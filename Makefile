@@ -11,3 +11,7 @@ test: quickcheck-test
 quickcheck-test:
 	rustc --test src/lib.rs -o quickcheck-test
 
+push:
+	git push origin master
+	git push github master
+
