@@ -1,5 +1,6 @@
 use std::iter::{Map, Unfold};
 use std::num::{one, zero};
+use std::str::from_chars;
 use std::vec;
 
 pub trait Shrink<T: Iterator<Self>> {
@@ -110,7 +111,9 @@ impl<A: Shrink<Ia> + Clone, B: Shrink<Ib> + Clone,
     }
 }
 
-impl<Ia: Iterator<A>, A: Shrink<Ia> + Clone> Shrink<vec::MoveItems<~[A]>> for ~[A] {
+impl<Ia: Iterator<A>, A: Shrink<Ia> + Clone>
+    Shrink<vec::MoveItems<~[A]>>
+    for ~[A] {
     fn shrink(&self) -> vec::MoveItems<~[A]> {
         let mut xs: ~[~[A]] = ~[];
         if self.len() == 0 {
@@ -132,6 +135,21 @@ impl<Ia: Iterator<A>, A: Shrink<Ia> + Clone> Shrink<vec::MoveItems<~[A]>> for ~[
         }
         xs.move_iter()
     }
+}
+
+impl Shrink<vec::MoveItems<~str>> for ~str {
+    fn shrink(&self) -> vec::MoveItems<~str> {
+        let chars: ~[char] = self.chars().to_owned_vec();
+        let mut strs: ~[~str] = ~[];
+        for x in chars.shrink() {
+            strs.push(from_chars(x));
+        }
+        strs.move_iter()
+    }
+}
+
+impl Shrink<vec::MoveItems<char>> for char {
+    fn shrink(&self) -> vec::MoveItems<char> { (~[]).move_iter() }
 }
 
 fn shuffle_vec<A: Clone>(xs: &[A], k: uint, n: uint) -> ~[~[A]] {
@@ -395,6 +413,18 @@ mod tests {
             ~[3, 5],
             ~[~[], ~[5], ~[3], ~[0,5], ~[2,5], ~[3,0], ~[3,3], ~[3,4]]
         );
+    }
+
+    #[test]
+    fn chars() {
+        eq('a', ~[]);
+    }
+
+    #[test]
+    fn strs() {
+        eq(~"", ~[]);
+        eq(~"A", ~[~""]);
+        eq(~"ABC", ~[~"", ~"AB", ~"BC", ~"AC"]);
     }
 
     // All this jazz is for testing set equality on the results of a shrinker.
