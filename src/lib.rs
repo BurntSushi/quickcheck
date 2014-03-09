@@ -8,7 +8,9 @@
 
 extern crate collections;
 
+pub use arbitrary::{Arbitrary};
 pub use shrink::{Shrink};
 
+mod arbitrary;
 mod shrink;
 
