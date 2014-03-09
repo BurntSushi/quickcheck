@@ -11,7 +11,7 @@ I chose iterators. My insistence on this point has greatly complicated type
 signatures for implementing the `Shrink` trait. More than that, the code to 
 produce these iterators is maddeningly complex, since the state for iteration 
 must be tracked explicitly. In fact, it was so complex that I gave up on 
-writing a lazy iterator for shrinking vectors, which is arguable the most 
+writing a lazy iterator for shrinking vectors, which is arguably the most 
 important place for laziness.
 
 I want laziness, but if I can't find a way to reduce the complexity of writing 
