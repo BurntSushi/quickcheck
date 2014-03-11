@@ -7,6 +7,8 @@ done. All that's really left is to actually run the tests given a property.
 The "plumbing" includes `Arbitrary`, `Shrink` and `Testable` traits, among a
 few others.
 
+[![Build status](https://api.travis-ci.org/BurntSushi/quickcheck.png)](https://travis-ci.org/BurntSushi/quickcheck)
+
 
 ### Documentation
 
