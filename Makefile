@@ -9,11 +9,14 @@ docs:
 	in-dir doc fix-perms
 	rscp ./doc/* gopher:~/www/burntsushi.net/rustdoc/
 
-test: quickcheck-test
-	RUST_TEST_TASKS=1 RUST_LOG=quickcheck=4 ./quickcheck-test ; rm -f quickcheck-test
+test: quickcheck-test src/lib.rs
+	RUST_TEST_TASKS=1 RUST_LOG=quickcheck=4 ./quickcheck-test
 
 quickcheck-test:
 	rustc --test src/lib.rs -o quickcheck-test
+
+test-clean:
+	rm -rf ./quickcheck-test
 
 push:
 	git push origin master
