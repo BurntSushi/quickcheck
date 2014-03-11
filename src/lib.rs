@@ -13,28 +13,28 @@ extern crate collections;
 
 pub use arbitrary::{Arbitrary, Gen, StdGen, gen};
 pub use shrink::{ObjIter, Shrink};
-pub use tester::{Testable, TestResult};
+pub use tester::{Testable, TestResult, Config, quickcheck, quickcheckConfig};
 
 mod arbitrary;
 mod shrink;
 
 mod tester {
     use std::fmt::Show;
-    use super::{Arbitrary, Gen};
+    use std::rand::task_rng;
+    use super::{Arbitrary, Gen, gen};
+
+    static DEFAULT_SIZE: uint = 20;
 
     static DEFAULT_CONFIG: Config = Config{
-        rng_size: 20,
         tests: 100,
         max_tests: 1000,
     };
 
-    fn arby<A: Arbitrary, G: Gen>(g: &mut G) -> A { Arbitrary::arbitrary(g) }
-
     /// Config contains various parameters for controlling automated testing.
+    ///
+    /// Note that the distribution of random values is controlled by the
+    /// generator passed to `quickcheckConfig`.
     pub struct Config {
-        /// A size hint to use when generating random values.
-        rng_size: uint,
-
         /// The number of tests to run on a function where the result is
         /// either a pass or a failure. (i.e., This doesn't include discarded
         /// test results.)
@@ -171,30 +171,50 @@ mod tester {
             r
         }
     }
+
+    pub fn quickcheck<A: Testable>(f: A) {
+        let g = &mut gen(task_rng(), DEFAULT_SIZE);
+        quickcheckConfig(DEFAULT_CONFIG, g, f)
+    }
+
+    pub fn quickcheckConfig<A: Testable, G: Gen>(c: Config, g: &mut G, f: A) {
+        let r = f.result(g);
+        debug!("{}", r);
+    }
+
+    /// Convenient alias.
+    fn arby<A: Arbitrary, G: Gen>(g: &mut G) -> A { Arbitrary::arbitrary(g) }
 }
 
 #[cfg(test)]
 mod test {
-    use std::iter;
     use std::rand::task_rng;
-    use super::{Testable, TestResult, gen};
+    use super::{Config, Testable, TestResult, gen, quickcheckConfig};
 
-    #[test]
-    fn reverse_reverse() {
-        let g = &mut gen(task_rng(), 20);
-        fn revrev(xs: ~[uint]) -> bool {
-            let rev = xs.clone().move_rev_iter().to_owned_vec()
-                        .move_rev_iter().to_owned_vec();
-            xs == rev
-        }
-        for _ in iter::range(0, 10) {
-            debug!("{}", (revrev).result(g));
-        }
+    static CONFIG: Config = Config {
+        tests: 100,
+        max_tests: 1000,
+    };
+
+    // #[test] 
+    // fn reverse_reverse() { 
+        // let g = &mut gen(task_rng(), 20); 
+        // fn revrev(xs: ~[uint]) -> bool { 
+            // let rev = xs.clone().move_rev_iter().to_owned_vec() 
+                        // .move_rev_iter().to_owned_vec(); 
+            // xs == rev 
+        // } 
+        // for _ in iter::range(0, 10) { 
+            // debug!("{}", (revrev).result(g)); 
+        // } 
+    // } 
+
+    fn check<A: Testable>(f: A) {
+        quickcheckConfig(CONFIG, &mut gen(task_rng(), 5), f)
     }
 
     #[test]
     fn reverse_single() {
-        let g = &mut gen(task_rng(), 20);
         fn rev_single(xs: ~[uint]) -> ~TestResult {
             if xs.len() != 1 {
                 return TestResult::discard()
@@ -205,26 +225,24 @@ mod test {
                 xs.clone().move_rev_iter().to_owned_vec()
             )
         }
-        for _ in iter::range(0, 10) {
-            debug!("{}", (rev_single).result(g));
-        }
+        check(rev_single);
     }
 
-    #[test]
-    fn reverse_app() {
-        let g = &mut gen(task_rng(), 20);
-        fn revapp(xs: ~[uint], ys: ~[uint]) -> bool {
-            let app = ::std::vec::append(xs.clone(), ys);
-            let app_rev = app.move_rev_iter().to_owned_vec();
-
-            let rxs = xs.clone().move_rev_iter().to_owned_vec();
-            let rys = ys.clone().move_rev_iter().to_owned_vec();
-            let rev_app = ::std::vec::append(rys, rxs);
-
-            app_rev == rev_app
-        }
-        for _ in iter::range(0, 10) {
-            debug!("{}", (revapp).result(g));
-        }
-    }
+    // #[test] 
+    // fn reverse_app() { 
+        // let g = &mut gen(task_rng(), 20); 
+        // fn revapp(xs: ~[uint], ys: ~[uint]) -> bool { 
+            // let app = ::std::vec::append(xs.clone(), ys); 
+            // let app_rev = app.move_rev_iter().to_owned_vec(); 
+//  
+            // let rxs = xs.clone().move_rev_iter().to_owned_vec(); 
+            // let rys = ys.clone().move_rev_iter().to_owned_vec(); 
+            // let rev_app = ::std::vec::append(rys, rxs); 
+//  
+            // app_rev == rev_app 
+        // } 
+        // for _ in iter::range(0, 10) { 
+            // debug!("{}", (revapp).result(g)); 
+        // } 
+    // } 
 }
