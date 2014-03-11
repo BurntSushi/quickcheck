@@ -11,7 +11,7 @@
 
 extern crate collections;
 
-pub use arbitrary::{Arbitrary, Gen, StdGen, arbitrary, default_gen, gen};
+pub use arbitrary::{Arbitrary, Gen, StdGen, gen};
 pub use shrink::{ObjIter, Shrink};
 pub use tester::{Testable, TestResult};
 
@@ -20,10 +20,30 @@ mod shrink;
 
 mod tester {
     use std::fmt::Show;
-
     use super::{Arbitrary, Gen};
 
+    static DEFAULT_CONFIG: Config = Config{
+        rng_size: 20,
+        tests: 100,
+        max_tests: 1000,
+    };
+
     fn arby<A: Arbitrary, G: Gen>(g: &mut G) -> A { Arbitrary::arbitrary(g) }
+
+    /// Config contains various parameters for controlling automated testing.
+    pub struct Config {
+        /// A size hint to use when generating random values.
+        rng_size: uint,
+
+        /// The number of tests to run on a function where the result is
+        /// either a pass or a failure. (i.e., This doesn't include discarded
+        /// test results.)
+        tests: uint,
+
+        /// The maximum number of tests to run for each function including
+        /// discarded test results. (Not currently used.)
+        max_tests: uint,
+    }
 
     #[deriving(Clone, Show)]
     pub struct TestResult {
@@ -156,12 +176,12 @@ mod tester {
 #[cfg(test)]
 mod test {
     use std::iter;
-
-    use super::{Testable, TestResult, default_gen};
+    use std::rand::task_rng;
+    use super::{Testable, TestResult, gen};
 
     #[test]
     fn reverse_reverse() {
-        let g = &mut default_gen();
+        let g = &mut gen(task_rng(), 20);
         fn revrev(xs: ~[uint]) -> bool {
             let rev = xs.clone().move_rev_iter().to_owned_vec()
                         .move_rev_iter().to_owned_vec();
@@ -174,7 +194,7 @@ mod test {
 
     #[test]
     fn reverse_single() {
-        let g = &mut default_gen();
+        let g = &mut gen(task_rng(), 20);
         fn rev_single(xs: ~[uint]) -> ~TestResult {
             if xs.len() != 1 {
                 return TestResult::discard()
@@ -192,7 +212,7 @@ mod test {
 
     #[test]
     fn reverse_app() {
-        let g = &mut default_gen();
+        let g = &mut gen(task_rng(), 20);
         fn revapp(xs: ~[uint], ys: ~[uint]) -> bool {
             let app = ::std::vec::append(xs.clone(), ys);
             let app_rev = app.move_rev_iter().to_owned_vec();

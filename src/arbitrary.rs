@@ -1,4 +1,4 @@
-use std::rand::{Rng, TaskRng, task_rng};
+use std::rand::Rng;
 use std::vec;
 
 /// Gen wraps a `rand::Rng` with parameters to control the distribution of
@@ -150,18 +150,6 @@ impl Arbitrary for u64 {
     fn arbitrary<G: Gen>(g: &mut G) -> u64 {
         let s = g.size(); g.gen_range(0, s as u64)
     }
-}
-
-/// Returns a random value according to `A`'s `Arbitrary` implementation using
-/// the default `Gen`.
-pub fn arbitrary<A: Arbitrary>() -> A {
-    Arbitrary::arbitrary(&mut default_gen())
-}
-
-/// Returns a default implementation for `Gen` using a task-local random number
-/// generator.
-pub fn default_gen() -> StdGen<TaskRng> {
-    gen(task_rng(), 20)
 }
 
 /// Returns a `Gen` with the given configuration.
