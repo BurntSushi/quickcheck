@@ -13,7 +13,7 @@ extern crate collections;
 
 pub use arbitrary::{Arbitrary, Gen, StdGen, arbitrary, default_gen, gen};
 pub use shrink::{ObjIter, Shrink};
-pub use tester::{Testable, TestResult, Status};
+pub use tester::{Testable, TestResult};
 
 mod arbitrary;
 mod shrink;
@@ -32,7 +32,7 @@ mod tester {
     }
 
     #[deriving(Clone, Show)]
-    pub enum Status { Pass, Fail, Discard }
+    priv enum Status { Pass, Fail, Discard }
 
     impl TestResult {
         pub fn passed() -> ~TestResult { TestResult::from_bool(true) }
