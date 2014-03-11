@@ -9,8 +9,8 @@ pub trait Gen : Rng {
 
 /// StdGen is the default implementation of `Gen`.
 pub struct StdGen<R> {
-    rng: R,
-    size: uint,
+    priv rng: R,
+    priv size: uint,
 }
 
 impl<R: Rng> Rng for StdGen<R> {
