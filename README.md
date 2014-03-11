@@ -1,7 +1,11 @@
 QuickCheck for Rust with shrinking.
 
-It is not yet in a working state although a substantial amount of code has been 
-written to implement shrinking on common types.
+This is pretty close to a working state. Most (or all) of the plumbing has been
+done. All that's really left is to actually run the tests given a property.
+(And of course, craft a public API.)
+
+The "plumbing" includes `Arbitrary`, `Shrink` and `Testable` traits, among a
+few others.
 
 
 ### Laziness
