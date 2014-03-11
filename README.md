@@ -8,6 +8,12 @@ The "plumbing" includes `Arbitrary`, `Shrink` and `Testable` traits, among a
 few others.
 
 
+### Documentation
+
+Documentation is a working in progress:
+[http://burntsushi.net/rustdoc/quickcheck/](http://burntsushi.net/rustdoc/quickcheck/).
+
+
 ### Laziness
 
 A key aspect for writing good shrinkers is a good lazy abstraction. For this,
