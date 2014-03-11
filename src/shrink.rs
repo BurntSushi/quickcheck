@@ -1,82 +1,84 @@
-use std::iter::{Map, Unfold};
+#[allow(dead_code)];
+
 use std::num::{one, zero};
 use std::str::from_chars;
 use std::vec;
 
-pub trait Shrink<T: Iterator<Self>> {
-    fn shrink(&self) -> T;
+/// Implementations of the `Shrink` trait specify how values can be shrunk.
+pub trait Shrink {
+    fn shrink(&self) -> ~ObjIter:<Self>;
 }
 
-impl Shrink<vec::MoveItems<()>> for () {
-    fn shrink(&self) -> vec::MoveItems<()> { (~[]).move_iter() }
+/// `~ObjIter` is an existential type that represents an arbitrary iterator
+/// by satisfying the `Iterator` trait.
+///
+/// This makes writing shrinkers easier.
+/// You should not have to implement this trait directly. By default, all
+/// types which implement the Iterator trait also implement the ObjIter trait.
+///
+/// The `A` type variable corresponds to the elements yielded by the iterator.
+pub trait ObjIter<A> {
+    /// Wraps `<A: Iterator>.next()`.
+    fn obj_next(&mut self) -> Option<A>;
 }
 
-impl Shrink<vec::MoveItems<bool>> for bool {
-    fn shrink(&self) -> vec::MoveItems<bool> {
-        match *self {
+impl<A> Iterator<A> for ~ObjIter:<A> {
+    fn next(&mut self) -> Option<A> { self.obj_next() }
+}
+
+impl<T, A: Iterator<T>> ObjIter<T> for A {
+    fn obj_next(&mut self) -> Option<T> { self.next() }
+}
+
+impl Shrink for () {
+    fn shrink(&self) -> ~ObjIter:<()> {
+        ~{let zero: ~[()] = ~[]; zero}.move_iter() as ~ObjIter:<()>
+    }
+}
+
+impl Shrink for bool {
+    fn shrink(&self) -> ~ObjIter:<bool> {
+        ~match *self {
             true => (~[false]).move_iter(),
             false => (~[]).move_iter(),
+        } as ~ObjIter:<bool>
+    }
+}
+
+impl<A: Shrink> Shrink for Option<A> {
+    fn shrink(&self)  -> ~ObjIter:<Option<A>> {
+        match *self {
+            None => {
+                let zero: ~[Option<A>] = ~[];
+                ~zero.move_iter() as ~ObjIter:<Option<A>>
+            }
+            Some(ref x) => {
+                let none: ~[Option<A>] = ~[None];
+                let tagged = x.shrink().map(Some);
+                let chain = none.move_iter().chain(tagged);
+                ~chain as ~ObjIter:<Option<A>>
+            }
         }
     }
 }
 
-struct OptionState<T> {
-    state: Option<T>,
-    started: bool,
-}
-
-impl<A: Shrink<Ia>, Ia: Iterator<A>>
-    Shrink<Unfold<'static, Option<A>, OptionState<Ia>>>
-    for Option<A>
-{
-    fn shrink(&self) -> Unfold<'static, Option<A>, OptionState<Ia>> {
-        let init = match *self {
-            None => None,
-            Some(ref x) => Some(x.shrink()),
-        };
-        let st = OptionState{
-            state: init,
-            started: false,
-        };
-        Unfold::new(st, |st: &mut OptionState<Ia>| -> Option<Option<A>> {
-            match st.state {
-                None => return None,
-                Some(ref mut x) => {
-                    if !st.started {
-                        st.started = true;
-                        return Some(None)
-                    }
-                    match x.next() {
-                        None => None,
-                        Some(it) => Some(Some(it)),
-                    }
-                }
+impl<A: Shrink, B: Shrink> Shrink for Result<A, B> {
+    fn shrink(&self) -> ~ObjIter:<Result<A, B>> {
+        match *self {
+            // I don't really understand the region type here for Map.
+            // I used 'static simply because the compiler let me.
+            // I don't know if it is right.
+            Ok(ref x) => {
+                let xs: ~ObjIter:<A> = x.shrink();
+                let tagged = xs.map::<'static, Result<A, B>>(Ok);
+                ~tagged as ~ObjIter:<Result<A, B>>
             }
-        })
-    }
-}
-
-impl<A: Shrink<Ia>, B: Shrink<Ib>, Ia: Iterator<A>, Ib: Iterator<B>>
-    Shrink<Unfold<'static, Result<A, B>, Result<Ia, Ib>>>
-    for Result<A, B>
-{
-    fn shrink(&self) -> Unfold<'static, Result<A, B>, Result<Ia, Ib>> {
-        let init = match *self {
-            Ok(ref a) => Ok(a.shrink()),
-            Err(ref b) => Err(b.shrink()),
-        };
-        Unfold::new(init, |st: &mut Result<Ia, Ib>| -> Option<Result<A, B>> {
-            match *st {
-                Ok(ref mut a) => match a.next() {
-                    None => return None,
-                    Some(a) => Some(Ok(a)),
-                },
-                Err(ref mut b) => match b.next() {
-                    None => return None,
-                    Some(b) => Some(Err(b)),
-                },
+            Err(ref x) => {
+                let xs: ~ObjIter:<B> = x.shrink();
+                let tagged = xs.map::<'static, Result<A, B>>(Err);
+                ~tagged as ~ObjIter:<Result<A, B>>
             }
-        })
+        }
     }
 }
 
@@ -88,36 +90,47 @@ impl<A: Shrink<Ia>, B: Shrink<Ib>, Ia: Iterator<A>, Ib: Iterator<B>>
 //         let (sa, sb) = (a.shrink(), b.shrink());
 //         ~[(sa1, b), ..., (saN, b), (a, sb1), ..., (a, sbN)]
 //
-// I wasn't able to figure out how to do this without copying. Maybe there is
-// a lifetime parameter lurking somewhere that might help.
-impl<A: Shrink<Ia> + Clone, B: Shrink<Ib> + Clone,
-     Ia: Iterator<A>, Ib: Iterator<B>>
-    Shrink<Unfold<'static, (A, B), (A, B, Ia, Ib)>>
-    for (A, B)
-{
-    fn shrink(&self) -> Unfold<'static, (A, B), (A, B, Ia, Ib)> {
+// I wasn't able to figure out how to do this without copying.
+impl<A: Shrink + Clone, B: Shrink + Clone> Shrink for (A, B) {
+    fn shrink(&self) -> ~ObjIter:<(A, B)> {
         let (ref a, ref b) = *self;
-        let init = (a.clone(), b.clone(), a.shrink(), b.shrink());
-        Unfold::new(init, |st: &mut (A, B, Ia, Ib)| -> Option<(A, B)> {
-            let (ref a, ref b, ref mut ia, ref mut ib) = *st;
-            match ia.next() {
-                Some(na) => Some((na, b.clone())),
-                None => match ib.next() {
-                    Some(nb) => Some((a.clone(), nb)),
-                    None => None,
-                }
-            }
-        })
+
+        // I miss real closures.
+        let sas = a.shrink().scan(b, |b: &mut &B, x: A| {
+            Some((x, b.clone()))
+        });
+        let sbs = b.shrink().scan(a, |a: &mut &A, x: B| {
+            Some((a.clone(), x))
+        });
+        ~sas.chain(sbs) as ~ObjIter:<(A, B)>
     }
 }
 
-impl<Ia: Iterator<A>, A: Shrink<Ia> + Clone>
-    Shrink<vec::MoveItems<~[A]>>
-    for ~[A] {
-    fn shrink(&self) -> vec::MoveItems<~[A]> {
+impl<A: Shrink + Clone, B: Shrink + Clone, C: Shrink + Clone>
+    Shrink for (A, B, C) {
+    fn shrink(&self) -> ~ObjIter:<(A, B, C)> {
+        let (ref a, ref b, ref c) = *self;
+
+        // Sorry about the unnecessary type annotations, but they're
+        // helpful to me.
+        let sas = a.shrink().scan((b, c), |&(b, c): &mut (&B, &C), x: A| {
+            Some((x, b.clone(), c.clone()))
+        });
+        let sbs = b.shrink().scan((a, c), |&(a, c): &mut (&A, &C), x: B| {
+            Some((a.clone(), x, c.clone()))
+        });
+        let scs = c.shrink().scan((a, b), |&(a, b): &mut (&A, &B), x: C| {
+            Some((a.clone(), b.clone(), x))
+        });
+        ~sas.chain(sbs).chain(scs) as ~ObjIter:<(A, B, C)>
+    }
+}
+
+impl<A: Shrink + Clone> Shrink for ~[A] {
+    fn shrink(&self) -> ~ObjIter:<~[A]> {
         let mut xs: ~[~[A]] = ~[];
         if self.len() == 0 {
-            return xs.move_iter()
+            return ~xs.move_iter() as ~ObjIter:<~[A]>
         }
         xs.push(~[]);
 
@@ -133,23 +146,26 @@ impl<Ia: Iterator<A>, A: Shrink<Ia> + Clone>
                 xs.push(vec::append(pre, self.slice_from(i+1)))
             }
         }
-        xs.move_iter()
+        ~xs.move_iter() as ~ObjIter:<~[A]>
     }
 }
 
-impl Shrink<vec::MoveItems<~str>> for ~str {
-    fn shrink(&self) -> vec::MoveItems<~str> {
+impl Shrink for ~str {
+    fn shrink(&self) -> ~ObjIter:<~str> {
         let chars: ~[char] = self.chars().to_owned_vec();
         let mut strs: ~[~str] = ~[];
         for x in chars.shrink() {
             strs.push(from_chars(x));
         }
-        strs.move_iter()
+        ~strs.move_iter() as ~ObjIter:<~str>
     }
 }
 
-impl Shrink<vec::MoveItems<char>> for char {
-    fn shrink(&self) -> vec::MoveItems<char> { (~[]).move_iter() }
+impl Shrink for char {
+    fn shrink(&self) -> ~ObjIter:<char> {
+        let zero: ~[char] = ~[];
+        ~zero.move_iter() as ~ObjIter:<char>
+    }
 }
 
 fn shuffle_vec<A: Clone>(xs: &[A], k: uint, n: uint) -> ~[~[A]] {
@@ -172,77 +188,77 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: uint, n: uint) -> ~[~[A]] {
     more
 }
 
-impl Shrink<vec::MoveItems<int>> for int {
-    fn shrink(&self) -> vec::MoveItems<int> {
-        shrink_signed(*self).move_iter()
+impl Shrink for int {
+    fn shrink(&self) -> ~ObjIter:<int> {
+        ~shrink_signed(*self).move_iter() as ~ObjIter:<int>
     }
 }
 
-impl Shrink<vec::MoveItems<i8>> for i8 {
-    fn shrink(&self) -> vec::MoveItems<i8> {
-        shrink_signed(*self).move_iter()
+impl Shrink for i8 {
+    fn shrink(&self) -> ~ObjIter:<i8> {
+        ~shrink_signed(*self).move_iter() as ~ObjIter:<i8>
     }
 }
 
-impl Shrink<vec::MoveItems<i16>> for i16 {
-    fn shrink(&self) -> vec::MoveItems<i16> {
-        shrink_signed(*self).move_iter()
+impl Shrink for i16 {
+    fn shrink(&self) -> ~ObjIter:<i16> {
+        ~shrink_signed(*self).move_iter() as ~ObjIter:<i16>
     }
 }
 
-impl Shrink<vec::MoveItems<i32>> for i32 {
-    fn shrink(&self) -> vec::MoveItems<i32> {
-        shrink_signed(*self).move_iter()
+impl Shrink for i32 {
+    fn shrink(&self) -> ~ObjIter:<i32> {
+        ~shrink_signed(*self).move_iter() as ~ObjIter:<i32>
     }
 }
 
-impl Shrink<vec::MoveItems<i64>> for i64 {
-    fn shrink(&self) -> vec::MoveItems<i64> {
-        shrink_signed(*self).move_iter()
+impl Shrink for i64 {
+    fn shrink(&self) -> ~ObjIter:<i64> {
+        ~shrink_signed(*self).move_iter() as ~ObjIter:<i64>
     }
 }
 
-impl Shrink<vec::MoveItems<uint>> for uint {
-    fn shrink(&self) -> vec::MoveItems<uint> {
-        shrink_unsigned(*self).move_iter()
+impl Shrink for uint {
+    fn shrink(&self) -> ~ObjIter:<uint> {
+        ~shrink_unsigned(*self).move_iter() as ~ObjIter:<uint>
     }
 }
 
-impl Shrink<vec::MoveItems<u8>> for u8 {
-    fn shrink(&self) -> vec::MoveItems<u8> {
-        shrink_unsigned(*self).move_iter()
+impl Shrink for u8 {
+    fn shrink(&self) -> ~ObjIter:<u8> {
+        ~shrink_unsigned(*self).move_iter() as ~ObjIter:<u8>
     }
 }
 
-impl Shrink<vec::MoveItems<u16>> for u16 {
-    fn shrink(&self) -> vec::MoveItems<u16> {
-        shrink_unsigned(*self).move_iter()
+impl Shrink for u16 {
+    fn shrink(&self) -> ~ObjIter:<u16> {
+        ~shrink_unsigned(*self).move_iter() as ~ObjIter:<u16>
     }
 }
 
-impl Shrink<vec::MoveItems<u32>> for u32 {
-    fn shrink(&self) -> vec::MoveItems<u32> {
-        shrink_unsigned(*self).move_iter()
+impl Shrink for u32 {
+    fn shrink(&self) -> ~ObjIter:<u32> {
+        ~shrink_unsigned(*self).move_iter() as ~ObjIter:<u32>
     }
 }
 
-impl Shrink<vec::MoveItems<u64>> for u64 {
-    fn shrink(&self) -> vec::MoveItems<u64> {
-        shrink_unsigned(*self).move_iter()
+impl Shrink for u64 {
+    fn shrink(&self) -> ~ObjIter:<u64> {
+        ~shrink_unsigned(*self).move_iter() as ~ObjIter:<u64>
     }
 }
 
-impl Shrink<Map<'static, i32, f32, vec::MoveItems<i32>>> for f32 {
-    fn shrink(&self) -> Map<'static, i32, f32, vec::MoveItems<i32>> {
-        let it = shrink_signed(self.to_i32().unwrap()).move_iter();
-        it.map(|x| x.to_f32().unwrap())
+impl Shrink for f32 {
+    fn shrink(&self) -> ~ObjIter:<f32> {
+        let it = ~shrink_signed(self.to_i32().unwrap()).move_iter();
+        ~it.map(|x| x.to_f32().unwrap()) as ~ObjIter:<f32>
     }
 }
 
-impl Shrink<Map<'static, i64, f64, vec::MoveItems<i64>>> for f64 {
-    fn shrink(&self) -> Map<'static, i64, f64, vec::MoveItems<i64>> {
-        let it = shrink_signed(self.to_i64().unwrap()).move_iter();
-        it.map(|x| x.to_f64().unwrap())
+impl Shrink for f64 {
+    fn shrink(&self) -> ~ObjIter:<f64> {
+        let it = ~shrink_signed(self.to_i64().unwrap()).move_iter();
+        ~it.map(|x| x.to_f64().unwrap()) as ~ObjIter:<f64>
     }
 }
 
@@ -283,7 +299,7 @@ fn shrink_unsigned<A: Clone + Ord + Unsigned + Mul<A, A>>(x: A) -> ~[A] {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use std::fmt::Show;
     use std::hash::Hash;
     use collections::HashSet;
@@ -321,6 +337,13 @@ mod tests {
         eq((false, false), ~[]);
         eq((true, false), ~[(false, false)]);
         eq((true, true), ~[(false, true), (true, false)]);
+    }
+
+    #[test]
+    fn triples() {
+        eq((false, false, false), ~[]);
+        eq((true, false, false), ~[(false, false, false)]);
+        eq((true, true, false), ~[(false, true, false), (true, false, false)]);
     }
 
     #[test]
@@ -428,17 +451,17 @@ mod tests {
     }
 
     // All this jazz is for testing set equality on the results of a shrinker.
-    fn eq<A: Shrink<Ia> + Eq + Show + Hash, Ia: Iterator<A>>(s: A, v: ~[A]) {
+    fn eq<A: Shrink + Eq + Show + Hash>(s: A, v: ~[A]) {
         assert_eq!(shrunk(s), set(v))
     }
-    fn shrunk<A: Shrink<Ia> + Eq + Hash, Ia: Iterator<A>>(s: A) -> HashSet<A> {
+    fn shrunk<A: Shrink + Eq + Hash>(s: A) -> HashSet<A> {
         set(s.shrink().to_owned_vec())
     }
     fn set<A: Eq + Hash>(xs: ~[A]) -> HashSet<A> {
         xs.move_iter().collect()
     }
 
-    fn ordered_eq<A: Shrink<Ia> + Eq + Show, Ia: Iterator<A>>(s: A, v: ~[A]) {
+    fn ordered_eq<A: Shrink + Eq + Show>(s: A, v: ~[A]) {
         assert_eq!(s.shrink().to_owned_vec(), v);
     }
 }
