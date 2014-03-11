@@ -27,8 +27,8 @@ mod tester {
 
     #[deriving(Clone, Show)]
     pub struct TestResult {
-        status: Status,
-        arguments: ~[~str],
+        priv status: Status,
+        priv arguments: ~[~str],
     }
 
     #[deriving(Clone, Show)]
