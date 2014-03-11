@@ -10,7 +10,7 @@ few others.
 
 ### Documentation
 
-Documentation is a working in progress:
+Documentation is a work in progress:
 [http://burntsushi.net/rustdoc/quickcheck/](http://burntsushi.net/rustdoc/quickcheck/).
 
 
