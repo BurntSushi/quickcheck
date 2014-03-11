@@ -10,7 +10,7 @@ docs:
 	rscp ./doc/* gopher:~/www/burntsushi.net/rustdoc/
 
 test: quickcheck-test
-	RUST_LOG=quickcheck=4 ./quickcheck-test ; rm -f quickcheck-test
+	RUST_TEST_TASKS=1 RUST_LOG=quickcheck=4 ./quickcheck-test ; rm -f quickcheck-test
 
 quickcheck-test:
 	rustc --test src/lib.rs -o quickcheck-test

@@ -197,6 +197,10 @@ mod test {
         super::Arbitrary::arbitrary(&mut gen())
     }
 
+    fn gen() -> super::StdGen<rand::TaskRng> {
+        super::gen(rand::task_rng(), 5)
+    }
+
     fn rep(f: ||) {
         for _ in iter::range(0, 100) {
             f()
