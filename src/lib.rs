@@ -87,7 +87,7 @@ mod tester {
     /// Like `quickcheck_config`, but returns either the number of tests passed
     /// or a witness of failure.
     pub fn quicktest_config<A: Testable, G: Gen>
-        (c: Config, g: &mut G, f: A) -> Result<uint, ~str> {
+                           (c: Config, g: &mut G, f: A) -> Result<uint, ~str> {
         let mut ntests: uint = 0;
         for _ in iter::range(0, c.max_tests) {
             if ntests >= c.tests {
