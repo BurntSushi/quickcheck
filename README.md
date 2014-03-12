@@ -145,7 +145,7 @@ fn sieve(n: uint) -> ~[uint] {
     let mut marked = vec::from_fn(n+1, |_| false);
     marked[0] = true; marked[1] = true; marked[2] = false;
     for p in iter::range(2, n) {
-        for i in iter::range_step(2 * p, n, p) { // whoops!
+        for i in iter::range_step(2 * p, n, p) {
             marked[i] = true;
         }
     }
