@@ -75,7 +75,7 @@ install `quickcheck`:
 ```bash
 pip2 install cargo-lite
 cargo-lite install git://github.com/BurntSushi/quickcheck # installs to ~/.rust
-rustc ~/.rust/src/quickcheck/examples/reverse.rs
+rustc ~/.rust/src/quickcheck/examples/reverse.rs # creates 'reverse' in CWD
 RUST_LOG=quickcheck ./reverse
 ```
 
