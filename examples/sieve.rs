@@ -48,7 +48,6 @@ fn is_prime(n: uint) -> bool {
 
 fn prop_all_prime(n: uint) -> bool {
     let primes = sieve(n);
-    debug!("{}: {}", n, primes);
     primes.iter().all(|&i| is_prime(i))
 }
 

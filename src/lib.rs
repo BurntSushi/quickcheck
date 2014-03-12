@@ -474,7 +474,6 @@ mod test {
 
         fn prop(n: uint) -> bool {
             let primes = sieve(n);
-            debug!("{}: {}", n, primes);
             primes.iter().all(|&i| is_prime(i))
         }
         fn is_prime(n: uint) -> bool {
