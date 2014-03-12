@@ -69,20 +69,18 @@ rustc -L ./ ./examples/reverse.rs
 RUST_LOG=quickcheck ./reverse
 ```
 
-Also, `quickcheck` has a `cargo-lite.conf` that seems to work. With a Python 2 
-`pip` binary, install `cargo-lite` with `pip2 install cargo-lite` and then
-install `quickcheck` with
-`cargo-lite install git://github.com/BurntSushi/quickcheck`.
-It looks like the library ends up in
-`~/.rust/lib/{arch-os}/libquickcheck-{version}.rlib`.
-Even better, it looks like `rustc` knows to look there, so you don't have to 
-use `-L`. So for example, to run the `reverse` example if you used `cargo-lite` 
-to install:
+Alternatively, install `cargo-lite` with a Python 2 `pip` binary and use it to 
+install `quickcheck`:
 
 ```bash
+pip2 install cargo-lite
+cargo-lite install git://github.com/BurntSushi/quickcheck # installs to ~/.rust
 rustc ~/.rust/src/quickcheck/examples/reverse.rs
 RUST_LOG=quickcheck ./reverse
 ```
+
+Notice that the `-L` flag isn't needed for `rustc` here. It looks like `rustc` 
+knows to look in `~/.rust` for compiled libraries.
 
 N.B. The `RUST_LOG=quickcheck` enables `debug!` so that it shows useful output 
 (like the number of tests passed). This is **not** needed to show witnesses for 
