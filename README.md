@@ -185,8 +185,8 @@ Haskell's `==>` combinator.)
 N.B. Since discarding a test means it neither passes nor fails, `quickcheck` 
 will try to replace the discarded test with a fresh one. However, if your 
 condition is seldom met, it's possible that `quickcheck` will have to settle 
-for running fewer tests than usual. By default, `quickcheck` if `quickcheck`
-can't find `100` valid tests after trying `10,000` times, then it will give up.
+for running fewer tests than usual. By default, if `quickcheck` can't find 
+`100` valid tests after trying `10,000` times, then it will give up.
 This parameter may be changed using
 [`quickcheckConfig`](http://burntsushi.net/rustdoc/quickcheck/fn.quickcheckConfig.html).
 
