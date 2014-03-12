@@ -234,8 +234,8 @@ Ah! But does the `range_step` function include `n`? Its documentation says
 > Return an iterator over the range [start, stop) by step. It handles overflow 
 > by stopping.
 
-Shucks. The `range_step` function will never yield `4`. We could use `n + 1`, 
-but the `std::iter` crate also has a
+Shucks. The `range_step` function will never yield `4` when `n = 4`. We could 
+use `n + 1`, but the `std::iter` crate also has a
 [`range_step_inclusive`](http://static.rust-lang.org/doc/master/std/iter/fn.range_step_inclusive.html)
 which seems clearer.
 
