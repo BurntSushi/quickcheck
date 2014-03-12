@@ -15,7 +15,7 @@ This port of QuickCheck is licensed under the
 
 ### Documentation
 
-The API is comprehensively documented:
+The API is fully documented:
 [http://burntsushi.net/rustdoc/quickcheck/](http://burntsushi.net/rustdoc/quickcheck/).
 
 
