@@ -16,7 +16,7 @@ This port of QuickCheck is licensed under the
 
 ### Documentation
 
-The API is comprehensively documented (with examples):
+The API is comprehensively documented:
 [http://burntsushi.net/rustdoc/quickcheck/](http://burntsushi.net/rustdoc/quickcheck/).
 
 
@@ -83,6 +83,109 @@ RUST_LOG=quickcheck ./reverse
 N.B. The `RUST_LOG=quickcheck` enables `debug!` so that it shows useful output 
 (like the number of tests passed). This is **not** needed to show witnesses for 
 failures.
+
+
+### Discarding test results (or, properties are polymorphic!)
+
+Sometimes you want to test a property that only holds for a *subset* of the 
+possible inputs, so that when your property is given an input that is outside 
+of that subset, you'd discard it. In particular, the property should *neither* 
+pass nor fail on inputs outside of the subset you want to test. But properties 
+return boolean values---which either indicate pass or fail.
+
+To fix this, we need to take a step back and look at the type of the 
+`quickcheck` function:
+
+```rust
+pub fn quickcheck<A: Testable>(f: A) {
+    // elided
+}
+```
+
+So `quickcheck` can test any value with a type that satisfies the `Testable` 
+trait. Great, so what is this `Testable` business?
+
+```rust
+pub trait Testable {
+    fn result<G: Gen>(&self, &mut G) -> ~TestResult;
+}
+```
+
+This trait states that a type is testable if it can produce a `~TestResult` 
+given a source of randomness. (A `~TestResult` stores information about the 
+results of a test, like whether it passed, failed or has been discarded.)
+
+Sure enough, `bool` satisfies the `Testable` trait:
+
+```rust
+impl Testable for bool {
+    fn result<G: Gen>(&self, _: &mut G) -> ~TestResult {
+        TestResult::from_bool(*self)
+    }
+}
+```
+
+But in the example, we gave a *function* to `quickcheck`. Yes, functions can 
+satisfy `Testable` too!
+
+```rust
+impl<A: Arbitrary + Show, B: Testable> Testable for fn(A) -> B {
+    fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
+        // elided
+    }
+}
+```
+
+Which says that a function satisfies `Testable` if and only if it has a single
+parameter type (whose values can be randomly generated and shrunk) and returns 
+any type (that also satisfies `Testable`). So a function with type
+`fn(uint) -> bool` satisfies `Testable` since `uint` satisfies `Arbitrary` and 
+`bool` satisfies `Testable`.
+
+So to discard a test, we need to return something other than `bool`. What if we 
+just returned a `~TestResult` directly? That should work, but we'll need to 
+make sure `~TestResult` satisfies `Testable`:
+
+```rust
+impl Testable for ~TestResult {
+    fn result<G: Gen>(&self, _: &mut G) -> ~TestResult { self.clone() }
+}
+```
+
+Now we can test functions that return a `~TestResult` directly.
+
+As an example, let's test our reverse function to make sure that the reverse of 
+a vector of length 1 is equal to the vector itself.
+
+```rust
+fn prop(xs: ~[int]) -> ~TestResult {
+    if xs.len() != 1 {
+        return TestResult::discard()
+    }
+    TestResult::from_bool(xs == reverse(xs))
+}
+quickcheck(prop);
+```
+
+(A full working program for this example is in `examples/reverse_single.rs`.)
+
+So now our property returns a `~TestResult`, which allows us to encode a bit 
+more information. There are a few more
+[convenience functions defined for the `TestResult` 
+type](http://burntsushi.net/rustdoc/quickcheck/struct.TestResult.html).
+For example, we can't just return a `bool`, so we convert a `bool` value to a 
+`~TestResult`.
+
+(The ability to discard tests allows you to get similar functionality as 
+Haskell's `==>` combinator.)
+
+N.B. Since discarding a test means it neither passes nor fails, `quickcheck` 
+will try to replace the discarded test with a fresh one. However, if your 
+condition is seldom met, it's possible that `quickcheck` will have to settle 
+for running fewer tests than usual. By default, `quickcheck` if `quickcheck`
+can't find `100` valid tests after trying `10,000` times, then it will give up.
+This parameter may be changed using
+[`quickcheckConfig`](http://burntsushi.net/rustdoc/quickcheck/fn.quickcheckConfig.html).
 
 
 ### Shrinking
