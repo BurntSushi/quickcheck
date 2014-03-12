@@ -392,6 +392,22 @@ algorithms are more complex, so it will take a bit more work to get them to
 use iterators like the rest of the shrinking strategies.
 
 
+### Related work
+
+There have been other attempts at QuickCheck for Rust, but they are missing 
+critical features. (I don't think any of them build either.)
+
+* [dbp/rust-quickcheck](https://github.com/dbp/rust-quickcheck) - No shrinking.
+* [mcandre/rustcheck](https://github.com/mcandre/rustcheck) - Properties are 
+  not polymorphic. No shrinking. In general, very incomplete.
+* [blake2-ppc/qc.rs](https://github.com/blake2-ppc/qc.rs) - Has shrinking, but 
+  properties are not polymorphic. Also, I *think* its approach to laziness is 
+  no longer possible with the changes in closures, but I could be wrong.
+* [lilac/quick-check](https://github.com/lilac/quick-check) - This is a fork of
+  `blake2-ppc/qc.rs`. I can't see any substantial changes, although it is used
+  `proc` in the laziness code, so perhaps they've gotten it to work.
+
+
 ### Request for review
 
 This is my first Rust project, so I've undoubtedly written unidiomatic code. In 
