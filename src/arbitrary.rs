@@ -3,7 +3,8 @@ use std::str::from_chars;
 use std::vec;
 use rand::Rng;
 
-/// Returns a `Gen` with the given configuration.
+/// Returns a `Gen` with the given configuration using any random number
+/// generator.
 ///
 /// The `size` parameter controls the size of random values generated.
 /// For example, it specifies the maximum length of a randomly generator vector
@@ -14,11 +15,17 @@ pub fn gen<R: Rng>(rng: R, size: uint) -> StdGen<R> {
 
 /// `Gen` wraps a `rand::Rng` with parameters to control the distribution of
 /// random values.
+///
+/// A value with type satisfying the `Gen` trait can be constructed with the
+/// `gen` function in this crate.
 pub trait Gen : Rng {
     fn size(&self) -> uint;
 }
 
 /// StdGen is the default implementation of `Gen`.
+///
+/// Values of type `StdGen` can be created with the `gen` function in this
+/// crate.
 pub struct StdGen<R> {
     priv rng: R,
     priv size: uint,
