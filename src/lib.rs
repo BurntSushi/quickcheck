@@ -10,6 +10,7 @@
 //! [Haskell's QuickCheck](http://hackage.haskell.org/package/QuickCheck).
 
 extern crate collections;
+extern crate rand;
 
 pub use arbitrary::{Arbitrary, Gen, StdGen, ObjIter, gen};
 pub use tester::{Testable, TestResult, Config};
@@ -22,8 +23,8 @@ mod arbitrary;
 mod tester {
     use std::fmt::Show;
     use std::iter;
-    use std::rand::task_rng;
     use std::task;
+    use rand::task_rng;
     use super::{Arbitrary, Gen, ObjIter, gen};
 
     /// Default size hint used in `quickcheck` for sampling from a random
@@ -365,8 +366,8 @@ mod tester {
 #[cfg(test)]
 mod test {
     use std::iter;
-    use std::rand::task_rng;
     use std::vec;
+    use rand::task_rng;
     use super::{Config, Testable, TestResult, gen, quickcheckConfig};
 
     static CONFIG: Config = Config {

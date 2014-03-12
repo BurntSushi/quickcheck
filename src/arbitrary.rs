@@ -1,7 +1,7 @@
 use std::num::{one, zero};
-use std::rand::Rng;
 use std::str::from_chars;
 use std::vec;
+use rand::Rng;
 
 /// Returns a `Gen` with the given configuration.
 ///
@@ -417,8 +417,8 @@ mod test {
     use std::fmt::Show;
     use std::hash::Hash;
     use std::iter;
-    use std::rand;
     use collections::HashSet;
+    use rand;
     use super::Arbitrary;
 
     // Arbitrary testing. (Not much here. What else can I reasonably test?)
