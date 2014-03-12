@@ -144,23 +144,16 @@ fn sieve(n: uint) -> ~[uint] {
 
     let mut marked = vec::from_fn(n+1, |_| false);
     marked[0] = true; marked[1] = true; marked[2] = false;
-    let next_marked = |marked: &[bool], p: uint| -> Option<uint> {
-        for (i, m) in marked.iter().enumerate() {
-            if i > p && !m { return Some(i) }
-        }
-        None
-    };
-    let mut next = next_marked(marked, 1);
-    while !next.is_none() {
-        let p = next.unwrap();
-        for i in iter::range_step(2 * p, n, p) {
+    for p in iter::range(2, n) {
+        for i in iter::range_step(2 * p, n, p) { // whoops!
             marked[i] = true;
         }
-        next = next_marked(marked, p);
     }
-    iter::range(0, n+1)
-        .filter_map(|i| if marked[i] { None } else { Some(i) })
-        .to_owned_vec()
+    let mut primes = ~[];
+    for (i, m) in marked.iter().enumerate() {
+        if !m { primes.push(i) }
+    }
+    primes
 }
 ```
 
