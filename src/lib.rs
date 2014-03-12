@@ -8,6 +8,9 @@
 
 //! This crate is a port of
 //! [Haskell's QuickCheck](http://hackage.haskell.org/package/QuickCheck).
+//!
+//! For detailed examples, please see the
+//! [README](https://github.com/BurntSushi/quickcheck).
 
 extern crate collections;
 extern crate rand;
