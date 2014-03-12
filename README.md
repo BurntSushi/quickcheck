@@ -193,7 +193,7 @@ fn is_prime(n: uint) -> bool {
 ```
 
 All this is doing is checking to see if any number in `[2, sqrt(n)]` divides
-`n` with a few special cases for `0`, `1` and `2`.
+`n` with a few base cases for `0`, `1` and `2`.
 
 Now we can write our QuickCheck property:
 
