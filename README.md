@@ -337,7 +337,13 @@ for our property.
 With such a short counter-example, it's hopefully a bit easier to narrow down 
 where the bug is. Since `4` is returned, it's likely never marked as being not 
 prime. Since `4` is a multiple of `2`, its slot should be marked as `true` when 
-`p = 2` on line 23.
+`p = 2` on these lines:
+
+```rust
+for i in iter::range_step(2 * p, n, p) {
+    marked[i] = true;
+}
+```
 
 Ah! But does the `range_step` function include `n`? Its documentation says
 
