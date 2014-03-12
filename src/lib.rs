@@ -444,7 +444,7 @@ mod test {
     }
 
     #[test]
-    // #[should_fail] 
+    #[should_fail]
     fn sieve_of_eratosthenes() {
         fn sieve(n: uint) -> ~[uint] {
             if n <= 1 {
