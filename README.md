@@ -21,7 +21,9 @@ The API is comprehensively documented:
 
 ### Simple example
 
-Here's a complete working program that tests a function that reverses a vector:
+Here's a
+[complete working program](https://github.com/BurntSushi/quickcheck/blob/master/examples/reverse.rs)
+that tests a function that reverses a vector:
 
 ```rust
 extern crate quickcheck;
@@ -166,7 +168,8 @@ fn prop(xs: ~[int]) -> ~TestResult {
 quickcheck(prop);
 ```
 
-(A full working program for this example is in `examples/reverse_single.rs`.)
+(A full working program for this example is in 
+[`examples/reverse_single.rs`](https://github.com/BurntSushi/quickcheck/blob/master/examples/reverse_single.rs).)
 
 So now our property returns a `~TestResult`, which allows us to encode a bit 
 more information. There are a few more
@@ -317,7 +320,8 @@ fn main() {
 }
 ```
 
-A fully working source file with this code is in `examples/sieve.rs`.
+A fully working source file with this code is in
+[`examples/sieve.rs`](https://github.com/BurntSushi/quickcheck/blob/master/examples/sieve.rs).
 
 The output of running this program has this message:
 
