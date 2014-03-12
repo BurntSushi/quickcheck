@@ -1,7 +1,6 @@
-QuickCheck for Rust with shrinking. QuickCheck is a way to do property based 
-testing using randomly generated input. This crate comes with the ability to 
-randomly generate and shrink integers, floats, tuples, booleans, lists, 
-strings, options and results.
+QuickCheck is a way to do property based testing using randomly generated 
+input. This crate comes with the ability to randomly generate and shrink 
+integers, floats, tuples, booleans, lists, strings, options and results.
 
 The shrinking strategies for lists and numbers use a binary search to cover 
 the input space quickly. (It should be the same strategy used in
