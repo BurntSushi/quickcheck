@@ -52,7 +52,7 @@ More than that, I am keeping this crate in sync with Rust's master branch (as
 enforced by `travis-ci`), so you'll need to build Rust from source first.
 
 If you have an up-to-date Rust, then the easiest way to get going is to just 
-clone the quickcheck repo and build it:
+clone this repo and build it:
 
 ```bash
 git clone git://github.com/BurntSushi/quickcheck
