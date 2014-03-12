@@ -5,7 +5,7 @@ use std::str::from_chars;
 use std::vec;
 
 /// Implementations of the `Shrink` trait specify how values can be shrunk.
-pub trait Shrink {
+pub trait Shrink : Clone {
     fn shrink(&self) -> ~ObjIter:<Self>;
 }
 
@@ -91,7 +91,7 @@ impl<A: Shrink, B: Shrink> Shrink for Result<A, B> {
 //         ~[(sa1, b), ..., (saN, b), (a, sb1), ..., (a, sbN)]
 //
 // I wasn't able to figure out how to do this without copying.
-impl<A: Shrink + Clone, B: Shrink + Clone> Shrink for (A, B) {
+impl<A: Shrink, B: Shrink> Shrink for (A, B) {
     fn shrink(&self) -> ~ObjIter:<(A, B)> {
         let (ref a, ref b) = *self;
 
@@ -106,7 +106,7 @@ impl<A: Shrink + Clone, B: Shrink + Clone> Shrink for (A, B) {
     }
 }
 
-impl<A: Shrink + Clone, B: Shrink + Clone, C: Shrink + Clone>
+impl<A: Shrink, B: Shrink, C: Shrink>
     Shrink for (A, B, C) {
     fn shrink(&self) -> ~ObjIter:<(A, B, C)> {
         let (ref a, ref b, ref c) = *self;
@@ -126,7 +126,7 @@ impl<A: Shrink + Clone, B: Shrink + Clone, C: Shrink + Clone>
     }
 }
 
-impl<A: Shrink + Clone> Shrink for ~[A] {
+impl<A: Shrink> Shrink for ~[A] {
     fn shrink(&self) -> ~ObjIter:<~[A]> {
         let mut xs: ~[~[A]] = ~[];
         if self.len() == 0 {
