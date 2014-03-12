@@ -11,20 +11,19 @@
 
 extern crate collections;
 
-pub use arbitrary::{Arbitrary, Gen, StdGen, gen};
-pub use shrink::{ObjIter, Shrink};
+pub use arbitrary::{Arbitrary, Gen, StdGen, ObjIter, gen};
 pub use tester::{Testable, TestResult, Config};
 pub use tester::{quickcheck, quickcheckConfig, quicktest, quicktestConfig};
 pub use tester::{DEFAULT_CONFIG, DEFAULT_SIZE};
 
 mod arbitrary;
-mod shrink;
+// mod shrink; 
 
 mod tester {
     use std::fmt::Show;
     use std::iter;
     use std::rand::task_rng;
-    use super::{Arbitrary, Gen, Shrink, gen};
+    use super::{Arbitrary, Gen, gen};
 
     /// Default size hint used in `quickcheck` for sampling from a random
     /// distribution.
@@ -171,22 +170,22 @@ mod tester {
         }
     }
 
-    impl<A: Arbitrary + Shrink + Show, B: Testable> Testable for 'static |A| -> B {
+    impl<A: Arbitrary + Show, B: Testable> Testable for 'static |A| -> B {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
             apply1(g, |a| (*self)(a))
         }
     }
 
-    impl<A: Arbitrary + Shrink + Show, B: Arbitrary + Shrink + Show, C: Testable>
+    impl<A: Arbitrary + Show, B: Arbitrary + Show, C: Testable>
         Testable for 'static |A, B| -> C {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
             apply2(g, |a, b| (*self)(a, b))
         }
     }
 
-    impl<A: Arbitrary + Shrink + Show,
-         B: Arbitrary + Shrink + Show,
-         C: Arbitrary + Shrink + Show,
+    impl<A: Arbitrary + Show,
+         B: Arbitrary + Show,
+         C: Arbitrary + Show,
          D: Testable>
         Testable for 'static |A, B, C| -> D {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
@@ -200,22 +199,22 @@ mod tester {
         }
     }
 
-    impl<A: Arbitrary + Shrink + Show, B: Testable> Testable for fn(A) -> B {
+    impl<A: Arbitrary + Show, B: Testable> Testable for fn(A) -> B {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
             apply1(g, |a| (*self)(a))
         }
     }
 
-    impl<A: Arbitrary + Shrink + Show, B: Arbitrary + Shrink + Show, C: Testable>
+    impl<A: Arbitrary + Show, B: Arbitrary + Show, C: Testable>
         Testable for fn(A, B) -> C {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
             apply2(g, |a, b| (*self)(a, b))
         }
     }
 
-    impl<A: Arbitrary + Shrink + Show,
-         B: Arbitrary + Shrink + Show,
-         C: Arbitrary + Shrink + Show,
+    impl<A: Arbitrary + Show,
+         B: Arbitrary + Show,
+         C: Arbitrary + Show,
          D: Testable>
         Testable for fn(A, B, C) -> D {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
@@ -230,7 +229,7 @@ mod tester {
         shrink(0, (), (), (), |_: (), _: (), _: ()| fun().result(g))
     }
 
-    fn apply1<A: Arbitrary + Shrink + Show,
+    fn apply1<A: Arbitrary + Show,
               B: Testable,
               G: Gen
              >(g: &mut G, fun: |a: A| -> B)
@@ -245,8 +244,8 @@ mod tester {
         })
     }
 
-    fn apply2<A: Arbitrary + Shrink + Show,
-              B: Arbitrary + Shrink + Show,
+    fn apply2<A: Arbitrary + Show,
+              B: Arbitrary + Show,
               C: Testable,
               G: Gen
              >(g: &mut G, fun: |a: A, b: B| -> C)
@@ -261,9 +260,9 @@ mod tester {
         })
     }
 
-    fn apply3<A: Arbitrary + Shrink + Show,
-              B: Arbitrary + Shrink + Show,
-              C: Arbitrary + Shrink + Show,
+    fn apply3<A: Arbitrary + Show,
+              B: Arbitrary + Show,
+              C: Arbitrary + Show,
               D: Testable,
               G: Gen
              >(g: &mut G, fun: |a: A, b: B, c: C| -> D)
@@ -278,7 +277,7 @@ mod tester {
         })
     }
 
-    fn shrink<A: Shrink + Show, B: Shrink + Show, C: Shrink + Show>
+    fn shrink<A: Arbitrary + Show, B: Arbitrary + Show, C: Arbitrary + Show>
              (n: uint, a: A, b: B, c: C, fun: |A, B, C| -> ~TestResult)
              -> ~TestResult {
         let toshrink = (a.clone(), b.clone(), c.clone());
