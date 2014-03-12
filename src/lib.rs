@@ -13,22 +13,96 @@ extern crate collections;
 
 pub use arbitrary::{Arbitrary, Gen, StdGen, gen};
 pub use shrink::{ObjIter, Shrink};
-pub use tester::{Testable, TestResult, Config, quickcheck, quickcheckConfig};
+pub use tester::{Testable, TestResult, Config};
+pub use tester::{quickcheck, quickcheckConfig, quicktest, quicktestConfig};
+pub use tester::{DEFAULT_CONFIG, DEFAULT_SIZE};
 
 mod arbitrary;
 mod shrink;
 
 mod tester {
     use std::fmt::Show;
+    use std::iter;
     use std::rand::task_rng;
-    use super::{Arbitrary, Gen, gen};
+    use super::{Arbitrary, Gen, Shrink, gen};
 
-    static DEFAULT_SIZE: uint = 20;
+    /// Default size hint used in `quickcheck` for sampling from a random
+    /// distribution.
+    pub static DEFAULT_SIZE: uint = 20;
 
-    static DEFAULT_CONFIG: Config = Config{
+    /// Default configuration used in `quickcheck`.
+    pub static DEFAULT_CONFIG: Config = Config{
         tests: 100,
-        max_tests: 1000,
+        max_tests: 10000,
     };
+
+    /// Does randomized testing on `f` and produces a possibly minimal
+    /// witness for test failures.
+    ///
+    /// This function is equivalent to calling `quickcheckConfig` with
+    /// `DEFAULT_CONFIG` and a `Gen` with size `DEFAULT_SIZE`.
+    ///
+    /// As of now, it is intended for `quickcheck` to be used inside Rust's
+    /// unit testing system. For example, to check if
+    /// `reverse(reverse(xs)) == xs`, you could use:
+    ///
+    /// ```rust
+    /// fn prop_reverse_reverse() {
+    ///     fn revrev(xs: ~[uint]) -> bool {
+    ///         let rev = xs.clone().move_rev_iter().to_owned_vec();
+    ///         let revrev = rev.move_rev_iter().to_owned_vec();
+    ///         xs == revrev
+    ///     }
+    ///     check(revrev);
+    /// }
+    /// ```
+    ///
+    /// In particular, `quickcheck` will call `fail!` if it finds a
+    /// test failure. The failure message will include a witness to the
+    /// failure.
+    pub fn quickcheck<A: Testable>(f: A) {
+        let g = &mut gen(task_rng(), DEFAULT_SIZE);
+        quickcheckConfig(DEFAULT_CONFIG, g, f)
+    }
+
+    /// Does randomized testing on `f` with the given config and produces a 
+    /// possibly minimal witness for test failures.
+    pub fn quickcheckConfig<A: Testable, G: Gen>(c: Config, g: &mut G, f: A) {
+        match quicktestConfig(c, g, f) {
+            Ok(ntests) => debug!("[quickcheck] Passed {:u} tests.", ntests),
+            Err(err) => fail!(err),
+        }
+    }
+
+    /// Like `quickcheck`, but returns either the number of tests passed
+    /// or a witness of failure.
+    pub fn quicktest<A: Testable>(f: A) -> Result<uint, ~str> {
+        let g = &mut gen(task_rng(), DEFAULT_SIZE);
+        quicktestConfig(DEFAULT_CONFIG, g, f)
+    }
+
+    /// Like `quickcheckConfig`, but returns either the number of tests passed
+    /// or a witness of failure.
+    pub fn quicktestConfig<A: Testable, G: Gen>
+        (c: Config, g: &mut G, f: A) -> Result<uint, ~str> {
+        let mut ntests: uint = 0;
+        for _ in iter::range(0, c.max_tests) {
+            if ntests >= c.tests {
+                break
+            }
+            let r = f.result(g);
+            match r.status {
+                Pass => ntests = ntests + 1,
+                Discard => continue,
+                Fail => {
+                    return Err(format!(
+                        "[quickcheck] TEST FAILED. Arguments: ({})",
+                        r.arguments.connect(", ")));
+                }
+            }
+        }
+        Ok(ntests)
+    }
 
     /// Config contains various parameters for controlling automated testing.
     ///
@@ -41,7 +115,7 @@ mod tester {
         tests: uint,
 
         /// The maximum number of tests to run for each function including
-        /// discarded test results. (Not currently used.)
+        /// discarded test results.
         max_tests: uint,
     }
 
@@ -62,6 +136,13 @@ mod tester {
         }
         pub fn from_bool(b: bool) -> ~TestResult {
             ~TestResult { status: if b { Pass } else { Fail }, arguments: ~[] }
+        }
+
+        pub fn is_failure(&self) -> bool {
+            match self.status {
+                Fail => true,
+                Pass|Discard => false,
+            }
         }
     }
 
@@ -86,100 +167,142 @@ mod tester {
 
     impl<A: Testable> Testable for 'static || -> A {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
-            (*self)().result(g)
+            apply0(g, || (*self)())
         }
     }
 
-    impl<A: Arbitrary + Show, B: Testable> Testable for 'static |A| -> B {
+    impl<A: Arbitrary + Shrink + Show, B: Testable> Testable for 'static |A| -> B {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
-            let a: A = Arbitrary::arbitrary(g);
-            let arg: ~str = a.to_str();
-            let mut r: ~TestResult = (*self)(a).result(g);
-            r.arguments.unshift(arg);
-            r
+            apply1(g, |a| (*self)(a))
         }
     }
 
-    impl<A: Arbitrary + Show, B: Arbitrary + Show, C: Testable>
+    impl<A: Arbitrary + Shrink + Show, B: Arbitrary + Shrink + Show, C: Testable>
         Testable for 'static |A, B| -> C {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
-            let (a, b): (A, B) = (arby(g), arby(g));
-            let (a_arg, b_arg) = (a.to_str(), b.to_str());
-            let mut r: ~TestResult = (*self)(a, b).result(g);
-            r.arguments.unshift(b_arg);
-            r.arguments.unshift(a_arg);
-            r
+            apply2(g, |a, b| (*self)(a, b))
         }
     }
 
-    impl<A: Arbitrary + Show,
-         B: Arbitrary + Show,
-         C: Arbitrary + Show,
+    impl<A: Arbitrary + Shrink + Show,
+         B: Arbitrary + Shrink + Show,
+         C: Arbitrary + Shrink + Show,
          D: Testable>
         Testable for 'static |A, B, C| -> D {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
-            let (a, b, c): (A, B, C) = (arby(g), arby(g), arby(g));
-            let (a_arg, b_arg, c_arg) = (a.to_str(), b.to_str(), c.to_str());
-            let mut r: ~TestResult = (*self)(a, b, c).result(g);
-            r.arguments.unshift(c_arg);
-            r.arguments.unshift(b_arg);
-            r.arguments.unshift(a_arg);
-            r
+            apply3(g, |a, b, c| (*self)(a, b, c))
         }
     }
 
     impl<A: Testable> Testable for fn() -> A {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
-            (*self)().result(g)
+            apply0(g, || (*self)())
         }
     }
 
-    impl<A: Arbitrary + Show, B: Testable> Testable for fn(A) -> B {
+    impl<A: Arbitrary + Shrink + Show, B: Testable> Testable for fn(A) -> B {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
-            let a: A = Arbitrary::arbitrary(g);
-            let arg: ~str = a.to_str();
-            let mut r: ~TestResult = (*self)(a).result(g);
-            r.arguments.unshift(arg);
-            r
+            apply1(g, |a| (*self)(a))
         }
     }
 
-    impl<A: Arbitrary + Show, B: Arbitrary + Show, C: Testable>
+    impl<A: Arbitrary + Shrink + Show, B: Arbitrary + Shrink + Show, C: Testable>
         Testable for fn(A, B) -> C {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
-            let (a, b): (A, B) = (arby(g), arby(g));
-            let (a_arg, b_arg) = (a.to_str(), b.to_str());
-            let mut r: ~TestResult = (*self)(a, b).result(g);
-            r.arguments.unshift(b_arg);
-            r.arguments.unshift(a_arg);
-            r
+            apply2(g, |a, b| (*self)(a, b))
         }
     }
 
-    impl<A: Arbitrary + Show,
-         B: Arbitrary + Show,
-         C: Arbitrary + Show,
+    impl<A: Arbitrary + Shrink + Show,
+         B: Arbitrary + Shrink + Show,
+         C: Arbitrary + Shrink + Show,
          D: Testable>
         Testable for fn(A, B, C) -> D {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
-            let (a, b, c): (A, B, C) = (arby(g), arby(g), arby(g));
-            let (a_arg, b_arg, c_arg) = (a.to_str(), b.to_str(), c.to_str());
-            let mut r: ~TestResult = (*self)(a, b, c).result(g);
-            r.arguments.unshift(c_arg);
-            r.arguments.unshift(b_arg);
-            r.arguments.unshift(a_arg);
-            r
+            apply3(g, |a, b, c| (*self)(a, b, c))
         }
     }
 
-    pub fn quickcheck<A: Testable>(f: A) {
-        let g = &mut gen(task_rng(), DEFAULT_SIZE);
-        quickcheckConfig(DEFAULT_CONFIG, g, f)
+    fn apply0<A: Testable,
+              G: Gen
+             >(g: &mut G, fun: || -> A)
+             -> ~TestResult {
+        shrink(0, (), (), (), |_: (), _: (), _: ()| fun().result(g))
     }
 
-    pub fn quickcheckConfig<A: Testable, G: Gen>(c: Config, g: &mut G, f: A) {
-        let r = f.result(g);
-        debug!("{}", r);
+    fn apply1<A: Arbitrary + Shrink + Show,
+              B: Testable,
+              G: Gen
+             >(g: &mut G, fun: |a: A| -> B)
+             -> ~TestResult {
+        let a = arby(g);
+        shrink(1, a, (), (), |a: A, _: (), _: ()| {
+            let mut r = fun(a.clone()).result(g);
+            if r.is_failure() {
+                r.arguments = ~[a.to_str()];
+            }
+            r
+        })
+    }
+
+    fn apply2<A: Arbitrary + Shrink + Show,
+              B: Arbitrary + Shrink + Show,
+              C: Testable,
+              G: Gen
+             >(g: &mut G, fun: |a: A, b: B| -> C)
+             -> ~TestResult {
+        let (a, b): (A, B) = arby(g);
+        shrink(2, a, b, (), |a: A, b: B, _: ()| {
+            let mut r = fun(a.clone(), b.clone()).result(g);
+            if r.is_failure() {
+                r.arguments = ~[a.to_str(), b.to_str()];
+            }
+            r
+        })
+    }
+
+    fn apply3<A: Arbitrary + Shrink + Show,
+              B: Arbitrary + Shrink + Show,
+              C: Arbitrary + Shrink + Show,
+              D: Testable,
+              G: Gen
+             >(g: &mut G, fun: |a: A, b: B, c: C| -> D)
+             -> ~TestResult {
+        let (a, b, c): (A, B, C) = arby(g);
+        shrink(3, a, b, c, |a: A, b: B, c: C| {
+            let mut r = fun(a.clone(), b.clone(), c.clone()).result(g);
+            if r.is_failure() {
+                r.arguments = ~[a.to_str(), b.to_str(), c.to_str()];
+            }
+            r
+        })
+    }
+
+    fn shrink<A: Shrink + Show, B: Shrink + Show, C: Shrink + Show>
+             (n: uint, a: A, b: B, c: C, fun: |A, B, C| -> ~TestResult)
+             -> ~TestResult {
+        let toshrink = (a.clone(), b.clone(), c.clone());
+        let mut r: ~TestResult = fun(a, b, c);
+        match r.status {
+            Pass|Discard => return r, // don't care about the args here
+            Fail => {
+                for (a, b, c) in toshrink.shrink() {
+                    let r1 = fun(a.clone(), b.clone(), c.clone());
+                    match r1.status {
+                        Pass|Discard => continue,
+                        Fail => {
+                            let r2 = shrink(n, a, b, c, |a, b, c| fun(a, b, c));
+                            match r2.status {
+                                Pass|Discard => r = r1,
+                                Fail => r = r2,
+                            }
+                            break;
+                        },
+                    }
+                }
+            },
+        }
+        r
     }
 
     /// Convenient alias.
@@ -193,24 +316,21 @@ mod test {
 
     static CONFIG: Config = Config {
         tests: 100,
-        max_tests: 1000,
+        max_tests: 10000,
     };
 
-    // #[test] 
-    // fn reverse_reverse() { 
-        // let g = &mut gen(task_rng(), 20); 
-        // fn revrev(xs: ~[uint]) -> bool { 
-            // let rev = xs.clone().move_rev_iter().to_owned_vec() 
-                        // .move_rev_iter().to_owned_vec(); 
-            // xs == rev 
-        // } 
-        // for _ in iter::range(0, 10) { 
-            // debug!("{}", (revrev).result(g)); 
-        // } 
-    // } 
-
     fn check<A: Testable>(f: A) {
-        quickcheckConfig(CONFIG, &mut gen(task_rng(), 5), f)
+        quickcheckConfig(CONFIG, &mut gen(task_rng(), 50), f)
+    }
+
+    #[test]
+    fn prop_reverse_reverse() {
+        fn revrev(xs: ~[uint]) -> bool {
+            let rev = xs.clone().move_rev_iter().to_owned_vec();
+            let revrev = rev.move_rev_iter().to_owned_vec();
+            xs == revrev
+        }
+        check(revrev);
     }
 
     #[test]
@@ -220,29 +340,24 @@ mod test {
                 return TestResult::discard()
             }
             return TestResult::from_bool(
-                xs.clone().move_rev_iter().to_owned_vec()
-                ==
-                xs.clone().move_rev_iter().to_owned_vec()
+                xs == xs.clone().move_rev_iter().to_owned_vec()
             )
         }
         check(rev_single);
     }
 
-    // #[test] 
-    // fn reverse_app() { 
-        // let g = &mut gen(task_rng(), 20); 
-        // fn revapp(xs: ~[uint], ys: ~[uint]) -> bool { 
-            // let app = ::std::vec::append(xs.clone(), ys); 
-            // let app_rev = app.move_rev_iter().to_owned_vec(); 
-//  
-            // let rxs = xs.clone().move_rev_iter().to_owned_vec(); 
-            // let rys = ys.clone().move_rev_iter().to_owned_vec(); 
-            // let rev_app = ::std::vec::append(rys, rxs); 
-//  
-            // app_rev == rev_app 
-        // } 
-        // for _ in iter::range(0, 10) { 
-            // debug!("{}", (revapp).result(g)); 
-        // } 
-    // } 
+    #[test]
+    fn reverse_app() {
+        fn revapp(xs: ~[uint], ys: ~[uint]) -> bool {
+            let app = ::std::vec::append(xs.clone(), ys);
+            let app_rev = app.move_rev_iter().to_owned_vec();
+
+            let rxs = xs.clone().move_rev_iter().to_owned_vec();
+            let rys = ys.clone().move_rev_iter().to_owned_vec();
+            let rev_app = ::std::vec::append(rys, rxs);
+
+            app_rev == rev_app
+        }
+        check(revapp);
+    }
 }
