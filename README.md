@@ -404,7 +404,7 @@ critical features. (I don't think any of them build either.)
   properties are not polymorphic. Also, I *think* its approach to laziness is 
   no longer possible with the changes in closures, but I could be wrong.
 * [lilac/quick-check](https://github.com/lilac/quick-check) - This is a fork of
-  `blake2-ppc/qc.rs`. I can't see any substantial changes, although it is used
+  `blake2-ppc/qc.rs`. I can't see any substantial changes, although it is using
   `proc` in the laziness code, so perhaps they've gotten it to work.
 
 
