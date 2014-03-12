@@ -12,7 +12,7 @@ pub fn gen<R: Rng>(rng: R, size: uint) -> StdGen<R> {
     StdGen{rng: rng, size: size}
 }
 
-/// Gen wraps a `rand::Rng` with parameters to control the distribution of
+/// `Gen` wraps a `rand::Rng` with parameters to control the distribution of
 /// random values.
 pub trait Gen : Rng {
     fn size(&self) -> uint;
