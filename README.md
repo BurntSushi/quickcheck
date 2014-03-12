@@ -364,6 +364,12 @@ caught by QuickCheck. Therefore, such failures will not have a witness attached
 to them. (I'd like to fix this, but I don't know how.)
 * `Coarbitrary` does not exist in any form in this package. I think it's 
 possible; I just haven't gotten around to it yet.
+* The output of `quickcheck` does not include the name of the function it's
+testing. I'm not sure if this is possible or not using reflection (and this is 
+complicated by the fact that everything is generic anyway). If not, it might be 
+worth providing something in the public API with the ability to name functions.
+However, this may be moot since using `#[test]` will show the name of the test 
+function.
 
 Please let me know if I've missed anything else.
 
