@@ -23,7 +23,8 @@ mod tester {
     use std::fmt::Show;
     use std::iter;
     use std::rand::task_rng;
-    use super::{Arbitrary, Gen, gen};
+    use std::task;
+    use super::{Arbitrary, Gen, ObjIter, gen};
 
     /// Default size hint used in `quickcheck` for sampling from a random
     /// distribution.
@@ -118,25 +119,43 @@ mod tester {
         max_tests: uint,
     }
 
+    /// Describes the status of a single instance of a test.
+    ///
+    /// All testable things must be capable of producing a `~TestResult`.
     #[deriving(Clone, Show)]
     pub struct TestResult {
         priv status: Status,
         priv arguments: ~[~str],
     }
 
+    /// Whether a test has passed, failed or been discarded.
     #[deriving(Clone, Show)]
     priv enum Status { Pass, Fail, Discard }
 
     impl TestResult {
+        /// Produces a test result that indicates the current test has passed.
         pub fn passed() -> ~TestResult { TestResult::from_bool(true) }
+
+        /// Produces a test result that indicates the current test has failed.
         pub fn failed() -> ~TestResult { TestResult::from_bool(false) }
+
+        /// Produces a test result that instructs `quickcheck` to ignore it.
+        /// This is useful for restricting the domain of your properties.
+        /// When a test is discarded, `quickcheck` will replace it with a
+        /// fresh one (up to a certain limit).
         pub fn discard() -> ~TestResult {
             ~TestResult { status: Discard, arguments: ~[] }
         }
+
+        /// Converts a `bool` to a `~TestResult`. A `true` value indicates that
+        /// the test has passed and a `false` value indicates that the test
+        /// has failed.
         pub fn from_bool(b: bool) -> ~TestResult {
             ~TestResult { status: if b { Pass } else { Fail }, arguments: ~[] }
         }
 
+        /// Returns `true` if and only if this test result describes a failing
+        /// test.
         pub fn is_failure(&self) -> bool {
             match self.status {
                 Fail => true,
@@ -145,6 +164,24 @@ mod tester {
         }
     }
 
+    /// `Testable` describes types (e.g., a function) whose values can be 
+    /// tested.
+    ///
+    /// Anything that can be tested must be capable of producing a `TestResult`
+    /// given a random number generator. This is trivial for types like `bool`,
+    /// which are just converted to either a passing or failing test result.
+    ///
+    /// For functions, an implementation must generate random arguments
+    /// and potentially shrink those arguments if they produce a failure.
+    ///
+    /// It's unlikely that you'll have to implement this trait yourself.
+    /// This comes with a caveat: currently, only functions with 3 parameters 
+    /// or fewer (both `fn` and `||` types) satisfy `Testable`. If you have
+    /// functions to test with more than 3 parameters, please
+    /// [file a bug](https://github.com/BurntSushi/quickcheck/issues) and
+    /// I'll hopefully add it. (As of now, it would be very difficult to
+    /// add your own implementation outside of `quickcheck`, since the
+    /// functions that do shrinking are not public.)
     pub trait Testable {
         fn result<G: Gen>(&self, &mut G) -> ~TestResult;
     }
@@ -159,6 +196,15 @@ mod tester {
         fn result<G: Gen>(&self, _: &mut G) -> ~TestResult { self.clone() }
     }
 
+    impl<A: Testable> Testable for Result<A, ~str> {
+        fn result<G: Gen>(&self, _: &mut G) -> ~TestResult {
+            match *self {
+                Ok(_) => TestResult::passed(),
+                Err(_) => TestResult::failed(),
+            }
+        }
+    }
+
     // I should really figure out how to use macros. This is painful.
     // N.B. This isn't needed in Haskell because it's currying by default!
     // Perhaps there is a way to circumvent this in Rust too (without macros),
@@ -170,23 +216,19 @@ mod tester {
         }
     }
 
-    impl<A: Arbitrary + Show, B: Testable> Testable for 'static |A| -> B {
+    impl<A: AShow, B: Testable> Testable for 'static |A| -> B {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
             apply1(g, |a| (*self)(a))
         }
     }
 
-    impl<A: Arbitrary + Show, B: Arbitrary + Show, C: Testable>
-        Testable for 'static |A, B| -> C {
+    impl<A: AShow, B: AShow, C: Testable> Testable for 'static |A, B| -> C {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
             apply2(g, |a, b| (*self)(a, b))
         }
     }
 
-    impl<A: Arbitrary + Show,
-         B: Arbitrary + Show,
-         C: Arbitrary + Show,
-         D: Testable>
+    impl<A: AShow, B: AShow, C: AShow, D: Testable>
         Testable for 'static |A, B, C| -> D {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
             apply3(g, |a, b, c| (*self)(a, b, c))
@@ -199,43 +241,36 @@ mod tester {
         }
     }
 
-    impl<A: Arbitrary + Show, B: Testable> Testable for fn(A) -> B {
+    impl<A: AShow, B: Testable> Testable for fn(A) -> B {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
             apply1(g, |a| (*self)(a))
         }
     }
 
-    impl<A: Arbitrary + Show, B: Arbitrary + Show, C: Testable>
-        Testable for fn(A, B) -> C {
+    impl<A: AShow, B: AShow, C: Testable> Testable for fn(A, B) -> C {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
             apply2(g, |a, b| (*self)(a, b))
         }
     }
 
-    impl<A: Arbitrary + Show,
-         B: Arbitrary + Show,
-         C: Arbitrary + Show,
-         D: Testable>
+    impl<A: AShow, B: AShow, C: AShow, D: Testable>
         Testable for fn(A, B, C) -> D {
         fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
             apply3(g, |a, b, c| (*self)(a, b, c))
         }
     }
 
-    fn apply0<A: Testable,
-              G: Gen
-             >(g: &mut G, fun: || -> A)
-             -> ~TestResult {
-        shrink(0, (), (), (), |_: (), _: (), _: ()| fun().result(g))
+    // The following apply functions are used to abstract over the different
+    // function types `fn` and `||`.
+
+    fn apply0<A: Testable, G: Gen>(g: &mut G, fun: || -> A) -> ~TestResult {
+        shrink((), (), (), |_: (), _: (), _: ()| fun().result(g))
     }
 
-    fn apply1<A: Arbitrary + Show,
-              B: Testable,
-              G: Gen
-             >(g: &mut G, fun: |a: A| -> B)
-             -> ~TestResult {
+    fn apply1<A: AShow, B: Testable, G: Gen>
+             (g: &mut G, fun: |a: A| -> B) -> ~TestResult {
         let a = arby(g);
-        shrink(1, a, (), (), |a: A, _: (), _: ()| {
+        shrink(a, (), (), |a: A, _: (), _: ()| {
             let mut r = fun(a.clone()).result(g);
             if r.is_failure() {
                 r.arguments = ~[a.to_str()];
@@ -244,14 +279,10 @@ mod tester {
         })
     }
 
-    fn apply2<A: Arbitrary + Show,
-              B: Arbitrary + Show,
-              C: Testable,
-              G: Gen
-             >(g: &mut G, fun: |a: A, b: B| -> C)
-             -> ~TestResult {
+    fn apply2<A: AShow, B: AShow, C: Testable, G: Gen>
+             (g: &mut G, fun: |a: A, b: B| -> C) -> ~TestResult {
         let (a, b): (A, B) = arby(g);
-        shrink(2, a, b, (), |a: A, b: B, _: ()| {
+        shrink(a, b, (), |a: A, b: B, _: ()| {
             let mut r = fun(a.clone(), b.clone()).result(g);
             if r.is_failure() {
                 r.arguments = ~[a.to_str(), b.to_str()];
@@ -260,15 +291,10 @@ mod tester {
         })
     }
 
-    fn apply3<A: Arbitrary + Show,
-              B: Arbitrary + Show,
-              C: Arbitrary + Show,
-              D: Testable,
-              G: Gen
-             >(g: &mut G, fun: |a: A, b: B, c: C| -> D)
-             -> ~TestResult {
+    fn apply3<A: AShow, B: AShow, C: AShow, D: Testable, G: Gen>
+             (g: &mut G, fun: |a: A, b: B, c: C| -> D) -> ~TestResult {
         let (a, b, c): (A, B, C) = arby(g);
-        shrink(3, a, b, c, |a: A, b: B, c: C| {
+        shrink(a, b, c, |a: A, b: B, c: C| {
             let mut r = fun(a.clone(), b.clone(), c.clone()).result(g);
             if r.is_failure() {
                 r.arguments = ~[a.to_str(), b.to_str(), c.to_str()];
@@ -277,40 +303,70 @@ mod tester {
         })
     }
 
-    fn shrink<A: Arbitrary + Show, B: Arbitrary + Show, C: Arbitrary + Show>
-             (n: uint, a: A, b: B, c: C, fun: |A, B, C| -> ~TestResult)
+    fn shrink<A: AShow, B: AShow, C: AShow>
+             (a: A, b: B, c: C, fun: |A, B, C| -> ~TestResult)
              -> ~TestResult {
-        let toshrink = (a.clone(), b.clone(), c.clone());
-        let mut r: ~TestResult = fun(a, b, c);
+        let r = fun(a.clone(), b.clone(), c.clone());
         match r.status {
-            Pass|Discard => return r, // don't care about the args here
+            Pass|Discard => r,
             Fail => {
-                for (a, b, c) in toshrink.shrink() {
-                    let r1 = fun(a.clone(), b.clone(), c.clone());
-                    match r1.status {
-                        Pass|Discard => continue,
-                        Fail => {
-                            let r2 = shrink(n, a, b, c, |a, b, c| fun(a, b, c));
-                            match r2.status {
-                                Pass|Discard => r = r1,
-                                Fail => r = r2,
-                            }
-                            break;
-                        },
-                    }
+                // We've found a failing test case, so try to shrink it.
+                match shrink_failure((a, b, c).shrink(), fun) {
+                    Some(smaller) => smaller,
+                    None => r,
                 }
-            },
+            }
         }
-        r
     }
 
-    /// Convenient alias.
+    fn shrink_failure<A: AShow, B: AShow, C: AShow>
+                     (mut shrinker: ~ObjIter:<(A, B, C)>,
+                      fun: |A, B, C| -> ~TestResult)
+                     -> Option<~TestResult> {
+        for (a, b, c) in shrinker {
+            let r = fun(a.clone(), b.clone(), c.clone());
+            match r.status {
+                // The shrunk value does not witness a failure, so
+                // throw it away.
+                Pass|Discard => continue,
+
+                // The shrunk value *does* witness a failure, so keep trying
+                // to shrink it.
+                Fail => {
+                    let shrunk = shrink_failure((a, b, c).shrink(),
+                                                |a, b, c| fun(a, b, c));
+
+                    // If we couldn't witness a failure on any shrunk value,
+                    // then return the failure we already have.
+                    return Some(shrunk.unwrap_or(r))
+                },
+            }
+        }
+        None
+    }
+
+    // This is my bright idea for capturing runtime errors caused by a test.
+    // Haven't been able to get the compiler to accept it.
+    #[allow(dead_code)]
+    fn safe<T: Send>(fun: proc() -> T) -> Result<T, ~str> {
+        let tryr = task::try(proc() { fun() });
+        match tryr {
+            Ok(t) => Ok(t),
+            Err(_) => Err(~"WTF"),
+        }
+    }
+
+    /// Convenient aliases.
+    trait AShow : Arbitrary + Show {}
+    impl<A: Arbitrary + Show> AShow for A {}
     fn arby<A: Arbitrary, G: Gen>(g: &mut G) -> A { Arbitrary::arbitrary(g) }
 }
 
 #[cfg(test)]
 mod test {
+    use std::iter;
     use std::rand::task_rng;
+    use std::vec;
     use super::{Config, Testable, TestResult, gen, quickcheckConfig};
 
     static CONFIG: Config = Config {
@@ -319,22 +375,22 @@ mod test {
     };
 
     fn check<A: Testable>(f: A) {
-        quickcheckConfig(CONFIG, &mut gen(task_rng(), 50), f)
+        quickcheckConfig(CONFIG, &mut gen(task_rng(), 100), f)
     }
 
     #[test]
     fn prop_reverse_reverse() {
-        fn revrev(xs: ~[uint]) -> bool {
+        fn prop(xs: ~[uint]) -> bool {
             let rev = xs.clone().move_rev_iter().to_owned_vec();
             let revrev = rev.move_rev_iter().to_owned_vec();
             xs == revrev
         }
-        check(revrev);
+        check(prop);
     }
 
     #[test]
     fn reverse_single() {
-        fn rev_single(xs: ~[uint]) -> ~TestResult {
+        fn prop(xs: ~[uint]) -> ~TestResult {
             if xs.len() != 1 {
                 return TestResult::discard()
             }
@@ -342,12 +398,12 @@ mod test {
                 xs == xs.clone().move_rev_iter().to_owned_vec()
             )
         }
-        check(rev_single);
+        check(prop);
     }
 
     #[test]
     fn reverse_app() {
-        fn revapp(xs: ~[uint], ys: ~[uint]) -> bool {
+        fn prop(xs: ~[uint], ys: ~[uint]) -> bool {
             let app = ::std::vec::append(xs.clone(), ys);
             let app_rev = app.move_rev_iter().to_owned_vec();
 
@@ -357,6 +413,85 @@ mod test {
 
             app_rev == rev_app
         }
-        check(revapp);
+        check(prop);
+    }
+
+    #[test]
+    fn max() {
+        fn prop(x: int, y: int) -> ~TestResult {
+            if x > y {
+                return TestResult::discard()
+            } else {
+                return TestResult::from_bool(::std::cmp::max(x, y) == y)
+            }
+        }
+        check(prop);
+    }
+
+    #[test]
+    fn sort() {
+        fn prop(mut xs: ~[int]) -> bool {
+            xs.sort();
+            let upto = if xs.len() == 0 { 0 } else { xs.len()-1 };
+            for i in iter::range(0, upto) {
+                if xs[i] > xs[i+1] {
+                    return false
+                }
+            }
+            true
+        }
+        check(prop);
+    }
+
+    #[test]
+    // #[should_fail] 
+    fn sieve_of_eratosthenes() {
+        fn sieve(n: uint) -> ~[uint] {
+            if n <= 1 {
+                return ~[]
+            }
+
+            let mut marked = vec::from_fn(n+1, |_| false);
+            marked[0] = true; marked[1] = true; marked[2] = false;
+            let next_marked = |marked: &[bool], p: uint| -> Option<uint> {
+                for (i, m) in marked.iter().enumerate() {
+                    if i > p && !m { return Some(i) }
+                }
+                None
+            };
+            let mut next = next_marked(marked, 1);
+            while !next.is_none() {
+                let p = next.unwrap();
+                for i in iter::range_step(2 * p, n, p) { // whoops!
+                    marked[i] = true;
+                }
+                next = next_marked(marked, p);
+            }
+            iter::range(0, n+1)
+                .filter_map(|i| if marked[i] { None } else { Some(i) })
+                .to_owned_vec()
+        }
+
+        fn prop(n: uint) -> bool {
+            let primes = sieve(n);
+            debug!("{}: {}", n, primes);
+            primes.iter().all(|&i| is_prime(i))
+        }
+        fn is_prime(n: uint) -> bool {
+            if n == 0 || n == 1 {
+                return false
+            } else if n == 2 {
+                return true
+            }
+
+            let max_possible = (n as f64).sqrt().ceil() as uint;
+            for i in iter::range(2, max_possible + 1) {
+                if n % i == 0 {
+                    return false
+                }
+            }
+            return true
+        }
+        check(prop);
     }
 }
