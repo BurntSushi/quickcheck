@@ -192,7 +192,7 @@ fn is_prime(n: uint) -> bool {
 }
 ```
 
-All this is doing is checking to see if any number in `[3, sqrt(n)+1]` divides
+All this is doing is checking to see if any number in `[2, sqrt(n)+1]` divides
 `n` with a few special cases for `0`, `1` and `2`.
 
 Now we can write our QuickCheck property:
