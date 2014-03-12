@@ -17,7 +17,7 @@ extern crate rand;
 
 pub use arbitrary::{Arbitrary, Gen, StdGen, ObjIter, gen};
 pub use tester::{Testable, TestResult, Config};
-pub use tester::{quickcheck, quickcheckConfig, quicktest, quicktestConfig};
+pub use tester::{quickcheck, quickcheck_config, quicktest, quicktest_config};
 pub use tester::{DEFAULT_CONFIG, DEFAULT_SIZE};
 
 mod arbitrary;
@@ -42,7 +42,7 @@ mod tester {
     /// Does randomized testing on `f` and produces a possibly minimal
     /// witness for test failures.
     ///
-    /// This function is equivalent to calling `quickcheckConfig` with
+    /// This function is equivalent to calling `quickcheck_config` with
     /// `DEFAULT_CONFIG` and a `Gen` with size `DEFAULT_SIZE`.
     ///
     /// As of now, it is intended for `quickcheck` to be used inside Rust's
@@ -65,13 +65,13 @@ mod tester {
     /// failure.
     pub fn quickcheck<A: Testable>(f: A) {
         let g = &mut gen(task_rng(), DEFAULT_SIZE);
-        quickcheckConfig(DEFAULT_CONFIG, g, f)
+        quickcheck_config(DEFAULT_CONFIG, g, f)
     }
 
     /// Does randomized testing on `f` with the given config and produces a 
     /// possibly minimal witness for test failures.
-    pub fn quickcheckConfig<A: Testable, G: Gen>(c: Config, g: &mut G, f: A) {
-        match quicktestConfig(c, g, f) {
+    pub fn quickcheck_config<A: Testable, G: Gen>(c: Config, g: &mut G, f: A) {
+        match quicktest_config(c, g, f) {
             Ok(ntests) => debug!("[quickcheck] Passed {:u} tests.", ntests),
             Err(err) => fail!(err),
         }
@@ -81,12 +81,12 @@ mod tester {
     /// or a witness of failure.
     pub fn quicktest<A: Testable>(f: A) -> Result<uint, ~str> {
         let g = &mut gen(task_rng(), DEFAULT_SIZE);
-        quicktestConfig(DEFAULT_CONFIG, g, f)
+        quicktest_config(DEFAULT_CONFIG, g, f)
     }
 
-    /// Like `quickcheckConfig`, but returns either the number of tests passed
+    /// Like `quickcheck_config`, but returns either the number of tests passed
     /// or a witness of failure.
-    pub fn quicktestConfig<A: Testable, G: Gen>
+    pub fn quicktest_config<A: Testable, G: Gen>
         (c: Config, g: &mut G, f: A) -> Result<uint, ~str> {
         let mut ntests: uint = 0;
         for _ in iter::range(0, c.max_tests) {
@@ -110,7 +110,7 @@ mod tester {
     /// Config contains various parameters for controlling automated testing.
     ///
     /// Note that the distribution of random values is controlled by the
-    /// generator passed to `quickcheckConfig`.
+    /// generator passed to `quickcheck_config`.
     pub struct Config {
         /// The number of tests to run on a function where the result is
         /// either a pass or a failure. (i.e., This doesn't include discarded
@@ -370,7 +370,7 @@ mod test {
     use std::iter;
     use std::vec;
     use rand::task_rng;
-    use super::{Config, Testable, TestResult, gen, quickcheckConfig};
+    use super::{Config, Testable, TestResult, gen, quickcheck_config};
 
     static CONFIG: Config = Config {
         tests: 100,
@@ -378,7 +378,7 @@ mod test {
     };
 
     fn check<A: Testable>(f: A) {
-        quickcheckConfig(CONFIG, &mut gen(task_rng(), 100), f)
+        quickcheck_config(CONFIG, &mut gen(task_rng(), 100), f)
     }
 
     #[test]

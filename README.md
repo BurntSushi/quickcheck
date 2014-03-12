@@ -188,7 +188,7 @@ condition is seldom met, it's possible that `quickcheck` will have to settle
 for running fewer tests than usual. By default, if `quickcheck` can't find 
 `100` valid tests after trying `10,000` times, then it will give up.
 This parameter may be changed using
-[`quickcheckConfig`](http://burntsushi.net/rustdoc/quickcheck/fn.quickcheckConfig.html).
+[`quickcheck_config`](http://burntsushi.net/rustdoc/quickcheck/fn.quickcheck_config.html).
 
 
 ### Shrinking
