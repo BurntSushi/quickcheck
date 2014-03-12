@@ -31,7 +31,7 @@ fn is_prime(n: uint) -> bool {
     }
 
     let max_possible = (n as f64).sqrt().ceil() as uint;
-    for i in iter::range(2, max_possible + 1) {
+    for i in iter::range_inclusive(2, max_possible) {
         if n % i == 0 {
             return false
         }

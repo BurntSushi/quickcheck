@@ -183,7 +183,7 @@ fn is_prime(n: uint) -> bool {
     }
 
     let max_possible = (n as f64).sqrt().ceil() as uint;
-    for i in iter::range(2, max_possible + 1) {
+    for i in iter::range(2, max_possible) {
         if n % i == 0 {
             return false
         }
@@ -192,7 +192,7 @@ fn is_prime(n: uint) -> bool {
 }
 ```
 
-All this is doing is checking to see if any number in `[2, sqrt(n)+1]` divides
+All this is doing is checking to see if any number in `[2, sqrt(n)]` divides
 `n` with a few special cases for `0`, `1` and `2`.
 
 Now we can write our QuickCheck property:
