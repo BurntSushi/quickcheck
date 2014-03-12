@@ -129,7 +129,7 @@ Briefly, the algorithm works by allocating an array with `N` slots containing
 booleans. Slots marked with `false` correspond to prime numbers (or numbers
 not known to be prime while building the sieve) and slots marked with `true`
 are known to not be prime. For each `n`, all of its multiples in this array
-are marked as true. When all `n` have been checked, the numbers marked `true`
+are marked as true. When all `n` have been checked, the numbers marked `false`
 are returned as the primes.
 
 As you might imagine, there's a lot of potential for off-by-one errors, which 
