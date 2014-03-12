@@ -51,7 +51,7 @@ fn main() {
 ### Installation
 
 The `quickcheck` crate only depends on the standard crates shipped with the 
-standard Rust distribution.
+Rust distribution.
 
 Given that Rust hasn't hit `1.0` yet---and the recent deprecation of 
 `rustpkg`---installing Rust libraries is pretty grim at the moment.
