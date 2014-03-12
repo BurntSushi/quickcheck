@@ -52,13 +52,13 @@ More than that, I am keeping this crate in sync with Rust's master branch (as
 enforced by `travis-ci`), so you'll need to build Rust from source first.
 
 If you have an up-to-date Rust, then the easiest way to get going is to just 
-clone the repo and build it:
+clone the quickcheck repo and build it:
 
 ```bash
 git clone git://github.com/BurntSushi/quickcheck
 cd quickcheck
 rustc --crate-type lib ./src/lib.rs # makes libquickcheck-{version}.rlib in CWD
-rustc -L . ./examples/reverse.rs
+rustc -L ./ ./examples/reverse.rs
 RUST_LOG=quickcheck ./reverse
 ```
 
