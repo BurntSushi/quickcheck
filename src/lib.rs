@@ -21,7 +21,6 @@ pub use tester::{quickcheck, quickcheckConfig, quicktest, quicktestConfig};
 pub use tester::{DEFAULT_CONFIG, DEFAULT_SIZE};
 
 mod arbitrary;
-// mod shrink; 
 
 mod tester {
     use std::fmt::Show;
