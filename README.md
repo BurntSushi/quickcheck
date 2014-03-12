@@ -10,6 +10,9 @@ Haskell](http://hackage.haskell.org/package/QuickCheck).)
 
 [![Build status](https://api.travis-ci.org/BurntSushi/quickcheck.png)](https://travis-ci.org/BurntSushi/quickcheck)
 
+This port of QuickCheck is licensed under the
+[UNLICENSE](http://unlicense.org).
+
 
 ### Documentation
 
