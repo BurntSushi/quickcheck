@@ -1,3 +1,6 @@
+compile:
+	rustc ./src/lib.rs
+
 install:
 	cargo-lite install
 
