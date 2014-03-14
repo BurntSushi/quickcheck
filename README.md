@@ -365,6 +365,10 @@ which seems clearer.
 Changing the call to `range_step_inclusive` results in `sieve` passing all 
 tests for the `prop_all_prime` property.
 
+In addition, if our bug happened to result in an index out-of-bounds error, 
+then `quickcheck` can handle it just like any other failure---including 
+shrinking on failures caused by runtime errors.
+
 
 ### What's not in this port of QuickCheck?
 
