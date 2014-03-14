@@ -11,9 +11,8 @@ fn reverse<T: Clone>(xs: &[T]) -> ~[T] {
 }
 
 fn main() {
-    quickcheck(|xs: ~[int]| xs == reverse(reverse(xs)));
-
-    // You can also use regular `fn` types.
-    fn prop(xs: ~[int]) -> bool { xs == reverse(reverse(xs)) }
+    fn prop(xs: ~[int]) -> bool {
+        xs == reverse(reverse(xs))
+    }
     quickcheck(prop);
 }

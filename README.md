@@ -39,10 +39,9 @@ fn reverse<T: Clone>(xs: &[T]) -> ~[T] {
 }
 
 fn main() {
-    quickcheck(|xs: ~[int]| xs == reverse(reverse(xs)));
-
-    // You can also use regular `fn` types.
-    fn prop(xs: ~[int]) -> bool { xs == reverse(reverse(xs)) }
+    fn prop(xs: ~[int]) -> bool {
+        xs == reverse(reverse(xs))
+    }
     quickcheck(prop);
 }
 ```
@@ -210,7 +209,10 @@ fn reverse<T: Clone>(xs: &[T]) -> ~[T] {
 And a property to test that `xs == reverse(reverse(xs))`:
 
 ```rust
-quickcheck(|xs: ~[int]| xs == reverse(reverse(xs)));
+fn prop(xs: ~[int]) -> bool {
+    xs == reverse(reverse(xs))
+}
+quickcheck(prop);
 ```
 
 Then without shrinking, you might get a counter-example like:
