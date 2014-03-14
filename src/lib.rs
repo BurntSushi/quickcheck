@@ -432,21 +432,6 @@ mod test {
     }
 
     #[test]
-    fn simple_closure() {
-        qcheck(|| true);
-    }
-
-    // #[test] 
-    // fn prop_reverse_reverse_closure() { 
-        // let prop = |xs: ~[uint]| -> bool { 
-            // let rev = xs.clone().move_rev_iter().to_owned_vec(); 
-            // let revrev = rev.move_rev_iter().to_owned_vec(); 
-            // xs == revrev 
-        // }; 
-        // qcheck(prop); 
-    // } 
-
-    #[test]
     fn prop_reverse_reverse() {
         fn prop(xs: ~[uint]) -> bool {
             let rev = xs.clone().move_rev_iter().to_owned_vec();
