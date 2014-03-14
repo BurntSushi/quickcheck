@@ -386,7 +386,10 @@ mod tester {
 
             match t.try(fun) {
                 Ok(v) => Ok(v),
-                Err(_) => Err(reader.read_to_str().unwrap().trim().into_owned()),
+                Err(_) => {
+                    let s = reader.read_to_str().unwrap();
+                    Err(s.trim().into_owned())
+                }
             }
         }
     }
