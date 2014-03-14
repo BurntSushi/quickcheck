@@ -71,7 +71,9 @@ impl<T, A: Iterator<T>> ObjIter<T> for A {
 /// `Clone`. (I'm not sure if this is a permanent restriction.)
 pub trait Arbitrary : Clone + Send {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
-    fn shrink(&self) -> ~ObjIter:<Self>;
+    fn shrink(&self) -> ~ObjIter:<Self> {
+        ~{let zero: ~[Self] = ~[]; zero}.move_iter() as ~ObjIter:<Self>
+    }
 }
 
 impl Arbitrary for () {
