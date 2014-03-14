@@ -421,6 +421,6 @@ will fail anyway, but if QuickCheck can catch it, then we can attach a witness
 to the failure.)
 
 Also, I would like to avoid using macros for building abstractions. (I'm not 
-opposed to using them to generating trait implementations---as is done in the 
+opposed to using them for generating trait implementations---as is done in the 
 standard library---but I haven't learned them yet.)
 
