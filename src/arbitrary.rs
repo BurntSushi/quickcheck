@@ -69,7 +69,7 @@ impl<T, A: Iterator<T>> ObjIter<T> for A {
 ///
 /// As of now, all types that implement `Arbitrary` must also implement 
 /// `Clone`. (I'm not sure if this is a permanent restriction.)
-pub trait Arbitrary : Clone {
+pub trait Arbitrary : Clone + Send {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
     fn shrink(&self) -> ~ObjIter:<Self>;
 }
