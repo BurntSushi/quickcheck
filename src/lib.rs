@@ -357,8 +357,8 @@ mod tester {
 
     #[cfg(not(quickfail))]
     mod trap {
-        use std::comm::Chan;
-        use std::io::{PortReader, ChanWriter};
+        use std::comm::channel;
+        use std::io::{ChanReader, ChanWriter};
         use std::task::task;
 
         // This is my bright idea for capturing runtime errors caused by a
@@ -375,9 +375,10 @@ mod tester {
         // Moreover, this feature seems to prevent an implementation of
         // Testable for a stack closure type. *sigh*
         pub fn safe<T: Send>(fun: proc() -> T) -> Result<T, ~str> {
-            let (recv, send) = Chan::new();
-            let (stdout, stderr) = (ChanWriter::new(send.clone()), ChanWriter::new(send));
-            let mut reader = PortReader::new(recv);
+            let (send, recv) = channel();
+            let stdout = ChanWriter::new(send.clone());
+            let stderr = ChanWriter::new(send);
+            let mut reader = ChanReader::new(recv);
 
             let mut t = task();
             t.opts.name = Some((~"safefn").into_maybe_owned());
