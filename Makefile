@@ -23,6 +23,9 @@ quickcheck-test: src/lib.rs src/arbitrary.rs
 test-clean:
 	rm -rf ./quickcheck-test
 
+clean: test-clean
+	rm -f *.rlib
+
 push:
 	git push origin master
 	git push github master
