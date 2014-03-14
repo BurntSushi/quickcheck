@@ -1,3 +1,5 @@
+RUST_CFG=
+
 compile:
 	rustc ./src/lib.rs
 
@@ -12,11 +14,11 @@ docs:
 	in-dir doc fix-perms
 	rscp ./doc/* gopher:~/www/burntsushi.net/rustdoc/
 
-test: quickcheck-test src/lib.rs
+test: quickcheck-test
 	RUST_TEST_TASKS=1 RUST_LOG=quickcheck=4 ./quickcheck-test
 
-quickcheck-test:
-	rustc --test src/lib.rs -o quickcheck-test
+quickcheck-test: src/lib.rs src/arbitrary.rs
+	rustc --test $(RUST_CFG) src/lib.rs -o quickcheck-test
 
 test-clean:
 	rm -rf ./quickcheck-test
