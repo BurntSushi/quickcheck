@@ -1,6 +1,11 @@
 QuickCheck is a way to do property based testing using randomly generated 
 input. This crate comes with the ability to randomly generate and shrink 
 integers, floats, tuples, booleans, lists, strings, options and results.
+All QuickCheck needs is a property function---it will then randomly generate 
+inputs to that function and call the property for each set of inputs. If the 
+property fails (whether by a runtime error like index out-of-bounds or by not
+satisfying your property), the inputs are "shrunk" to find a smaller 
+counter-example.
 
 The shrinking strategies for lists and numbers use a binary search to cover 
 the input space quickly. (It should be the same strategy used in
