@@ -6,6 +6,9 @@ compile:
 install:
 	cargo-lite install
 
+tags:
+	ctags --recurse --options=ctags.rust --languages=Rust
+
 docs:
 	rm -rf doc
 	rustdoc src/lib.rs

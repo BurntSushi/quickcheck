@@ -2,3 +2,4 @@ doc
 .*.swp
 *.rlib
 quickcheck-test
+tags
