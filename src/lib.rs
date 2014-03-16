@@ -25,6 +25,7 @@ mod arbitrary;
 mod tester {
     use std::fmt::Show;
     use std::iter;
+    use std::vec_ng::Vec;
     use rand::task_rng;
     use super::{Arbitrary, Gen, ObjIter, gen};
     use tester::trap::safe;
@@ -51,7 +52,7 @@ mod tester {
     ///
     /// ```rust
     /// fn prop_reverse_reverse() {
-    ///     fn revrev(xs: ~[uint]) -> bool {
+    ///     fn revrev(xs: Vec<uint>) -> bool {
     ///         let rev = xs.clone().move_rev_iter().to_owned_vec();
     ///         let revrev = rev.move_rev_iter().to_owned_vec();
     ///         xs == revrev
@@ -127,7 +128,7 @@ mod tester {
     #[deriving(Clone, Show)]
     pub struct TestResult {
         priv status: Status,
-        priv arguments: ~[~str],
+        priv arguments: Vec<~str>,
         priv err: ~str,
     }
 
@@ -155,7 +156,7 @@ mod tester {
         /// When a test is discarded, `quickcheck` will replace it with a
         /// fresh one (up to a certain limit).
         pub fn discard() -> ~TestResult {
-            ~TestResult { status: Discard, arguments: ~[], err: ~"", }
+            ~TestResult { status: Discard, arguments: vec!(), err: ~"", }
         }
 
         /// Converts a `bool` to a `~TestResult`. A `true` value indicates that
@@ -164,7 +165,7 @@ mod tester {
         pub fn from_bool(b: bool) -> ~TestResult {
             ~TestResult {
                 status: if b { Pass } else { Fail },
-                arguments: ~[],
+                arguments: vec!(),
                 err: ~"",
             }
         }
@@ -282,7 +283,7 @@ mod tester {
                     let oa = ~a.clone();
                     let mut r = safe(proc() { f(*oa) }).result(g);
                     if r.is_failure() {
-                        r.arguments = ~[a.to_str()];
+                        r.arguments = vec!(a.to_str());
                     }
                     r
                 },
@@ -291,7 +292,7 @@ mod tester {
                     let (oa, ob) = (~a.clone(), ~b.clone());
                     let mut r = safe(proc() { f(*oa, *ob) }).result(g);
                     if r.is_failure() {
-                        r.arguments = ~[a.to_str(), b.to_str()];
+                        r.arguments = vec!(a.to_str(), b.to_str());
                     }
                     r
                 },
@@ -300,7 +301,7 @@ mod tester {
                     let (oa, ob, oc) = (~a.clone(), ~b.clone(), ~c.clone());
                     let mut r = safe(proc() { f(*oa, *ob, *oc) }).result(g);
                     if r.is_failure() {
-                        r.arguments = ~[a.to_str(), b.to_str(), c.to_str()];
+                        r.arguments = vec!(a.to_str(), b.to_str(), c.to_str());
                     }
                     r
                 },
@@ -405,8 +406,9 @@ mod tester {
 
 #[cfg(test)]
 mod test {
+    use std::cmp::TotalOrd;
     use std::iter;
-    use std::vec;
+    use std::vec_ng::Vec;
     use rand::task_rng;
     use super::{Config, Testable, TestResult, gen};
     use super::{quickcheck_config, quicktest_config};
@@ -428,7 +430,8 @@ mod test {
     #[test]
     fn prop_oob() {
         fn prop() -> bool {
-            (~[])[0]
+            let zero: Vec<bool> = vec!();
+            *zero.get(0)
         }
         match qtest(prop) {
             Ok(n) => fail!("prop_oob should fail with a runtime error \
@@ -439,9 +442,9 @@ mod test {
 
     #[test]
     fn prop_reverse_reverse() {
-        fn prop(xs: ~[uint]) -> bool {
-            let rev = xs.clone().move_rev_iter().to_owned_vec();
-            let revrev = rev.move_rev_iter().to_owned_vec();
+        fn prop(xs: Vec<uint>) -> bool {
+            let rev: Vec<uint> = xs.clone().move_rev_iter().collect();
+            let revrev = rev.move_rev_iter().collect();
             xs == revrev
         }
         qcheck(prop);
@@ -449,12 +452,12 @@ mod test {
 
     #[test]
     fn reverse_single() {
-        fn prop(xs: ~[uint]) -> ~TestResult {
+        fn prop(xs: Vec<uint>) -> ~TestResult {
             if xs.len() != 1 {
                 return TestResult::discard()
             }
             return TestResult::from_bool(
-                xs == xs.clone().move_rev_iter().to_owned_vec()
+                xs == xs.clone().move_rev_iter().collect()
             )
         }
         qcheck(prop);
@@ -462,13 +465,13 @@ mod test {
 
     #[test]
     fn reverse_app() {
-        fn prop(xs: ~[uint], ys: ~[uint]) -> bool {
-            let app = ::std::vec::append(xs.clone(), ys);
-            let app_rev = app.move_rev_iter().to_owned_vec();
+        fn prop(xs: Vec<uint>, ys: Vec<uint>) -> bool {
+            let app = ::std::vec_ng::append(xs.clone(), ys.as_slice());
+            let app_rev: Vec<uint> = app.move_rev_iter().collect();
 
-            let rxs = xs.clone().move_rev_iter().to_owned_vec();
-            let rys = ys.clone().move_rev_iter().to_owned_vec();
-            let rev_app = ::std::vec::append(rys, rxs);
+            let rxs = xs.move_rev_iter().collect();
+            let mut rev_app = ys.move_rev_iter().collect::<Vec<uint>>();
+            rev_app.push_all_move(rxs);
 
             app_rev == rev_app
         }
@@ -489,11 +492,11 @@ mod test {
 
     #[test]
     fn sort() {
-        fn prop(mut xs: ~[int]) -> bool {
-            xs.sort();
+        fn prop(mut xs: Vec<int>) -> bool {
+            xs.sort_by(|x, y| x.cmp(y));
             let upto = if xs.len() == 0 { 0 } else { xs.len()-1 };
             for i in iter::range(0, upto) {
-                if xs[i] > xs[i+1] {
+                if xs.get(i) > xs.get(i+1) {
                     return false
                 }
             }
@@ -505,19 +508,21 @@ mod test {
     #[test]
     #[should_fail]
     fn sieve_of_eratosthenes() {
-        fn sieve(n: uint) -> ~[uint] {
+        fn sieve(n: uint) -> Vec<uint> {
             if n <= 1 {
-                return ~[]
+                return vec!()
             }
 
-            let mut marked = vec::from_fn(n+1, |_| false);
-            marked[0] = true; marked[1] = true; marked[2] = false;
+            let mut marked = Vec::from_fn(n+1, |_| false);
+            *marked.get_mut(0) = true;
+            *marked.get_mut(1) = true;
+            *marked.get_mut(2) = false;
             for p in iter::range(2, n) {
                 for i in iter::range_step(2 * p, n, p) { // whoops!
-                    marked[i] = true;
+                    *marked.get_mut(i) = true;
                 }
             }
-            let mut primes = ~[];
+            let mut primes = vec!();
             for (i, m) in marked.iter().enumerate() {
                 if !m { primes.push(i) }
             }
