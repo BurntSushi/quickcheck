@@ -278,7 +278,8 @@ mod tester {
             match self {
                 Zero(f) => safe(proc() { f() }).result(g),
                 One(f) => {
-                    let oa = ~a.unwrap().clone();
+                    let a = a.unwrap();
+                    let oa = ~a.clone();
                     let mut r = safe(proc() { f(*oa) }).result(g);
                     if r.is_failure() {
                         r.arguments = ~[a.to_str()];
@@ -286,7 +287,8 @@ mod tester {
                     r
                 },
                 Two(f) => {
-                    let (oa, ob) = (~a.unwrap().clone(), ~b.unwrap().clone());
+                    let (a, b) = (a.unwrap(), b.unwrap());
+                    let (oa, ob) = (~a.clone(), ~b.clone());
                     let mut r = safe(proc() { f(*oa, *ob) }).result(g);
                     if r.is_failure() {
                         r.arguments = ~[a.to_str(), b.to_str()];
@@ -294,8 +296,8 @@ mod tester {
                     r
                 },
                 Three(f) => {
-                    let (oa, ob) = (~a.unwrap().clone(), ~b.unwrap().clone());
-                    let oc = ~c.unwrap().clone();
+                    let (a, b, c) = (a.unwrap(), b.unwrap(), c.unwrap());
+                    let (oa, ob, oc) = (~a.clone(), ~b.clone(), ~c.clone());
                     let mut r = safe(proc() { f(*oa, *ob, *oc) }).result(g);
                     if r.is_failure() {
                         r.arguments = ~[a.to_str(), b.to_str(), c.to_str()];
