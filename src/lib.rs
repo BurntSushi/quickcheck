@@ -5,6 +5,7 @@
 #[crate_type = "lib"];
 #[license = "UNLICENSE"];
 #[doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")];
+#[allow(deprecated_owned_vector)];
 
 //! This crate is a port of
 //! [Haskell's QuickCheck](http://hackage.haskell.org/package/QuickCheck).
