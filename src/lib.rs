@@ -13,7 +13,11 @@
 //! For detailed examples, please see the
 //! [README](https://github.com/BurntSushi/quickcheck).
 
+// Dunno what this is, but apparently it's required for the 'log' crate.
+#[feature(phase)];
+
 extern crate collections;
+#[phase(syntax, link)] extern crate log;
 extern crate rand;
 
 pub use arbitrary::{Arbitrary, Gen, StdGen, ObjIter, gen};
