@@ -11,7 +11,7 @@ fn reverse<T: Clone>(xs: &[T]) -> ~[T] {
 }
 
 fn main() {
-    fn prop(xs: ~[int]) -> ~TestResult {
+    fn prop(xs: ~[int]) -> TestResult {
         if xs.len() != 1 {
             return TestResult::discard()
         }
