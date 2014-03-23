@@ -1,6 +1,5 @@
 use std::num::{one, zero};
 use std::str::from_chars;
-use std::vec_ng::Vec;
 use rand::Rng;
 
 /// Returns a `Gen` with the given configuration using any random number
@@ -224,8 +223,8 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
         for (i, x) in self.iter().enumerate() {
             for sx in x.shrink() {
                 let pre = Vec::from_slice(self.slice_to(i).map(|x| x.clone()));
-                let pre = ::std::vec_ng::append_one(pre, sx);
-                xs.push(::std::vec_ng::append(pre, self.slice_from(i+1)))
+                let pre = ::std::vec::append_one(pre, sx);
+                xs.push(::std::vec::append(pre, self.slice_from(i+1)))
             }
         }
         ~xs.move_iter() as ~ObjIter:<Vec<A>>
@@ -429,7 +428,6 @@ mod test {
     use std::fmt::Show;
     use std::hash::Hash;
     use std::iter;
-    use std::vec_ng::Vec;
     use collections::HashSet;
     use rand;
     use super::Arbitrary;

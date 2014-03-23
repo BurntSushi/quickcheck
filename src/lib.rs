@@ -12,7 +12,11 @@
 //! For detailed examples, please see the
 //! [README](https://github.com/BurntSushi/quickcheck).
 
+// Dunno what this is, but apparently it's required for the 'log' crate.
+#[feature(phase)];
+
 extern crate collections;
+#[phase(syntax, link)] extern crate log;
 extern crate rand;
 
 pub use arbitrary::{Arbitrary, Gen, StdGen, ObjIter, gen};
@@ -25,7 +29,6 @@ mod arbitrary;
 mod tester {
     use std::fmt::Show;
     use std::iter;
-    use std::vec_ng::Vec;
     use rand::task_rng;
     use super::{Arbitrary, Gen, ObjIter, gen};
     use tester::trap::safe;
@@ -53,8 +56,8 @@ mod tester {
     /// ```rust
     /// fn prop_reverse_reverse() {
     ///     fn revrev(xs: Vec<uint>) -> bool {
-    ///         let rev = xs.clone().move_rev_iter().to_owned_vec();
-    ///         let revrev = rev.move_rev_iter().to_owned_vec();
+    ///         let rev = xs.clone().move_iter().rev().to_owned_vec();
+    ///         let revrev = rev.move_iter().rev().to_owned_vec();
     ///         xs == revrev
     ///     }
     ///     check(revrev);
@@ -100,7 +103,7 @@ mod tester {
                 Pass => ntests = ntests + 1,
                 Discard => continue,
                 Fail => {
-                    return Err(*r)
+                    return Err(r)
                 }
             }
         }
@@ -124,7 +127,7 @@ mod tester {
 
     /// Describes the status of a single instance of a test.
     ///
-    /// All testable things must be capable of producing a `~TestResult`.
+    /// All testable things must be capable of producing a `TestResult`.
     #[deriving(Clone, Show)]
     pub struct TestResult {
         priv status: Status,
@@ -138,14 +141,14 @@ mod tester {
 
     impl TestResult {
         /// Produces a test result that indicates the current test has passed.
-        pub fn passed() -> ~TestResult { TestResult::from_bool(true) }
+        pub fn passed() -> TestResult { TestResult::from_bool(true) }
 
         /// Produces a test result that indicates the current test has failed.
-        pub fn failed() -> ~TestResult { TestResult::from_bool(false) }
+        pub fn failed() -> TestResult { TestResult::from_bool(false) }
 
         /// Produces a test result that indicates failure from a runtime
         /// error.
-        pub fn error(msg: &str) -> ~TestResult {
+        pub fn error(msg: &str) -> TestResult {
             let mut r = TestResult::from_bool(false);
             r.err = msg.to_owned();
             r
@@ -155,15 +158,15 @@ mod tester {
         /// This is useful for restricting the domain of your properties.
         /// When a test is discarded, `quickcheck` will replace it with a
         /// fresh one (up to a certain limit).
-        pub fn discard() -> ~TestResult {
-            ~TestResult { status: Discard, arguments: vec!(), err: ~"", }
+        pub fn discard() -> TestResult {
+            TestResult { status: Discard, arguments: vec!(), err: ~"", }
         }
 
-        /// Converts a `bool` to a `~TestResult`. A `true` value indicates that
+        /// Converts a `bool` to a `TestResult`. A `true` value indicates that
         /// the test has passed and a `false` value indicates that the test
         /// has failed.
-        pub fn from_bool(b: bool) -> ~TestResult {
-            ~TestResult {
+        pub fn from_bool(b: bool) -> TestResult {
+            TestResult {
                 status: if b { Pass } else { Fail },
                 arguments: vec!(),
                 err: ~"",
@@ -218,21 +221,21 @@ mod tester {
     /// add your own implementation outside of `quickcheck`, since the
     /// functions that do shrinking are not public.)
     pub trait Testable : Send {
-        fn result<G: Gen>(&self, &mut G) -> ~TestResult;
+        fn result<G: Gen>(&self, &mut G) -> TestResult;
     }
 
     impl Testable for bool {
-        fn result<G: Gen>(&self, _: &mut G) -> ~TestResult {
+        fn result<G: Gen>(&self, _: &mut G) -> TestResult {
             TestResult::from_bool(*self)
         }
     }
 
-    impl Testable for ~TestResult {
-        fn result<G: Gen>(&self, _: &mut G) -> ~TestResult { self.clone() }
+    impl Testable for TestResult {
+        fn result<G: Gen>(&self, _: &mut G) -> TestResult { self.clone() }
     }
 
     impl<A: Testable> Testable for Result<A, ~str> {
-        fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
+        fn result<G: Gen>(&self, g: &mut G) -> TestResult {
             match *self {
                 Ok(ref r) => r.result(g),
                 Err(ref err) => TestResult::error(*err),
@@ -241,26 +244,26 @@ mod tester {
     }
 
     impl<T: Testable> Testable for fn() -> T {
-        fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
+        fn result<G: Gen>(&self, g: &mut G) -> TestResult {
             shrink(g, Zero::<(), (), (), T>(*self))
         }
     }
 
     impl<A: AShow, T: Testable> Testable for fn(A) -> T {
-        fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
+        fn result<G: Gen>(&self, g: &mut G) -> TestResult {
             shrink(g, One::<A, (), (), T>(*self))
         }
     }
 
     impl<A: AShow, B: AShow, T: Testable> Testable for fn(A, B) -> T {
-        fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
+        fn result<G: Gen>(&self, g: &mut G) -> TestResult {
             shrink(g, Two::<A, B, (), T>(*self))
         }
     }
 
     impl<A: AShow, B: AShow, C: AShow, T: Testable>
         Testable for fn(A, B, C) -> T {
-        fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
+        fn result<G: Gen>(&self, g: &mut G) -> TestResult {
             shrink(g, Three::<A, B, C, T>(*self))
         }
     }
@@ -275,7 +278,7 @@ mod tester {
     impl<A: AShow, B: AShow, C: AShow, T: Testable> Fun<A, B, C, T> {
         fn call<G: Gen>(self, g: &mut G,
                         a: Option<&A>, b: Option<&B>, c: Option<&C>)
-                       -> ~TestResult {
+                       -> TestResult {
             match self {
                 Zero(f) => safe(proc() { f() }).result(g),
                 One(f) => {
@@ -311,7 +314,7 @@ mod tester {
 
     fn shrink<G: Gen, A: AShow, B: AShow, C: AShow, T: Testable>
              (g: &mut G, fun: Fun<A, B, C, T>)
-             -> ~TestResult {
+             -> TestResult {
         let (a, b, c): (A, B, C) = arby(g);
         let r = fun.call(g, Some(&a), Some(&b), Some(&c));
         match r.status {
@@ -329,7 +332,7 @@ mod tester {
     fn shrink_failure<G: Gen, A: AShow, B: AShow, C: AShow, T: Testable>
                      (g: &mut G, mut shrinker: ~ObjIter:<(A, B, C)>,
                       fun: Fun<A, B, C, T>)
-                     -> Option<~TestResult> {
+                     -> Option<TestResult> {
         for (a, b, c) in shrinker {
             let r = fun.call(g, Some(&a), Some(&b), Some(&c));
             match r.status {
@@ -408,7 +411,6 @@ mod tester {
 mod test {
     use std::cmp::TotalOrd;
     use std::iter;
-    use std::vec_ng::Vec;
     use rand::task_rng;
     use super::{Config, Testable, TestResult, gen};
     use super::{quickcheck_config, quicktest_config};
@@ -443,8 +445,8 @@ mod test {
     #[test]
     fn prop_reverse_reverse() {
         fn prop(xs: Vec<uint>) -> bool {
-            let rev: Vec<uint> = xs.clone().move_rev_iter().collect();
-            let revrev = rev.move_rev_iter().collect();
+            let rev: Vec<uint> = xs.clone().move_iter().rev().collect();
+            let revrev = rev.move_iter().rev().collect();
             xs == revrev
         }
         qcheck(prop);
@@ -452,12 +454,12 @@ mod test {
 
     #[test]
     fn reverse_single() {
-        fn prop(xs: Vec<uint>) -> ~TestResult {
+        fn prop(xs: Vec<uint>) -> TestResult {
             if xs.len() != 1 {
                 return TestResult::discard()
             }
             return TestResult::from_bool(
-                xs == xs.clone().move_rev_iter().collect()
+                xs == xs.clone().move_iter().rev().collect()
             )
         }
         qcheck(prop);
@@ -466,11 +468,11 @@ mod test {
     #[test]
     fn reverse_app() {
         fn prop(xs: Vec<uint>, ys: Vec<uint>) -> bool {
-            let app = ::std::vec_ng::append(xs.clone(), ys.as_slice());
-            let app_rev: Vec<uint> = app.move_rev_iter().collect();
+            let app = ::std::vec::append(xs.clone(), ys.as_slice());
+            let app_rev: Vec<uint> = app.move_iter().rev().collect();
 
-            let rxs = xs.move_rev_iter().collect();
-            let mut rev_app = ys.move_rev_iter().collect::<Vec<uint>>();
+            let rxs = xs.move_iter().rev().collect();
+            let mut rev_app = ys.move_iter().rev().collect::<Vec<uint>>();
             rev_app.push_all_move(rxs);
 
             app_rev == rev_app
@@ -480,7 +482,7 @@ mod test {
 
     #[test]
     fn max() {
-        fn prop(x: int, y: int) -> ~TestResult {
+        fn prop(x: int, y: int) -> TestResult {
             if x > y {
                 return TestResult::discard()
             } else {

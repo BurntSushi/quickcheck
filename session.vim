@@ -1,1 +1,1 @@
-au BufWritePost *.rs silent!make tags > /dev/null 2>&1
+au BufWritePost *.rs silent!make ctags > /dev/null 2>&1

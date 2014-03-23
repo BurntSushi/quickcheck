@@ -35,8 +35,8 @@ extern crate quickcheck;
 
 use quickcheck::quickcheck;
 
-fn reverse<T: Clone>(xs: &[T]) -> ~[T] {
-    let mut rev = ~[];
+fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
+    let mut rev = vec!();
     for x in xs.iter() {
         rev.unshift(x.clone())
     }
@@ -44,8 +44,8 @@ fn reverse<T: Clone>(xs: &[T]) -> ~[T] {
 }
 
 fn main() {
-    fn prop(xs: ~[int]) -> bool {
-        xs == reverse(reverse(xs))
+    fn prop(xs: Vec<int>) -> bool {
+        xs == reverse(reverse(xs.as_slice()).as_slice())
     }
     quickcheck(prop);
 }
@@ -113,19 +113,19 @@ trait. Great, so what is this `Testable` business?
 
 ```rust
 pub trait Testable {
-    fn result<G: Gen>(&self, &mut G) -> ~TestResult;
+    fn result<G: Gen>(&self, &mut G) -> TestResult;
 }
 ```
 
-This trait states that a type is testable if it can produce a `~TestResult` 
-given a source of randomness. (A `~TestResult` stores information about the 
+This trait states that a type is testable if it can produce a `TestResult` 
+given a source of randomness. (A `TestResult` stores information about the 
 results of a test, like whether it passed, failed or has been discarded.)
 
 Sure enough, `bool` satisfies the `Testable` trait:
 
 ```rust
 impl Testable for bool {
-    fn result<G: Gen>(&self, _: &mut G) -> ~TestResult {
+    fn result<G: Gen>(&self, _: &mut G) -> TestResult {
         TestResult::from_bool(*self)
     }
 }
@@ -136,7 +136,7 @@ satisfy `Testable` too!
 
 ```rust
 impl<A: Arbitrary + Show, B: Testable> Testable for fn(A) -> B {
-    fn result<G: Gen>(&self, g: &mut G) -> ~TestResult {
+    fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         // elided
     }
 }
@@ -149,26 +149,26 @@ any type (that also satisfies `Testable`). So a function with type
 `bool` satisfies `Testable`.
 
 So to discard a test, we need to return something other than `bool`. What if we 
-just returned a `~TestResult` directly? That should work, but we'll need to 
-make sure `~TestResult` satisfies `Testable`:
+just returned a `TestResult` directly? That should work, but we'll need to 
+make sure `TestResult` satisfies `Testable`:
 
 ```rust
-impl Testable for ~TestResult {
-    fn result<G: Gen>(&self, _: &mut G) -> ~TestResult { self.clone() }
+impl Testable for TestResult {
+    fn result<G: Gen>(&self, _: &mut G) -> TestResult { self.clone() }
 }
 ```
 
-Now we can test functions that return a `~TestResult` directly.
+Now we can test functions that return a `TestResult` directly.
 
 As an example, let's test our reverse function to make sure that the reverse of 
 a vector of length 1 is equal to the vector itself.
 
 ```rust
-fn prop(xs: ~[int]) -> ~TestResult {
+fn prop(xs: Vec<int>) -> TestResult {
     if xs.len() != 1 {
         return TestResult::discard()
     }
-    TestResult::from_bool(xs == reverse(xs))
+    TestResult::from_bool(xs == reverse(xs.as_slice()))
 }
 quickcheck(prop);
 ```
@@ -176,12 +176,12 @@ quickcheck(prop);
 (A full working program for this example is in 
 [`examples/reverse_single.rs`](https://github.com/BurntSushi/quickcheck/blob/master/examples/reverse_single.rs).)
 
-So now our property returns a `~TestResult`, which allows us to encode a bit 
+So now our property returns a `TestResult`, which allows us to encode a bit 
 more information. There are a few more
 [convenience functions defined for the `TestResult` 
 type](http://burntsushi.net/rustdoc/quickcheck/struct.TestResult.html).
 For example, we can't just return a `bool`, so we convert a `bool` value to a 
-`~TestResult`.
+`TestResult`.
 
 (The ability to discard tests allows you to get similar functionality as 
 Haskell's `==>` combinator.)
@@ -202,8 +202,8 @@ your properties automatically. For example, if you erroneously defined a
 function for reversing vectors as: (my apologies for the contrived example)
 
 ```rust
-fn reverse<T: Clone>(xs: &[T]) -> ~[T] {
-    let mut rev = ~[];
+fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
+    let mut rev = vec!();
     for i in iter::range(1, xs.len()) {
         rev.unshift(xs[i].clone())
     }
@@ -214,8 +214,8 @@ fn reverse<T: Clone>(xs: &[T]) -> ~[T] {
 And a property to test that `xs == reverse(reverse(xs))`:
 
 ```rust
-fn prop(xs: ~[int]) -> bool {
-    xs == reverse(reverse(xs))
+fn prop(xs: Vec<int>) -> bool {
+    xs == reverse(reverse(xs.as_slice()).as_slice())
 }
 quickcheck(prop);
 ```
@@ -253,19 +253,21 @@ makes it ideal for randomized testing. So let's take a look at my
 implementation and see if we can spot the bug:
 
 ```rust
-fn sieve(n: uint) -> ~[uint] {
+fn sieve(n: uint) -> Vec<uint> {
     if n <= 1 {
-        return ~[]
+        return vec!()
     }
 
-    let mut marked = vec::from_fn(n+1, |_| false);
-    marked[0] = true; marked[1] = true; marked[2] = false;
+    let mut marked = Vec::from_fn(n+1, |_| false);
+    *marked.get_mut(0) = true;
+    *marked.get_mut(1) = true;
+    *marked.get_mut(2) = false;
     for p in iter::range(2, n) {
-        for i in iter::range_step(2 * p, n, p) {
-            marked[i] = true;
+        for i in iter::range_step(2 * p, n, p) { // whoops!
+            *marked.get_mut(i) = true;
         }
     }
-    let mut primes = ~[];
+    let mut primes = vec!();
     for (i, m) in marked.iter().enumerate() {
         if !m { primes.push(i) }
     }

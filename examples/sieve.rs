@@ -1,22 +1,23 @@
 extern crate quickcheck;
 
 use std::iter;
-use std::vec;
 use quickcheck::quickcheck;
 
-fn sieve(n: uint) -> ~[uint] {
+fn sieve(n: uint) -> Vec<uint> {
     if n <= 1 {
-        return ~[]
+        return vec!()
     }
 
-    let mut marked = vec::from_fn(n+1, |_| false);
-    marked[0] = true; marked[1] = true; marked[2] = false;
+    let mut marked = Vec::from_fn(n+1, |_| false);
+    *marked.get_mut(0) = true;
+    *marked.get_mut(1) = true;
+    *marked.get_mut(2) = false;
     for p in iter::range(2, n) {
         for i in iter::range_step(2 * p, n, p) { // whoops!
-            marked[i] = true;
+            *marked.get_mut(i) = true;
         }
     }
-    let mut primes = ~[];
+    let mut primes = vec!();
     for (i, m) in marked.iter().enumerate() {
         if !m { primes.push(i) }
     }

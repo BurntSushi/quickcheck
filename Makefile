@@ -6,7 +6,7 @@ compile:
 install:
 	cargo-lite install
 
-tags:
+ctags:
 	ctags --recurse --options=ctags.rust --languages=Rust
 
 docs:
@@ -22,6 +22,9 @@ test: quickcheck-test
 
 quickcheck-test: src/lib.rs src/arbitrary.rs
 	rustc --test $(RUST_CFG) src/lib.rs -o quickcheck-test
+
+test-examples:
+	(cd ./examples && ./test)
 
 test-clean:
 	rm -rf ./quickcheck-test
