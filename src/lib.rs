@@ -56,8 +56,8 @@ mod tester {
     /// ```rust
     /// fn prop_reverse_reverse() {
     ///     fn revrev(xs: Vec<uint>) -> bool {
-    ///         let rev = xs.clone().move_iter().rev().to_owned_vec();
-    ///         let revrev = rev.move_iter().rev().to_owned_vec();
+    ///         let rev = xs.clone().move_iter().rev().collect();
+    ///         let revrev = rev.move_iter().rev().collect();
     ///         xs == revrev
     ///     }
     ///     check(revrev);
