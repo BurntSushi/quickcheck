@@ -379,8 +379,8 @@ I think I've captured the key features, but there are still things missing:
 * As of now, only functions with 3 or fewer parameters can be quickchecked.
 This limitation can be lifted to some `N`, but requires an implementation
 for each `n` of the `Testable` trait.
-* Functions that fail because of a runtime error (e.g., out-of-bounds) are not
-caught by QuickCheck. Therefore, such failures will not have a witness attached
+* Functions that fail because of a stack overflow are not caught by QuickCheck. 
+Therefore, such failures will not have a witness attached
 to them. (I'd like to fix this, but I don't know how.)
 * `Coarbitrary` does not exist in any form in this package. I think it's 
 possible; I just haven't gotten around to it yet.
@@ -425,15 +425,6 @@ critical features. (I don't think any of them build either.)
 
 This is my first Rust project, so I've undoubtedly written unidiomatic code. In 
 fact, it would be fair to say that the code in this project just happened to be 
-what I could manage to get by the compiler.
-
-I think my primary concern is whether I'm using the region types correctly.
-I'd also like to trap runtime failures in functions so that they can be
-reported as a test failure from within QuickCheck. (In typical use, the test
-will fail anyway, but if QuickCheck can catch it, then we can attach a witness
-to the failure.)
-
-Also, I would like to avoid using macros for building abstractions. (I'm not 
-opposed to using them for generating trait implementations---as is done in the 
-standard library---but I haven't learned them yet.)
+what I could manage to get by the compiler (with respect to region/linear 
+types).
 
