@@ -263,7 +263,7 @@ fn sieve(n: uint) -> Vec<uint> {
     *marked.get_mut(1) = true;
     *marked.get_mut(2) = false;
     for p in iter::range(2, n) {
-        for i in iter::range_step(2 * p, n, p) { // whoops!
+        for i in iter::range_step(2 * p, n, p) {
             *marked.get_mut(i) = true;
         }
     }
