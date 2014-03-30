@@ -1,7 +1,7 @@
 RUST_CFG=
 
 compile:
-	rustc ./src/lib.rs
+	rustc -O ./src/lib.rs
 
 install:
 	cargo-lite install
