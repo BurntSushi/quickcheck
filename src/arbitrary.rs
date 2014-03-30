@@ -38,25 +38,25 @@ impl<R: Rng> Gen for StdGen<R> {
     fn size(&self) -> uint { self.size }
 }
 
-/// `~ObjIter` is an existential type that represents an arbitrary iterator
+/// `~Iter` is an existential type that represents an arbitrary iterator
 /// by satisfying the `Iterator` trait.
 ///
 /// This makes writing shrinkers easier.
 /// You should not have to implement this trait directly. By default, all
-/// types which implement the `Iterator` trait also implement the `ObjIter`
+/// types which implement the `Iterator` trait also implement the `Iter`
 /// trait.
 ///
 /// The `A` type variable corresponds to the elements yielded by the iterator.
-pub trait ObjIter<A> {
+pub trait Iter<A> {
     /// Wraps `<A: Iterator>.next()`.
     fn obj_next(&mut self) -> Option<A>;
 }
 
-impl<A> Iterator<A> for ~ObjIter:<A> {
+impl<A> Iterator<A> for ~Iter<A> {
     fn next(&mut self) -> Option<A> { self.obj_next() }
 }
 
-impl<T, A: Iterator<T>> ObjIter<T> for A {
+impl<T, A: Iterator<T>> Iter<T> for A {
     fn obj_next(&mut self) -> Option<T> { self.next() }
 }
 
@@ -70,27 +70,27 @@ impl<T, A: Iterator<T>> ObjIter<T> for A {
 /// `Clone`. (I'm not sure if this is a permanent restriction.)
 pub trait Arbitrary : Clone + Send {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
-    fn shrink(&self) -> ~ObjIter:<Self> {
+    fn shrink(&self) -> ~Iter<Self> {
         let zero: Vec<Self> = vec!();
-        ~zero.move_iter() as ~ObjIter:<Self>
+        ~zero.move_iter() as ~Iter<Self>
     }
 }
 
 impl Arbitrary for () {
     fn arbitrary<G: Gen>(_: &mut G) -> () { () }
-    fn shrink(&self) -> ~ObjIter:<()> {
+    fn shrink(&self) -> ~Iter<()> {
         let zero: Vec<()> = vec!();
-        ~zero.move_iter() as ~ObjIter:<()>
+        ~zero.move_iter() as ~Iter<()>
     }
 }
 
 impl Arbitrary for bool {
     fn arbitrary<G: Gen>(g: &mut G) -> bool { g.gen() }
-    fn shrink(&self) -> ~ObjIter:<bool> {
+    fn shrink(&self) -> ~Iter<bool> {
         ~match *self {
             true => (vec!(false)).move_iter(),
             false => (vec!()).move_iter(),
-        } as ~ObjIter:<bool>
+        } as ~Iter<bool>
     }
 }
 
@@ -103,17 +103,17 @@ impl<A: Arbitrary> Arbitrary for Option<A> {
         }
     }
 
-    fn shrink(&self)  -> ~ObjIter:<Option<A>> {
+    fn shrink(&self)  -> ~Iter<Option<A>> {
         match *self {
             None => {
                 let zero: Vec<Option<A>> = vec!();
-                ~zero.move_iter() as ~ObjIter:<Option<A>>
+                ~zero.move_iter() as ~Iter<Option<A>>
             }
             Some(ref x) => {
                 let none: Vec<Option<A>> = vec!(None);
                 let tagged = x.shrink().map(Some);
                 let chain = none.move_iter().chain(tagged);
-                ~chain as ~ObjIter:<Option<A>>
+                ~chain as ~Iter<Option<A>>
             }
         }
     }
@@ -128,20 +128,20 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
         }
     }
 
-    fn shrink(&self) -> ~ObjIter:<Result<A, B>> {
+    fn shrink(&self) -> ~Iter<Result<A, B>> {
         match *self {
             // I don't really understand the region type here for Map.
             // I used 'static simply because the compiler let me.
             // I don't know if it is right.
             Ok(ref x) => {
-                let xs: ~ObjIter:<A> = x.shrink();
+                let xs: ~Iter<A> = x.shrink();
                 let tagged = xs.map::<'static, Result<A, B>>(Ok);
-                ~tagged as ~ObjIter:<Result<A, B>>
+                ~tagged as ~Iter<Result<A, B>>
             }
             Err(ref x) => {
-                let xs: ~ObjIter:<B> = x.shrink();
+                let xs: ~Iter<B> = x.shrink();
                 let tagged = xs.map::<'static, Result<A, B>>(Err);
-                ~tagged as ~ObjIter:<Result<A, B>>
+                ~tagged as ~Iter<Result<A, B>>
             }
         }
     }
@@ -161,7 +161,7 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for (A, B) {
     //         let (sa, sb) = (a.shrink(), b.shrink());
     //         vec!((sa1, b), ..., (saN, b), (a, sb1), ..., (a, sbN))
     //
-    fn shrink(&self) -> ~ObjIter:<(A, B)> {
+    fn shrink(&self) -> ~Iter<(A, B)> {
         let (ref a, ref b) = *self;
 
         // I miss real closures.
@@ -171,7 +171,7 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for (A, B) {
         let sbs = b.shrink().scan(a, |a: &mut &A, x: B| {
             Some((a.clone(), x))
         });
-        ~sas.chain(sbs) as ~ObjIter:<(A, B)>
+        ~sas.chain(sbs) as ~Iter<(A, B)>
     }
 }
 
@@ -184,7 +184,7 @@ impl<A: Arbitrary, B: Arbitrary, C: Arbitrary> Arbitrary for (A, B, C) {
         )
     }
 
-    fn shrink(&self) -> ~ObjIter:<(A, B, C)> {
+    fn shrink(&self) -> ~Iter<(A, B, C)> {
         let (ref a, ref b, ref c) = *self;
 
         // Sorry about the unnecessary type annotations, but they're
@@ -198,7 +198,7 @@ impl<A: Arbitrary, B: Arbitrary, C: Arbitrary> Arbitrary for (A, B, C) {
         let scs = c.shrink().scan((a, b), |&(a, b): &mut (&A, &B), x: C| {
             Some((a.clone(), b.clone(), x))
         });
-        ~sas.chain(sbs).chain(scs) as ~ObjIter:<(A, B, C)>
+        ~sas.chain(sbs).chain(scs) as ~Iter<(A, B, C)>
     }
 }
 
@@ -208,10 +208,10 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
         Vec::from_fn(size, |_| Arbitrary::arbitrary(g))
     }
 
-    fn shrink(&self) -> ~ObjIter:<Vec<A>> {
+    fn shrink(&self) -> ~Iter<Vec<A>> {
         let mut xs: Vec<Vec<A>> = vec!();
         if self.len() == 0 {
-            return ~xs.move_iter() as ~ObjIter:<Vec<A>>
+            return ~xs.move_iter() as ~Iter<Vec<A>>
         }
         xs.push(vec!());
 
@@ -222,12 +222,12 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
         }
         for (i, x) in self.iter().enumerate() {
             for sx in x.shrink() {
-                let pre = Vec::from_slice(self.slice_to(i).map(|x| x.clone()));
-                let pre = ::std::vec::append_one(pre, sx);
+                let mut pre = self.slice_to(i).iter().map(|x| x.clone());
+                let pre = ::std::vec::append_one(pre.collect(), sx);
                 xs.push(::std::vec::append(pre, self.slice_from(i+1)))
             }
         }
-        ~xs.move_iter() as ~ObjIter:<Vec<A>>
+        ~xs.move_iter() as ~Iter<Vec<A>>
     }
 }
 
@@ -237,22 +237,22 @@ impl Arbitrary for ~str {
         g.gen_ascii_str(size)
     }
 
-    fn shrink(&self) -> ~ObjIter:<~str> {
+    fn shrink(&self) -> ~Iter<~str> {
         let chars: Vec<char> = self.chars().collect();
         let mut strs: Vec<~str> = vec!();
         for x in chars.shrink() {
             strs.push(from_chars(x.as_slice()));
         }
-        ~strs.move_iter() as ~ObjIter:<~str>
+        ~strs.move_iter() as ~Iter<~str>
     }
 }
 
 impl Arbitrary for char {
     fn arbitrary<G: Gen>(g: &mut G) -> char { g.gen() }
 
-    fn shrink(&self) -> ~ObjIter:<char> {
+    fn shrink(&self) -> ~Iter<char> {
         let zero: Vec<char> = vec!();
-        ~zero.move_iter() as ~ObjIter:<char>
+        ~zero.move_iter() as ~Iter<char>
     }
 }
 
@@ -260,8 +260,8 @@ impl Arbitrary for int {
     fn arbitrary<G: Gen>(g: &mut G) -> int {
         let s = g.size(); g.gen_range(-(s as int), s as int)
     }
-    fn shrink(&self) -> ~ObjIter:<int> {
-        ~shrink_signed(*self).move_iter() as ~ObjIter:<int>
+    fn shrink(&self) -> ~Iter<int> {
+        ~shrink_signed(*self).move_iter() as ~Iter<int>
     }
 }
 
@@ -269,8 +269,8 @@ impl Arbitrary for i8 {
     fn arbitrary<G: Gen>(g: &mut G) -> i8 {
         let s = g.size(); g.gen_range(-(s as i8), s as i8)
     }
-    fn shrink(&self) -> ~ObjIter:<i8> {
-        ~shrink_signed(*self).move_iter() as ~ObjIter:<i8>
+    fn shrink(&self) -> ~Iter<i8> {
+        ~shrink_signed(*self).move_iter() as ~Iter<i8>
     }
 }
 
@@ -278,8 +278,8 @@ impl Arbitrary for i16 {
     fn arbitrary<G: Gen>(g: &mut G) -> i16 {
         let s = g.size(); g.gen_range(-(s as i16), s as i16)
     }
-    fn shrink(&self) -> ~ObjIter:<i16> {
-        ~shrink_signed(*self).move_iter() as ~ObjIter:<i16>
+    fn shrink(&self) -> ~Iter<i16> {
+        ~shrink_signed(*self).move_iter() as ~Iter<i16>
     }
 }
 
@@ -287,8 +287,8 @@ impl Arbitrary for i32 {
     fn arbitrary<G: Gen>(g: &mut G) -> i32 {
         let s = g.size(); g.gen_range(-(s as i32), s as i32)
     }
-    fn shrink(&self) -> ~ObjIter:<i32> {
-        ~shrink_signed(*self).move_iter() as ~ObjIter:<i32>
+    fn shrink(&self) -> ~Iter<i32> {
+        ~shrink_signed(*self).move_iter() as ~Iter<i32>
     }
 }
 
@@ -296,8 +296,8 @@ impl Arbitrary for i64 {
     fn arbitrary<G: Gen>(g: &mut G) -> i64 {
         let s = g.size(); g.gen_range(-(s as i64), s as i64)
     }
-    fn shrink(&self) -> ~ObjIter:<i64> {
-        ~shrink_signed(*self).move_iter() as ~ObjIter:<i64>
+    fn shrink(&self) -> ~Iter<i64> {
+        ~shrink_signed(*self).move_iter() as ~Iter<i64>
     }
 }
 
@@ -305,8 +305,8 @@ impl Arbitrary for uint {
     fn arbitrary<G: Gen>(g: &mut G) -> uint {
         let s = g.size(); g.gen_range(0, s)
     }
-    fn shrink(&self) -> ~ObjIter:<uint> {
-        ~shrink_unsigned(*self).move_iter() as ~ObjIter:<uint>
+    fn shrink(&self) -> ~Iter<uint> {
+        ~shrink_unsigned(*self).move_iter() as ~Iter<uint>
     }
 }
 
@@ -314,8 +314,8 @@ impl Arbitrary for u8 {
     fn arbitrary<G: Gen>(g: &mut G) -> u8 {
         let s = g.size(); g.gen_range(0, s as u8)
     }
-    fn shrink(&self) -> ~ObjIter:<u8> {
-        ~shrink_unsigned(*self).move_iter() as ~ObjIter:<u8>
+    fn shrink(&self) -> ~Iter<u8> {
+        ~shrink_unsigned(*self).move_iter() as ~Iter<u8>
     }
 }
 
@@ -323,8 +323,8 @@ impl Arbitrary for u16 {
     fn arbitrary<G: Gen>(g: &mut G) -> u16 {
         let s = g.size(); g.gen_range(0, s as u16)
     }
-    fn shrink(&self) -> ~ObjIter:<u16> {
-        ~shrink_unsigned(*self).move_iter() as ~ObjIter:<u16>
+    fn shrink(&self) -> ~Iter<u16> {
+        ~shrink_unsigned(*self).move_iter() as ~Iter<u16>
     }
 }
 
@@ -332,8 +332,8 @@ impl Arbitrary for u32 {
     fn arbitrary<G: Gen>(g: &mut G) -> u32 {
         let s = g.size(); g.gen_range(0, s as u32)
     }
-    fn shrink(&self) -> ~ObjIter:<u32> {
-        ~shrink_unsigned(*self).move_iter() as ~ObjIter:<u32>
+    fn shrink(&self) -> ~Iter<u32> {
+        ~shrink_unsigned(*self).move_iter() as ~Iter<u32>
     }
 }
 
@@ -341,8 +341,8 @@ impl Arbitrary for u64 {
     fn arbitrary<G: Gen>(g: &mut G) -> u64 {
         let s = g.size(); g.gen_range(0, s as u64)
     }
-    fn shrink(&self) -> ~ObjIter:<u64> {
-        ~shrink_unsigned(*self).move_iter() as ~ObjIter:<u64>
+    fn shrink(&self) -> ~Iter<u64> {
+        ~shrink_unsigned(*self).move_iter() as ~Iter<u64>
     }
 }
 
@@ -350,9 +350,9 @@ impl Arbitrary for f32 {
     fn arbitrary<G: Gen>(g: &mut G) -> f32 {
         let s = g.size(); g.gen_range(-(s as f32), s as f32)
     }
-    fn shrink(&self) -> ~ObjIter:<f32> {
+    fn shrink(&self) -> ~Iter<f32> {
         let it = ~shrink_signed(self.to_i32().unwrap()).move_iter();
-        ~it.map(|x| x.to_f32().unwrap()) as ~ObjIter:<f32>
+        ~it.map(|x| x.to_f32().unwrap()) as ~Iter<f32>
     }
 }
 
@@ -360,9 +360,9 @@ impl Arbitrary for f64 {
     fn arbitrary<G: Gen>(g: &mut G) -> f64 {
         let s = g.size(); g.gen_range(-(s as f64), s as f64)
     }
-    fn shrink(&self) -> ~ObjIter:<f64> {
+    fn shrink(&self) -> ~Iter<f64> {
         let it = ~shrink_signed(self.to_i64().unwrap()).move_iter();
-        ~it.map(|x| x.to_f64().unwrap()) as ~ObjIter:<f64>
+        ~it.map(|x| x.to_f64().unwrap()) as ~Iter<f64>
     }
 }
 
@@ -370,8 +370,8 @@ fn shuffle_vec<A: Clone>(xs: &Vec<A>, k: uint, n: uint) -> Vec<Vec<A>> {
     if k > n {
         return vec!()
     }
-    let xs1 = Vec::from_slice(xs.slice_to(k).map(|x| x.clone()));
-    let xs2 = Vec::from_slice(xs.slice_from(k).map(|x| x.clone()));
+    let xs1: Vec<A> = xs.slice_to(k).iter().map(|x| x.clone()).collect();
+    let xs2: Vec<A> = xs.slice_from(k).iter().map(|x| x.clone()).collect();
     if xs2.len() == 0 {
         return vec!(vec!())
     }

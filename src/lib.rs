@@ -1,10 +1,10 @@
 // I have no idea what I'm doing with these attributes. Are we using
 // semantic versioning? Some packages include their full github URL.
 // Documentation for this stuff is extremely scarce.
-#[crate_id = "quickcheck#0.1.0"];
-#[crate_type = "lib"];
-#[license = "UNLICENSE"];
-#[doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")];
+#![crate_id = "quickcheck#0.1.0"]
+#![crate_type = "lib"]
+#![license = "UNLICENSE"]
+#![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
 
 //! This crate is a port of
 //! [Haskell's QuickCheck](http://hackage.haskell.org/package/QuickCheck).
@@ -13,13 +13,13 @@
 //! [README](https://github.com/BurntSushi/quickcheck).
 
 // Dunno what this is, but apparently it's required for the 'log' crate.
-#[feature(phase)];
+#![feature(phase)]
 
 extern crate collections;
 #[phase(syntax, link)] extern crate log;
 extern crate rand;
 
-pub use arbitrary::{Arbitrary, Gen, StdGen, ObjIter, gen};
+pub use arbitrary::{Arbitrary, Gen, StdGen, Iter, gen};
 pub use tester::{Testable, TestResult, Config};
 pub use tester::{quickcheck, quickcheck_config, quicktest, quicktest_config};
 pub use tester::{DEFAULT_CONFIG, DEFAULT_SIZE};
@@ -30,7 +30,7 @@ mod tester {
     use std::fmt::Show;
     use std::iter;
     use rand::task_rng;
-    use super::{Arbitrary, Gen, ObjIter, gen};
+    use super::{Arbitrary, Gen, Iter, gen};
     use tester::trap::safe;
 
     /// Default size hint used in `quickcheck` for sampling from a random
@@ -330,7 +330,7 @@ mod tester {
     }
 
     fn shrink_failure<G: Gen, A: AShow, B: AShow, C: AShow, T: Testable>
-                     (g: &mut G, mut shrinker: ~ObjIter:<(A, B, C)>,
+                     (g: &mut G, mut shrinker: ~Iter<(A, B, C)>,
                       fun: Fun<A, B, C, T>)
                      -> Option<TestResult> {
         for (a, b, c) in shrinker {
@@ -380,7 +380,7 @@ mod tester {
         //
         // Moreover, this feature seems to prevent an implementation of
         // Testable for a stack closure type. *sigh*
-        pub fn safe<T: Send>(fun: proc() -> T) -> Result<T, ~str> {
+        pub fn safe<T: Send>(fun: proc:Send() -> T) -> Result<T, ~str> {
             let (send, recv) = channel();
             let stdout = ChanWriter::new(send.clone());
             let stderr = ChanWriter::new(send);
@@ -388,8 +388,8 @@ mod tester {
 
             let mut t = task();
             t.opts.name = Some((~"safefn").into_maybe_owned());
-            t.opts.stdout = Some(~stdout as ~Writer);
-            t.opts.stderr = Some(~stderr as ~Writer);
+            t.opts.stdout = Some(~stdout as ~Writer:Send);
+            t.opts.stderr = Some(~stderr as ~Writer:Send);
 
             match t.try(fun) {
                 Ok(v) => Ok(v),
