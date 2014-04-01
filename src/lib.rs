@@ -118,11 +118,11 @@ mod tester {
         /// The number of tests to run on a function where the result is
         /// either a pass or a failure. (i.e., This doesn't include discarded
         /// test results.)
-        tests: uint,
+        pub tests: uint,
 
         /// The maximum number of tests to run for each function including
         /// discarded test results.
-        max_tests: uint,
+        pub max_tests: uint,
     }
 
     /// Describes the status of a single instance of a test.
@@ -130,9 +130,9 @@ mod tester {
     /// All testable things must be capable of producing a `TestResult`.
     #[deriving(Clone, Show)]
     pub struct TestResult {
-        priv status: Status,
-        priv arguments: Vec<~str>,
-        priv err: ~str,
+        status: Status,
+        arguments: Vec<~str>,
+        err: ~str,
     }
 
     /// Whether a test has passed, failed or been discarded.
@@ -468,7 +468,7 @@ mod test {
     #[test]
     fn reverse_app() {
         fn prop(xs: Vec<uint>, ys: Vec<uint>) -> bool {
-            let app = ::std::vec::append(xs.clone(), ys.as_slice());
+            let app = xs.clone().append(ys.as_slice());
             let app_rev: Vec<uint> = app.move_iter().rev().collect();
 
             let rxs = xs.move_iter().rev().collect();

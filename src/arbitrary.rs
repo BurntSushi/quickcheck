@@ -26,8 +26,8 @@ pub trait Gen : Rng {
 /// Values of type `StdGen` can be created with the `gen` function in this
 /// crate.
 pub struct StdGen<R> {
-    priv rng: R,
-    priv size: uint,
+    rng: R,
+    size: uint,
 }
 
 impl<R: Rng> Rng for StdGen<R> {
@@ -223,8 +223,8 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
         for (i, x) in self.iter().enumerate() {
             for sx in x.shrink() {
                 let mut pre = self.slice_to(i).iter().map(|x| x.clone());
-                let pre = ::std::vec::append_one(pre.collect(), sx);
-                xs.push(::std::vec::append(pre, self.slice_from(i+1)))
+                let pre = pre.collect::<Vec<A>>().append_one(sx);
+                xs.push(pre.append(self.slice_from(i+1)))
             }
         }
         ~xs.move_iter() as ~Iter<Vec<A>>
