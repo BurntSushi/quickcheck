@@ -380,7 +380,7 @@ mod tester {
         //
         // Moreover, this feature seems to prevent an implementation of
         // Testable for a stack closure type. *sigh*
-        pub fn safe<T: Send>(fun: proc:Send() -> T) -> Result<T, ~str> {
+        pub fn safe<T: Send>(fun: proc():Send -> T) -> Result<T, ~str> {
             let (send, recv) = channel();
             let stdout = ChanWriter::new(send.clone());
             let stderr = ChanWriter::new(send);
