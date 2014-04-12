@@ -60,7 +60,8 @@ Rust distribution.
 Given that Rust hasn't hit `1.0` yet---and the recent deprecation of 
 `rustpkg`---installing Rust libraries is pretty grim at the moment.
 More than that, I am keeping this crate in sync with Rust's master branch (as 
-enforced by `travis-ci`), so you'll need to build Rust from source first.
+enforced by `travis-ci`), so you'll need to build Rust from source first, or
+grab [the nightly build](http://www.rust-lang.org/install.html) from rust-lang.org.
 
 If you have an up-to-date Rust, then the easiest way to get going is to just 
 clone this repo and build it:
