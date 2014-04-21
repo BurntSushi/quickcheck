@@ -137,7 +137,7 @@ mod tester {
 
     /// Whether a test has passed, failed or been discarded.
     #[deriving(Clone, Show)]
-    priv enum Status { Pass, Fail, Discard }
+    enum Status { Pass, Fail, Discard }
 
     impl TestResult {
         /// Produces a test result that indicates the current test has passed.
