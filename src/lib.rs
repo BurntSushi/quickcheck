@@ -365,7 +365,7 @@ mod tester {
     mod trap {
         use std::comm::channel;
         use std::io::{ChanReader, ChanWriter};
-        use std::task::task;
+        use std::task::TaskBuilder;
 
         // This is my bright idea for capturing runtime errors caused by a
         // test. Actually, it looks like rustc uses a similar approach.
@@ -386,7 +386,7 @@ mod tester {
             let stderr = ChanWriter::new(send);
             let mut reader = ChanReader::new(recv);
 
-            let mut t = task();
+            let mut t = TaskBuilder::new();
             t.opts.name = Some((~"safefn").into_maybe_owned());
             t.opts.stdout = Some(~stdout as ~Writer:Send);
             t.opts.stderr = Some(~stderr as ~Writer:Send);
