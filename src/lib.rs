@@ -159,7 +159,7 @@ mod tester {
         /// When a test is discarded, `quickcheck` will replace it with a
         /// fresh one (up to a certain limit).
         pub fn discard() -> TestResult {
-            TestResult { status: Discard, arguments: vec!(), err: ~"", }
+            TestResult { status: Discard, arguments: vec!(), err: "".to_owned(), }
         }
 
         /// Converts a `bool` to a `TestResult`. A `true` value indicates that
@@ -169,7 +169,7 @@ mod tester {
             TestResult {
                 status: if b { Pass } else { Fail },
                 arguments: vec!(),
-                err: ~"",
+                err: "".to_owned(),
             }
         }
 
@@ -387,7 +387,7 @@ mod tester {
             let mut reader = ChanReader::new(recv);
 
             let mut t = TaskBuilder::new();
-            t.opts.name = Some((~"safefn").into_maybe_owned());
+            t.opts.name = Some(("safefn".to_owned()).into_maybe_owned());
             t.opts.stdout = Some(~stdout as ~Writer:Send);
             t.opts.stderr = Some(~stderr as ~Writer:Send);
 
