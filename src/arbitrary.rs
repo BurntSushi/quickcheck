@@ -605,9 +605,12 @@ mod test {
 
     #[test]
     fn strs() {
-        eq(~"", vec!());
-        eq(~"A", vec!(~""));
-        eq(~"ABC", vec!(~"", ~"AB", ~"BC", ~"AC"));
+        eq("".to_owned(), vec!());
+        eq("A".to_owned(), vec!("".to_owned()));
+        eq("ABC".to_owned(), vec!("".to_owned(),
+                                 "AB".to_owned(),
+                                 "BC".to_owned(),
+                                 "AC".to_owned()));
     }
 
     // All this jazz is for testing set equality on the results of a shrinker.
