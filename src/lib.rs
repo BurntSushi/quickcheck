@@ -12,14 +12,13 @@
 //! For detailed examples, please see the
 //! [README](https://github.com/BurntSushi/quickcheck).
 
-// Dunno what this is, but apparently it's required for the 'log' crate.
 #![feature(phase)]
 
 extern crate collections;
 #[phase(syntax, link)] extern crate log;
 extern crate rand;
 
-pub use arbitrary::{Arbitrary, Gen, StdGen, Iter, gen};
+pub use arbitrary::{Arbitrary, Gen, StdGen, Shrinker, gen};
 pub use tester::{Testable, TestResult, Config};
 pub use tester::{quickcheck, quickcheck_config, quicktest, quicktest_config};
 pub use tester::{DEFAULT_CONFIG, DEFAULT_SIZE};
@@ -30,7 +29,7 @@ mod tester {
     use std::fmt::Show;
     use std::iter;
     use rand::task_rng;
-    use super::{Arbitrary, Gen, Iter, gen};
+    use super::{Arbitrary, Gen, Shrinker, gen};
     use tester::trap::safe;
 
     /// Default size hint used in `quickcheck` for sampling from a random
@@ -319,18 +318,12 @@ mod tester {
         let r = fun.call(g, Some(&a), Some(&b), Some(&c));
         match r.status {
             Pass|Discard => r,
-            Fail => {
-                // We've found a failing test case, so try to shrink it.
-                match shrink_failure(g, (a, b, c).shrink(), fun) {
-                    Some(smaller) => smaller,
-                    None => r,
-                }
-            }
+            Fail => shrink_failure(g, (a, b, c).shrink(), fun).unwrap_or(r),
         }
     }
 
     fn shrink_failure<G: Gen, A: AShow, B: AShow, C: AShow, T: Testable>
-                     (g: &mut G, mut shrinker: ~Iter<(A, B, C)>,
+                     (g: &mut G, mut shrinker: ~Shrinker<(A, B, C)>,
                       fun: Fun<A, B, C, T>)
                      -> Option<TestResult> {
         for (a, b, c) in shrinker {
