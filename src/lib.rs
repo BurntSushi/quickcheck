@@ -282,7 +282,7 @@ mod tester {
                 Zero(f) => safe(proc() { f() }).result(g),
                 One(f) => {
                     let a = a.unwrap();
-                    let oa = ~a.clone();
+                    let oa = box a.clone();
                     let mut r = safe(proc() { f(*oa) }).result(g);
                     if r.is_failure() {
                         r.arguments = vec!(a.to_str());
@@ -291,7 +291,7 @@ mod tester {
                 },
                 Two(f) => {
                     let (a, b) = (a.unwrap(), b.unwrap());
-                    let (oa, ob) = (~a.clone(), ~b.clone());
+                    let (oa, ob) = (box a.clone(), box b.clone());
                     let mut r = safe(proc() { f(*oa, *ob) }).result(g);
                     if r.is_failure() {
                         r.arguments = vec!(a.to_str(), b.to_str());
@@ -300,7 +300,7 @@ mod tester {
                 },
                 Three(f) => {
                     let (a, b, c) = (a.unwrap(), b.unwrap(), c.unwrap());
-                    let (oa, ob, oc) = (~a.clone(), ~b.clone(), ~c.clone());
+                    let (oa, ob, oc) = (box a.clone(), box b.clone(), box c.clone());
                     let mut r = safe(proc() { f(*oa, *ob, *oc) }).result(g);
                     if r.is_failure() {
                         r.arguments = vec!(a.to_str(), b.to_str(), c.to_str());
@@ -323,7 +323,7 @@ mod tester {
     }
 
     fn shrink_failure<G: Gen, A: AShow, B: AShow, C: AShow, T: Testable>
-                     (g: &mut G, mut shrinker: ~Shrinker<(A, B, C)>,
+                     (g: &mut G, mut shrinker: Box<Shrinker<(A, B, C)>>,
                       fun: Fun<A, B, C, T>)
                      -> Option<TestResult> {
         for (a, b, c) in shrinker {
@@ -381,8 +381,8 @@ mod tester {
 
             let mut t = TaskBuilder::new();
             t.opts.name = Some(("safefn".to_owned()).into_maybe_owned());
-            t.opts.stdout = Some(~stdout as ~Writer:Send);
-            t.opts.stderr = Some(~stderr as ~Writer:Send);
+            t.opts.stdout = Some(box stdout as Box<Writer:Send>);
+            t.opts.stderr = Some(box stderr as Box<Writer:Send>);
 
             match t.try(fun) {
                 Ok(v) => Ok(v),
