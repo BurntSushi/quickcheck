@@ -34,7 +34,7 @@ mod tester {
 
     /// Default size hint used in `quickcheck` for sampling from a random
     /// distribution.
-    pub static DEFAULT_SIZE: uint = 20;
+    pub static DEFAULT_SIZE: uint = 100;
 
     /// Default configuration used in `quickcheck`.
     pub static DEFAULT_CONFIG: Config = Config{

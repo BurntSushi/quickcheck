@@ -85,7 +85,7 @@ fn empty_shrinker<A>() -> ~Shrinker<A> {
 pub trait Arbitrary : Clone + Send {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
     fn shrink(&self) -> ~Shrinker<Self> {
-        empty_shrinker::<Self>()
+        empty_shrinker()
     }
 }
 
@@ -115,7 +115,7 @@ impl<A: Arbitrary> Arbitrary for Option<A> {
     fn shrink(&self)  -> ~Shrinker<Option<A>> {
         match *self {
             None => {
-                empty_shrinker::<Option<A>>()
+                empty_shrinker()
             }
             Some(ref x) => {
                 let none: Vec<Option<A>> = vec!(None);
@@ -210,7 +210,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
 
     fn shrink(&self) -> ~Shrinker<Vec<A>> {
         if self.len() == 0 {
-            return empty_shrinker::<Vec<A>>()
+            return empty_shrinker()
         }
 
         // Start the shrunk values with an empty vector.
@@ -260,7 +260,7 @@ impl Arbitrary for char {
 
     fn shrink(&self) -> ~Shrinker<char> {
         // No char shrinking for now.
-        empty_shrinker::<char>()
+        empty_shrinker()
     }
 }
 
