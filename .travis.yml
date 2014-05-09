@@ -1,9 +1,9 @@
 language: c
-before_install:
-  - yes | sudo add-apt-repository ppa:hansjorg/rust
-  - sudo apt-get update
 install:
-  - sudo apt-get install rust-nightly
+  - curl -O http://static.rust-lang.org/dist/rust-nightly-x86_64-unknown-linux-gnu.tar.gz
+  - tar xfz rust-nightly-x86_64-unknown-linux-gnu.tar.gz
+  - (cd rust-nightly-x86_64-unknown-linux-gnu/ && sudo ./install.sh)
 script:
-  - rustc --crate-type lib src/lib.rs
+  - make
+  - make test
 
