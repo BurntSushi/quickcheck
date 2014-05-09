@@ -66,7 +66,8 @@ impl<A> Iterator<A> for EmptyShrinker<A> {
     fn next(&mut self) -> Option<A> { None }
 }
 
-fn empty_shrinker<A>() -> ~Shrinker<A> {
+/// Creates a shrinker with zero elements.
+pub fn empty_shrinker<A>() -> ~Shrinker<A> {
     let zero: EmptyShrinker<A> = EmptyShrinker;
     ~zero as ~Shrinker<A>
 }
