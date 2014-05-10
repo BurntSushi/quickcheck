@@ -1,7 +1,7 @@
 QuickCheck is a way to do property based testing using randomly generated 
 input. This crate comes with the ability to randomly generate and shrink 
 integers, floats, tuples, booleans, lists, strings, options and results.
-All QuickCheck needs is a property function---it will then randomly generate 
+All QuickCheck needs is a property function—it will then randomly generate
 inputs to that function and call the property for each set of inputs. If the 
 property fails (whether by a runtime error like index out-of-bounds or by not
 satisfying your property), the inputs are "shrunk" to find a smaller 
@@ -57,8 +57,8 @@ fn main() {
 The `quickcheck` crate only depends on the standard crates shipped with the 
 Rust distribution.
 
-Given that Rust hasn't hit `1.0` yet---and the recent deprecation of 
-`rustpkg`---installing Rust libraries is pretty grim at the moment.
+Given that Rust hasn't hit `1.0` yet—and the recent deprecation of
+`rustpkg`—installing Rust libraries is pretty grim at the moment.
 More than that, I am keeping this crate in sync with Rust's master branch (as 
 enforced by `travis-ci`), so you'll need to build Rust from source first, or
 grab [the nightly build](http://www.rust-lang.org/install.html) from rust-lang.org.
@@ -98,7 +98,7 @@ Sometimes you want to test a property that only holds for a *subset* of the
 possible inputs, so that when your property is given an input that is outside 
 of that subset, you'd discard it. In particular, the property should *neither* 
 pass nor fail on inputs outside of the subset you want to test. But properties 
-return boolean values---which either indicate pass or fail.
+return boolean values—which either indicate pass or fail.
 
 To fix this, we need to take a step back and look at the type of the 
 `quickcheck` function:
@@ -369,7 +369,7 @@ Changing the call to `range_step_inclusive` results in `sieve` passing all
 tests for the `prop_all_prime` property.
 
 In addition, if our bug happened to result in an index out-of-bounds error, 
-then `quickcheck` can handle it just like any other failure---including 
+then `quickcheck` can handle it just like any other failure—including
 shrinking on failures caused by runtime errors.
 
 
