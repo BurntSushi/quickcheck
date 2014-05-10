@@ -1,3 +1,4 @@
+use std::mem;
 use std::num;
 use std::str;
 use rand::Rng;
@@ -72,6 +73,20 @@ pub fn empty_shrinker<A>() -> Box<Shrinker<A>> {
     box zero as Box<Shrinker<A>>
 }
 
+struct SingleShrinker<A> {
+    value: Option<A>
+}
+
+impl<A> Iterator<A> for SingleShrinker<A> {
+    fn next(&mut self) -> Option<A> { mem::replace(&mut self.value, None) }
+}
+
+/// Creates a shrinker with a single element.
+pub fn single_shrinker<A>(value: A) -> Box<Shrinker<A>> {
+    let one: SingleShrinker<A> = SingleShrinker { value: Some(value) };
+    box one as Box<Shrinker<A>>
+}
+
 /// `Arbitrary` describes types whose values can be randomly generated and
 /// shrunk.
 ///
@@ -97,10 +112,10 @@ impl Arbitrary for () {
 impl Arbitrary for bool {
     fn arbitrary<G: Gen>(g: &mut G) -> bool { g.gen() }
     fn shrink(&self) -> Box<Shrinker<bool>> {
-        box match *self {
-            true => (vec!(false)).move_iter(),
-            false => (vec!()).move_iter(),
-        } as Box<Shrinker<bool>>
+        match *self {
+            true => single_shrinker(false),
+            false => empty_shrinker(),
+        }
     }
 }
 
@@ -119,9 +134,7 @@ impl<A: Arbitrary> Arbitrary for Option<A> {
                 empty_shrinker()
             }
             Some(ref x) => {
-                let none: Vec<Option<A>> = vec!(None);
-                let tagged = x.shrink().map(Some);
-                let chain = none.move_iter().chain(tagged);
+                let chain = single_shrinker(None).chain(x.shrink().map(Some));
                 box chain as Box<Shrinker<Option<A>>>
             }
         }
