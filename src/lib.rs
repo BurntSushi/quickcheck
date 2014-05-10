@@ -18,7 +18,7 @@ extern crate collections;
 #[phase(syntax, link)] extern crate log;
 extern crate rand;
 
-pub use arbitrary::{Arbitrary, Gen, StdGen, Shrinker, gen, empty_shrinker};
+pub use arbitrary::{Arbitrary, Gen, StdGen, Shrinker, gen, empty_shrinker, single_shrinker};
 pub use tester::{Testable, TestResult, Config};
 pub use tester::{quickcheck, quickcheck_config, quicktest, quicktest_config};
 pub use tester::{DEFAULT_CONFIG, DEFAULT_SIZE};
