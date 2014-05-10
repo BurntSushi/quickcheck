@@ -283,7 +283,7 @@ impl Arbitrary for int {
         let s = g.size(); g.gen_range(-(s as int), s as int)
     }
     fn shrink(&self) -> Box<Shrinker<int>> {
-        box shrink_signed(*self).move_iter() as Box<Shrinker<int>>
+        SignedShrinker::new(*self)
     }
 }
 
@@ -292,7 +292,7 @@ impl Arbitrary for i8 {
         let s = g.size(); g.gen_range(-(s as i8), s as i8)
     }
     fn shrink(&self) -> Box<Shrinker<i8>> {
-        box shrink_signed(*self).move_iter() as Box<Shrinker<i8>>
+        SignedShrinker::new(*self)
     }
 }
 
@@ -301,7 +301,7 @@ impl Arbitrary for i16 {
         let s = g.size(); g.gen_range(-(s as i16), s as i16)
     }
     fn shrink(&self) -> Box<Shrinker<i16>> {
-        box shrink_signed(*self).move_iter() as Box<Shrinker<i16>>
+        SignedShrinker::new(*self)
     }
 }
 
@@ -310,7 +310,7 @@ impl Arbitrary for i32 {
         let s = g.size(); g.gen_range(-(s as i32), s as i32)
     }
     fn shrink(&self) -> Box<Shrinker<i32>> {
-        box shrink_signed(*self).move_iter() as Box<Shrinker<i32>>
+        SignedShrinker::new(*self)
     }
 }
 
@@ -319,7 +319,7 @@ impl Arbitrary for i64 {
         let s = g.size(); g.gen_range(-(s as i64), s as i64)
     }
     fn shrink(&self) -> Box<Shrinker<i64>> {
-        box shrink_signed(*self).move_iter() as Box<Shrinker<i64>>
+        SignedShrinker::new(*self)
     }
 }
 
@@ -328,7 +328,7 @@ impl Arbitrary for uint {
         let s = g.size(); g.gen_range(0, s)
     }
     fn shrink(&self) -> Box<Shrinker<uint>> {
-        box shrink_unsigned(*self).move_iter() as Box<Shrinker<uint>>
+        UnsignedShrinker::new(*self)
     }
 }
 
@@ -337,7 +337,7 @@ impl Arbitrary for u8 {
         let s = g.size(); g.gen_range(0, s as u8)
     }
     fn shrink(&self) -> Box<Shrinker<u8>> {
-        box shrink_unsigned(*self).move_iter() as Box<Shrinker<u8>>
+        UnsignedShrinker::new(*self)
     }
 }
 
@@ -346,7 +346,7 @@ impl Arbitrary for u16 {
         let s = g.size(); g.gen_range(0, s as u16)
     }
     fn shrink(&self) -> Box<Shrinker<u16>> {
-        box shrink_unsigned(*self).move_iter() as Box<Shrinker<u16>>
+        UnsignedShrinker::new(*self)
     }
 }
 
@@ -355,7 +355,7 @@ impl Arbitrary for u32 {
         let s = g.size(); g.gen_range(0, s as u32)
     }
     fn shrink(&self) -> Box<Shrinker<u32>> {
-        box shrink_unsigned(*self).move_iter() as Box<Shrinker<u32>>
+        UnsignedShrinker::new(*self)
     }
 }
 
@@ -364,7 +364,7 @@ impl Arbitrary for u64 {
         let s = g.size(); g.gen_range(0, s as u64)
     }
     fn shrink(&self) -> Box<Shrinker<u64>> {
-        box shrink_unsigned(*self).move_iter() as Box<Shrinker<u64>>
+        UnsignedShrinker::new(*self)
     }
 }
 
@@ -373,7 +373,7 @@ impl Arbitrary for f32 {
         let s = g.size(); g.gen_range(-(s as f32), s as f32)
     }
     fn shrink(&self) -> Box<Shrinker<f32>> {
-        let it = shrink_signed(self.to_i32().unwrap()).move_iter();
+        let it = SignedShrinker::new(self.to_i32().unwrap());
         box it.map(|x| x.to_f32().unwrap()) as Box<Shrinker<f32>>
     }
 }
@@ -383,7 +383,7 @@ impl Arbitrary for f64 {
         let s = g.size(); g.gen_range(-(s as f64), s as f64)
     }
     fn shrink(&self) -> Box<Shrinker<f64>> {
-        let it = shrink_signed(self.to_i64().unwrap()).move_iter();
+        let it = SignedShrinker::new(self.to_i64().unwrap());
         box it.map(|x| x.to_f64().unwrap()) as Box<Shrinker<f64>>
     }
 }
@@ -414,40 +414,73 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: uint) -> Vec<Vec<A>> {
     shuffle(xs, k, xs.len())
 }
 
-// This feels incredibly gross. I hacked my way through this one.
-// The cloning seems unfortunate, but maybe the compiler is smart enough
-// to elide it.
-fn shrink_signed<A: Clone + Ord + Signed + Mul<A, A>>(x: A) -> Vec<A> {
-    if x.is_zero() {
-        return vec!()
-    }
+fn half<A: Primitive>(x: A) -> A { x / num::cast(2).unwrap() }
 
-    let two: A = num::one::<A>() + num::one::<A>();
-    let mut xs: Vec<A> = vec!(num::zero());
-    let mut i: A = x.clone() / two;
-    if i.is_negative() {
-        xs.push(x.clone().abs())
-    }
-    while (x.clone() - i.clone()).abs() < x.clone().abs() {
-        xs.push(x.clone() - i.clone());
-        i = i.clone() / two;
-    }
-    xs
+struct SignedShrinker<A> {
+    x: A,
+    i: A,
 }
 
-fn shrink_unsigned<A: Clone + Ord + Unsigned + Mul<A, A>>(x: A) -> Vec<A> {
-    if x.is_zero() {
-        return vec!()
+impl<A: Primitive + Signed> SignedShrinker<A> {
+    fn new(x: A) -> Box<Shrinker<A>> {
+        if x.is_zero() {
+            empty_shrinker::<A>()
+        } else {
+            let shrinker = SignedShrinker {
+                x: x,
+                i: half(x),
+            };
+            if shrinker.i.is_negative() {
+                box { vec![num::zero(), shrinker.x.abs()] }.move_iter().chain(shrinker) as Box<Shrinker<A>>
+            } else {
+                box { vec![num::zero()] }.move_iter().chain(shrinker) as Box<Shrinker<A>>
+            }
+        }
     }
+}
 
-    let two: A = num::one::<A>() + num::one::<A>();
-    let mut xs: Vec<A> = vec!(num::zero());
-    let mut i: A = x.clone() / two;
-    while x.clone() - i.clone() < x.clone() {
-        xs.push(x.clone() - i.clone());
-        i = i.clone() / two;
+impl<A: Primitive + Signed> Iterator<A> for SignedShrinker<A> {
+    fn next(&mut self) -> Option<A> {
+        if (self.x - self.i).abs() < self.x.abs() {
+            let result = Some(self.x - self.i);
+            self.i = half(self.i);
+            result
+        } else {
+            None
+        }
     }
-    xs
+}
+
+struct UnsignedShrinker<A> {
+    x: A,
+    i: A,
+}
+
+impl<A: Primitive + Unsigned> UnsignedShrinker<A> {
+    fn new(x: A) -> Box<Shrinker<A>> {
+        if x.is_zero() {
+            empty_shrinker::<A>()
+        } else {
+            box { vec![num::zero()] }.move_iter().chain(
+                UnsignedShrinker {
+                    x: x,
+                    i: half(x),
+                }
+            ) as Box<Shrinker<A>>
+        }
+    }
+}
+
+impl<A: Primitive + Unsigned> Iterator<A> for UnsignedShrinker<A> {
+    fn next(&mut self) -> Option<A> {
+        if self.x - self.i < self.x {
+            let result = Some(self.x - self.i);
+            self.i = half(self.i);
+            result
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
@@ -629,7 +662,7 @@ mod test {
     // All this jazz is for testing set equality on the results of a shrinker.
     fn eq<A: Arbitrary + TotalEq + Show + Hash>(s: A, v: Vec<A>) {
         let (left, right) = (shrunk(s), set(v));
-        assert!(left.eq(&right) && right.eq(&left));
+        assert_eq!(left, right);
     }
     fn shrunk<A: Arbitrary + TotalEq + Hash>(s: A) -> HashSet<A> {
         set(s.shrink().collect())
@@ -640,6 +673,6 @@ mod test {
 
     fn ordered_eq<A: Arbitrary + TotalEq + Show>(s: A, v: Vec<A>) {
         let (left, right) = (s.shrink().collect::<Vec<A>>(), v);
-        assert!(left.eq(&right) && right.eq(&left));
+        assert_eq!(left, right);
     }
 }
