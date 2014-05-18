@@ -1,6 +1,5 @@
 use std::mem;
 use std::num;
-use std::str;
 use rand::Rng;
 
 /// Returns a `Gen` with the given configuration using any random number
@@ -255,17 +254,28 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
 impl Arbitrary for ~str {
     fn arbitrary<G: Gen>(g: &mut G) -> ~str {
         let size = { let s = g.size(); g.gen_range(0, s) };
-        g.gen_ascii_str(size)
+        g.gen_ascii_str(size).to_owned()
     }
 
     fn shrink(&self) -> Box<Shrinker<~str>> {
         // Shrink a string by shrinking a vector of its characters.
-        let chars: Vec<char> = self.chars().collect();
-        let mut strs: Vec<~str> = vec!();
-        for x in chars.shrink() {
-            strs.push(str::from_chars(x.as_slice()));
-        }
-        box strs.move_iter() as Box<Shrinker<~str>>
+        let chars: Vec<char> = self.as_slice().chars().collect();
+        let strs = chars.shrink().map(|x| x.move_iter().collect::<~str>());
+        box strs as Box<Shrinker<~str>>
+    }
+}
+
+impl Arbitrary for StrBuf {
+    fn arbitrary<G: Gen>(g: &mut G) -> StrBuf {
+        let size = { let s = g.size(); g.gen_range(0, s) };
+        g.gen_ascii_str(size).to_strbuf()
+    }
+
+    fn shrink(&self) -> Box<Shrinker<StrBuf>> {
+        // Shrink a string by shrinking a vector of its characters.
+        let chars: Vec<char> = self.as_slice().chars().collect();
+        let strs = chars.shrink().map(|x| x.move_iter().collect::<StrBuf>());
+        box strs as Box<Shrinker<StrBuf>>
     }
 }
 
