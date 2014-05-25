@@ -130,8 +130,8 @@ mod tester {
     #[deriving(Clone, Show)]
     pub struct TestResult {
         status: Status,
-        arguments: Vec<~str>,
-        err: ~str,
+        arguments: Vec<StrBuf>,
+        err: StrBuf,
     }
 
     /// Whether a test has passed, failed or been discarded.
@@ -187,7 +187,7 @@ mod tester {
             return self.is_failure() && self.err.len() > 0
         }
 
-        fn failed_msg(&self) -> ~str {
+        fn failed_msg(&self) -> StrBuf {
             if self.err.len() == 0 {
                 return format!(
                     "[quickcheck] TEST FAILED. Arguments: ({})",
@@ -233,11 +233,11 @@ mod tester {
         fn result<G: Gen>(&self, _: &mut G) -> TestResult { self.clone() }
     }
 
-    impl<A: Testable> Testable for Result<A, ~str> {
+    impl<A: Testable> Testable for Result<A, StrBuf> {
         fn result<G: Gen>(&self, g: &mut G) -> TestResult {
             match *self {
                 Ok(ref r) => r.result(g),
-                Err(ref err) => TestResult::error(*err),
+                Err(ref err) => TestResult::error(err.as_slice()),
             }
         }
     }
@@ -389,7 +389,7 @@ mod tester {
         //
         // Moreover, this feature seems to prevent an implementation of
         // Testable for a stack closure type. *sigh*
-        pub fn safe<T: Send>(fun: proc():Send -> T) -> Result<T, ~str> {
+        pub fn safe<T: Send>(fun: proc():Send -> T) -> Result<T, StrBuf> {
             let (send, recv) = channel();
             let stdout = ChanWriter::new(send.clone());
             let stderr = ChanWriter::new(send);
@@ -404,7 +404,7 @@ mod tester {
                 Ok(v) => Ok(v),
                 Err(_) => {
                     let s = reader.read_to_str().unwrap();
-                    Err(s.trim().into_owned())
+                    Err(s.as_slice().trim().into_strbuf())
                 }
             }
         }
