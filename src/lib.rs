@@ -149,7 +149,7 @@ mod tester {
         /// error.
         pub fn error(msg: &str) -> TestResult {
             let mut r = TestResult::from_bool(false);
-            r.err = msg.to_owned();
+            r.err = msg.to_string();
             r
         }
 
@@ -158,7 +158,7 @@ mod tester {
         /// When a test is discarded, `quickcheck` will replace it with a
         /// fresh one (up to a certain limit).
         pub fn discard() -> TestResult {
-            TestResult { status: Discard, arguments: vec!(), err: "".to_owned(), }
+            TestResult { status: Discard, arguments: vec!(), err: "".to_string(), }
         }
 
         /// Converts a `bool` to a `TestResult`. A `true` value indicates that
@@ -168,7 +168,7 @@ mod tester {
             TestResult {
                 status: if b { Pass } else { Fail },
                 arguments: vec!(),
-                err: "".to_owned(),
+                err: "".to_string(),
             }
         }
 
@@ -396,7 +396,7 @@ mod tester {
             let mut reader = ChanReader::new(recv);
 
             let mut t = TaskBuilder::new();
-            t.opts.name = Some(("safefn".to_owned()).into_maybe_owned());
+            t.opts.name = Some(("safefn".to_string()).into_maybe_owned());
             t.opts.stdout = Some(box stdout as Box<Writer:Send>);
             t.opts.stderr = Some(box stderr as Box<Writer:Send>);
 
@@ -404,7 +404,7 @@ mod tester {
                 Ok(v) => Ok(v),
                 Err(_) => {
                     let s = reader.read_to_str().unwrap();
-                    Err(s.as_slice().trim().into_strbuf())
+                    Err(s.as_slice().trim().to_string())
                 }
             }
         }
