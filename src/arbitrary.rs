@@ -254,7 +254,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
 impl Arbitrary for String {
     fn arbitrary<G: Gen>(g: &mut G) -> String {
         let size = { let s = g.size(); g.gen_range(0, s) };
-        g.gen_ascii_str(size).to_strbuf()
+        g.gen_ascii_str(size)
     }
 
     fn shrink(&self) -> Box<Shrinker<String>> {
@@ -647,12 +647,12 @@ mod test {
 
     #[test]
     fn strs() {
-        eq("".to_owned(), vec!());
-        eq("A".to_owned(), vec!("".to_owned()));
-        eq("ABC".to_owned(), vec!("".to_owned(),
-                                 "AB".to_owned(),
-                                 "BC".to_owned(),
-                                 "AC".to_owned()));
+        eq("".to_string(), vec!());
+        eq("A".to_string(), vec!("".to_string()));
+        eq("ABC".to_string(), vec!("".to_string(),
+                                 "AB".to_string(),
+                                 "BC".to_string(),
+                                 "AC".to_string()));
     }
 
     // All this jazz is for testing set equality on the results of a shrinker.
