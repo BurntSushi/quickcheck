@@ -1,6 +1,6 @@
 use std::mem;
 use std::num;
-use rand::Rng;
+use std::rand::Rng;
 
 /// Returns a `Gen` with the given configuration using any random number
 /// generator.
@@ -254,7 +254,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
 impl Arbitrary for String {
     fn arbitrary<G: Gen>(g: &mut G) -> String {
         let size = { let s = g.size(); g.gen_range(0, s) };
-        g.gen_ascii_str(size).to_strbuf()
+        g.gen_ascii_chars().take(size).collect()
     }
 
     fn shrink(&self) -> Box<Shrinker<String>> {
@@ -485,7 +485,7 @@ mod test {
     use std::hash::Hash;
     use std::iter;
     use collections::HashSet;
-    use rand;
+    use std::rand;
     use super::Arbitrary;
 
     // Arbitrary testing. (Not much here. What else can I reasonably test?)
@@ -647,27 +647,27 @@ mod test {
 
     #[test]
     fn strs() {
-        eq("".to_owned(), vec!());
-        eq("A".to_owned(), vec!("".to_owned()));
-        eq("ABC".to_owned(), vec!("".to_owned(),
-                                 "AB".to_owned(),
-                                 "BC".to_owned(),
-                                 "AC".to_owned()));
+        eq("".to_string(), vec!());
+        eq("A".to_string(), vec!("".to_string()));
+        eq("ABC".to_string(), vec!("".to_string(),
+                                   "AB".to_string(),
+                                   "BC".to_string(),
+                                   "AC".to_string()));
     }
 
     // All this jazz is for testing set equality on the results of a shrinker.
-    fn eq<A: Arbitrary + TotalEq + Show + Hash>(s: A, v: Vec<A>) {
+    fn eq<A: Arbitrary + Eq + Show + Hash>(s: A, v: Vec<A>) {
         let (left, right) = (shrunk(s), set(v));
         assert_eq!(left, right);
     }
-    fn shrunk<A: Arbitrary + TotalEq + Hash>(s: A) -> HashSet<A> {
+    fn shrunk<A: Arbitrary + Eq + Hash>(s: A) -> HashSet<A> {
         set(s.shrink().collect())
     }
-    fn set<A: TotalEq + Hash>(xs: Vec<A>) -> HashSet<A> {
+    fn set<A: Eq + Hash>(xs: Vec<A>) -> HashSet<A> {
         xs.move_iter().collect()
     }
 
-    fn ordered_eq<A: Arbitrary + TotalEq + Show>(s: A, v: Vec<A>) {
+    fn ordered_eq<A: Arbitrary + Eq + Show>(s: A, v: Vec<A>) {
         let (left, right) = (s.shrink().collect::<Vec<A>>(), v);
         assert_eq!(left, right);
     }
