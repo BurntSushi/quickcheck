@@ -484,7 +484,7 @@ mod test {
     use std::fmt::Show;
     use std::hash::Hash;
     use std::iter;
-    use collections::HashSet;
+    use std::collections::HashSet;
     use std::rand;
     use super::Arbitrary;
 
