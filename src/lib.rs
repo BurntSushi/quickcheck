@@ -15,7 +15,7 @@
 #![feature(phase)]
 
 extern crate collections;
-#[phase(syntax, link)] extern crate log;
+#[phase(plugin, link)] extern crate log;
 
 pub use arbitrary::{Arbitrary, Gen, StdGen, Shrinker, gen, empty_shrinker, single_shrinker};
 pub use tester::{Testable, TestResult, Config};
@@ -364,7 +364,7 @@ mod tester {
 
     #[cfg(quickfail)]
     mod trap {
-        pub fn safe<T: Send>(fun: proc() -> T) -> Result<T, ~str> {
+        pub fn safe<T: Send>(fun: proc() -> T) -> Result<T, String> {
             Ok(fun())
         }
     }
