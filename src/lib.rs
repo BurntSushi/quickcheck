@@ -395,10 +395,9 @@ mod tester {
             let mut reader = ChanReader::new(recv);
 
             let mut t = TaskBuilder::new();
-            t.opts.name = Some(("safefn".to_string()).into_maybe_owned());
-            t.opts.stdout = Some(box stdout as Box<Writer:Send>);
-            t.opts.stderr = Some(box stderr as Box<Writer:Send>);
-
+            t = t.named("safefn");
+            t = t.stdout(box stdout as Box<Writer+Send>);
+            t = t.stderr(box stderr as Box<Writer+Send>);
             match t.try(fun) {
                 Ok(v) => Ok(v),
                 Err(_) => {
