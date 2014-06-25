@@ -32,6 +32,11 @@ pub struct StdGen<R> {
 
 impl<R: Rng> Rng for StdGen<R> {
     fn next_u32(&mut self) -> u32 { self.rng.next_u32() }
+
+    // some RNGs implement these more efficiently than the default, so
+    // we might as well defer to them.
+    fn next_u64(&mut self) -> u64 { self.rng.next_u64() }
+    fn fill_bytes(&mut self, dest: &mut [u8]) { self.rng.fill_bytes(dest) }
 }
 
 impl<R: Rng> Gen for StdGen<R> {
