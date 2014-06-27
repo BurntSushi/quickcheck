@@ -6,7 +6,6 @@ for f in *.rs; do
   echo "$f"
   if [ "$f" = attribute.rs ]; then
       FLAGS=--test
-      continue
   else
       FLAGS=
   fi

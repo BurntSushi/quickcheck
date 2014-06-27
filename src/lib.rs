@@ -12,7 +12,7 @@
 //! For detailed examples, please see the
 //! [README](https://github.com/BurntSushi/quickcheck).
 
-#![feature(phase)]
+#![feature(macro_rules, phase)]
 
 extern crate collections;
 #[phase(plugin, link)] extern crate log;
