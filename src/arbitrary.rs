@@ -32,6 +32,11 @@ pub struct StdGen<R> {
 
 impl<R: Rng> Rng for StdGen<R> {
     fn next_u32(&mut self) -> u32 { self.rng.next_u32() }
+
+    // some RNGs implement these more efficiently than the default, so
+    // we might as well defer to them.
+    fn next_u64(&mut self) -> u64 { self.rng.next_u64() }
+    fn fill_bytes(&mut self, dest: &mut [u8]) { self.rng.fill_bytes(dest) }
 }
 
 impl<R: Rng> Gen for StdGen<R> {
@@ -274,94 +279,40 @@ impl Arbitrary for char {
     }
 }
 
-impl Arbitrary for int {
-    fn arbitrary<G: Gen>(g: &mut G) -> int {
-        let s = g.size(); g.gen_range(-(s as int), s as int)
-    }
-    fn shrink(&self) -> Box<Shrinker<int>> {
-        SignedShrinker::new(*self)
-    }
-}
-
-impl Arbitrary for i8 {
-    fn arbitrary<G: Gen>(g: &mut G) -> i8 {
-        let s = g.size(); g.gen_range(-(s as i8), s as i8)
-    }
-    fn shrink(&self) -> Box<Shrinker<i8>> {
-        SignedShrinker::new(*self)
+macro_rules! signed_arbitrary {
+    ($($ty: ty),*) => {
+        $(
+            impl Arbitrary for $ty {
+                fn arbitrary<G: Gen>(g: &mut G) -> $ty {
+                    let s = g.size(); g.gen_range(-(s as $ty), s as $ty)
+                }
+                fn shrink(&self) -> Box<Shrinker<$ty>> {
+                    SignedShrinker::new(*self)
+                }
+            }
+            )*
     }
 }
-
-impl Arbitrary for i16 {
-    fn arbitrary<G: Gen>(g: &mut G) -> i16 {
-        let s = g.size(); g.gen_range(-(s as i16), s as i16)
-    }
-    fn shrink(&self) -> Box<Shrinker<i16>> {
-        SignedShrinker::new(*self)
-    }
+signed_arbitrary! {
+    int, i8, i16, i32, i64
 }
 
-impl Arbitrary for i32 {
-    fn arbitrary<G: Gen>(g: &mut G) -> i32 {
-        let s = g.size(); g.gen_range(-(s as i32), s as i32)
-    }
-    fn shrink(&self) -> Box<Shrinker<i32>> {
-        SignedShrinker::new(*self)
-    }
-}
-
-impl Arbitrary for i64 {
-    fn arbitrary<G: Gen>(g: &mut G) -> i64 {
-        let s = g.size(); g.gen_range(-(s as i64), s as i64)
-    }
-    fn shrink(&self) -> Box<Shrinker<i64>> {
-        SignedShrinker::new(*self)
+macro_rules! unsigned_arbitrary {
+    ($($ty: ty),*) => {
+        $(
+            impl Arbitrary for $ty {
+                fn arbitrary<G: Gen>(g: &mut G) -> $ty {
+                    let s = g.size(); g.gen_range(0, s as $ty)
+                }
+                fn shrink(&self) -> Box<Shrinker<$ty>> {
+                    UnsignedShrinker::new(*self)
+                }
+            }
+            )*
     }
 }
-
-impl Arbitrary for uint {
-    fn arbitrary<G: Gen>(g: &mut G) -> uint {
-        let s = g.size(); g.gen_range(0, s)
-    }
-    fn shrink(&self) -> Box<Shrinker<uint>> {
-        UnsignedShrinker::new(*self)
-    }
-}
-
-impl Arbitrary for u8 {
-    fn arbitrary<G: Gen>(g: &mut G) -> u8 {
-        let s = g.size(); g.gen_range(0, s as u8)
-    }
-    fn shrink(&self) -> Box<Shrinker<u8>> {
-        UnsignedShrinker::new(*self)
-    }
-}
-
-impl Arbitrary for u16 {
-    fn arbitrary<G: Gen>(g: &mut G) -> u16 {
-        let s = g.size(); g.gen_range(0, s as u16)
-    }
-    fn shrink(&self) -> Box<Shrinker<u16>> {
-        UnsignedShrinker::new(*self)
-    }
-}
-
-impl Arbitrary for u32 {
-    fn arbitrary<G: Gen>(g: &mut G) -> u32 {
-        let s = g.size(); g.gen_range(0, s as u32)
-    }
-    fn shrink(&self) -> Box<Shrinker<u32>> {
-        UnsignedShrinker::new(*self)
-    }
-}
-
-impl Arbitrary for u64 {
-    fn arbitrary<G: Gen>(g: &mut G) -> u64 {
-        let s = g.size(); g.gen_range(0, s as u64)
-    }
-    fn shrink(&self) -> Box<Shrinker<u64>> {
-        UnsignedShrinker::new(*self)
-    }
+unsigned_arbitrary! {
+    uint, u8, u16, u32, u64
 }
 
 impl Arbitrary for f32 {

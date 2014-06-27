@@ -17,6 +17,11 @@
 extern crate collections;
 #[phase(plugin, link)] extern crate log;
 
+// During tests, this links with the `quickcheck` crate so that the
+// `#[quickcheck]` attribute can be tested.
+#[cfg(test)]
+extern crate quickcheck;
+
 pub use arbitrary::{Arbitrary, Gen, StdGen, Shrinker, gen, empty_shrinker, single_shrinker};
 pub use tester::{Testable, TestResult, Config};
 pub use tester::{quickcheck, quickcheck_config, quicktest, quicktest_config};
@@ -558,5 +563,39 @@ mod test {
             return true
         }
         qcheck(prop);
+    }
+
+    mod attribute {
+        #[phase(plugin)]
+        extern crate quickcheck_macros;
+
+        use quickcheck::TestResult;
+
+        #[quickcheck]
+        fn min(x: int, y: int) -> TestResult {
+            if x < y {
+                return TestResult::discard()
+            } else {
+                return TestResult::from_bool(::std::cmp::min(x, y) == y)
+            }
+        }
+
+        #[quickcheck]
+        #[should_fail]
+        fn fail_fn() -> bool { false }
+
+        #[quickcheck]
+        static static_bool: bool = true;
+
+        #[quickcheck]
+        #[should_fail]
+        static fail_static_bool: bool = false;
+
+        // If static_bool wasn't turned into a test function, then this should
+        // result in a compiler error.
+        #[test]
+        fn static_bool_test_is_function() {
+            static_bool()
+        }
     }
 }
