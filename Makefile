@@ -2,6 +2,7 @@ RUST_CFG=
 
 compile:
 	rustc -O ./src/lib.rs
+	rustc -O ./src/macro.rs
 
 install:
 	cargo-lite install
@@ -21,7 +22,7 @@ test: quickcheck-test
 	RUST_TEST_TASKS=1 RUST_LOG=quickcheck=4 ./quickcheck-test
 
 quickcheck-test: src/lib.rs src/arbitrary.rs
-	rustc --test $(RUST_CFG) src/lib.rs -o quickcheck-test
+	rustc --test $(RUST_CFG) src/lib.rs -o quickcheck-test -L .
 
 test-examples:
 	(cd ./examples && ./test)
@@ -35,4 +36,3 @@ clean: test-clean
 push:
 	git push origin master
 	git push github master
-

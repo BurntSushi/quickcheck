@@ -51,6 +51,37 @@ fn main() {
 }
 ```
 
+### The `#[quickcheck]` attribute
+
+To make it easier to write QuickCheck tests, the `#[quickcheck]` attribute
+will convert a property function into a `#[test]` function.
+
+To use the `#[quickcheck]` attribute, you must enable the `phase` feature and
+import the `quickcheck_macros` crate as a syntax extension:
+
+```rust
+#![feature(plugin)]
+#[phase(plugin)]
+extern crate quickcheck_macros;
+extern crate quickcheck;
+
+fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
+    let mut rev = vec!();
+    for x in xs.iter() {
+        rev.unshift(x.clone())
+    }
+    rev
+}
+
+#[quickcheck]
+fn double_reversal_is_identity(xs: Vec<int>) -> bool {
+    xs == reverse(reverse(xs.as_slice()).as_slice())
+}
+```
+
+The `#[quickcheck]` attribute also works with static items. The reason will
+be apparent later.
+
 
 ### Installation
 

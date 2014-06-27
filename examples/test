@@ -3,8 +3,14 @@
 set -e
 
 for f in *.rs; do
-  rustc "$f"
+  echo "$f"
+  if [ "$f" = attribute.rs ]; then
+      FLAGS=--test
+      continue
+  else
+      FLAGS=
+  fi
+  rustc -L .. "$f" $FLAGS
   ./${f%%.rs}
   rm ${f%%.rs}
 done
-
