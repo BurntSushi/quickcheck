@@ -410,7 +410,7 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: uint) -> Vec<Vec<A>> {
     shuffle(xs, k, xs.len())
 }
 
-fn half<A: Primitive>(x: A) -> A { x / num::cast(2).unwrap() }
+fn half<A: Primitive>(x: A) -> A { x / num::cast(2i).unwrap() }
 
 struct SignedShrinker<A> {
     x: A,
@@ -513,7 +513,7 @@ mod test {
     }
 
     fn rep(f: ||) {
-        for _ in iter::range(0, 100) {
+        for _ in iter::range(0u, 100) {
             f()
         }
     }
@@ -631,10 +631,10 @@ mod test {
     fn vecs() {
         eq({let it: Vec<int> = vec!(); it}, vec!());
         eq({let it: Vec<Vec<int>> = vec!(vec!()); it}, vec!(vec!()));
-        eq(vec!(1), vec!(vec!(), vec!(0)));
-        eq(vec!(11), vec!(vec!(), vec!(0), vec!(6), vec!(9), vec!(10)));
+        eq(vec!(1i), vec!(vec!(), vec!(0)));
+        eq(vec!(11i), vec!(vec!(), vec!(0), vec!(6), vec!(9), vec!(10)));
         eq(
-            vec!(3, 5),
+            vec!(3i, 5),
             vec!(vec!(), vec!(5), vec!(3), vec!(0,5), vec!(2,5),
                  vec!(3,0), vec!(3,3), vec!(3,4))
         );
