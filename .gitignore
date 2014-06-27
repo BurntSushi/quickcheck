@@ -4,3 +4,4 @@ doc
 *.so
 quickcheck-test
 tags
+target

@@ -1,0 +1,14 @@
+[package]
+name = "quickcheck"
+version = "0.1.0"
+authors = ["Andrew Gallant <jamslam@gmail.com>"]
+
+[[lib]]
+name = "quickcheck"
+path = "src/lib.rs"
+
+# TODO: Cargo doesn't support exporting multiple libraries yet.
+#
+# [[lib]]
+# name = "quickcheck_macros"
+# path = "src/macro.rs"
