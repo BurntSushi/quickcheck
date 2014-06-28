@@ -6,6 +6,7 @@ LIB = build/.timestamp_quickcheck
 compile: $(LIB)
 
 $(LIB): src/lib.rs src/arbitrary.rs src/macro.rs
+	@mkdir -p ./build
 	$(RUSTC) -O ./src/lib.rs --out-dir build
 	$(RUSTC) -O ./src/macro.rs --out-dir build
 	@touch build/.timestamp_quickcheck
