@@ -1,11 +1,14 @@
-RUST_CFG=
+RUST_CFG ?=
+RUST_PATH ?= ./build/
+RUSTC ?= rustc
+LIB = build/.timestamp_quickcheck
 
-compile:
-	rustc -O ./src/lib.rs
-	rustc -O ./src/macro.rs
+compile: $(LIB)
 
-install:
-	cargo-lite install
+$(LIB): src/lib.rs src/arbitrary.rs src/macro.rs
+	$(RUSTC) -O ./src/lib.rs --out-dir build
+	$(RUSTC) -O ./src/macro.rs --out-dir build
+	@touch build/.timestamp_quickcheck
 
 ctags:
 	ctags --recurse --options=ctags.rust --languages=Rust
@@ -18,11 +21,11 @@ docs:
 	in-dir doc fix-perms
 	rscp ./doc/* gopher:~/www/burntsushi.net/rustdoc/
 
-test: quickcheck-test
-	RUST_TEST_TASKS=1 RUST_LOG=quickcheck=4 ./quickcheck-test
+test: build/test
+	RUST_TEST_TASKS=1 RUST_LOG=quickcheck=4 ./build/test
 
-quickcheck-test: src/lib.rs src/arbitrary.rs
-	rustc --test $(RUST_CFG) src/lib.rs -o quickcheck-test -L .
+build/test: src/lib.rs src/arbitrary.rs $(LIB)
+	$(RUSTC) -L $(RUST_PATH) --test $(RUST_CFG) src/lib.rs -o build/test
 
 test-examples:
 	(cd ./examples && ./test)
@@ -31,7 +34,7 @@ test-clean:
 	rm -rf ./quickcheck-test
 
 clean: test-clean
-	rm -f *.rlib
+	rm -f ./build/* $(LIB)
 
 push:
 	git push origin master

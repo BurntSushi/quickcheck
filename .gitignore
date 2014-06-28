@@ -1,7 +1,5 @@
 doc
 .*.swp
-*.rlib
-*.so
-quickcheck-test
 tags
 target
+build

@@ -12,3 +12,4 @@ path = "src/lib.rs"
 # [[lib]]
 # name = "quickcheck_macros"
 # path = "src/macro.rs"
+
