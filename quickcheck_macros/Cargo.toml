@@ -1,8 +1,9 @@
 [package]
-name = "quickcheck"
+name = "quickcheck_macros"
 version = "0.1.0"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 
 [[lib]]
-name = "quickcheck"
+name = "quickcheck_macros"
 path = "src/lib.rs"
+crate_type = ["dylib"]

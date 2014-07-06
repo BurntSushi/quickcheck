@@ -1,22 +1,31 @@
 RUST_CFG ?=
 RUST_PATH ?= ./build/
 RUSTC ?= rustc
+
 LIB = build/.timestamp_quickcheck
+MACRO_LIB = build/.timestamp_quickcheck_macro
 
-compile: $(LIB)
+DIR=src
+MACRO_DIR=quickcheck_macros/src
 
-$(LIB): src/lib.rs src/arbitrary.rs src/macro.rs
+compile: $(LIB) $(MACRO_LIB)
+
+$(LIB): $(DIR)/lib.rs $(DIR)/arbitrary.rs
 	@mkdir -p ./build
-	$(RUSTC) -O ./src/lib.rs --out-dir build
-	$(RUSTC) -O ./src/macro.rs --out-dir build
-	@touch build/.timestamp_quickcheck
+	$(RUSTC) -O $(DIR)/lib.rs --out-dir build
+	@touch $(LIB)
+
+$(MACRO_LIB): $(MACRO_DIR)/lib.rs
+	@mkdir -p ./build
+	$(RUSTC) -O $(MACRO_DIR)/lib.rs --out-dir build
+	@touch $(MACRO_LIB)
 
 ctags:
 	ctags --recurse --options=ctags.rust --languages=Rust
 
 docs:
 	rm -rf doc
-	rustdoc src/lib.rs
+	rustdoc $(DIR)/lib.rs
 	# WTF is rustdoc doing?
 	chmod 755 doc
 	in-dir doc fix-perms
@@ -25,8 +34,8 @@ docs:
 test: build/test
 	RUST_TEST_TASKS=1 RUST_LOG=quickcheck=4 ./build/test
 
-build/test: src/lib.rs src/arbitrary.rs $(LIB)
-	$(RUSTC) -L $(RUST_PATH) --test $(RUST_CFG) src/lib.rs -o build/test
+build/test: build $(DIR)/lib.rs $(DIR)/arbitrary.rs $(MACRO_DIR)/lib.rs $(LIB) $(MACRO_LIB)
+	$(RUSTC) -L $(RUST_PATH) --test $(RUST_CFG) $(DIR)/lib.rs -o build/test
 
 test-examples:
 	(cd ./examples && ./test)
