@@ -85,43 +85,35 @@ be apparent later.
 
 ### Installation
 
-The `quickcheck` crate only depends on the standard crates shipped with the 
-Rust distribution.
+The `quickcheck` crate only depends on the standard crates shipped
+with the Rust distribution. It is provided as a
+[Cargo](https://github.com/rust-lang/cargo/) library: a project using
+Cargo can use `quickcheck` by including
 
-Given that Rust hasn't hit `1.0` yet—and the recent deprecation of
-`rustpkg`—installing Rust libraries is pretty grim at the moment.
-More than that, I am keeping this crate in sync with Rust's master branch (as 
-enforced by `travis-ci`), so you'll need to build Rust from source first, or
-grab [the nightly build](http://www.rust-lang.org/install.html) from rust-lang.org.
-
-If you have an up-to-date Rust, then the easiest way to get going is to just 
-clone this repo and build it:
-
-```bash
-git clone git://github.com/BurntSushi/quickcheck
-cd quickcheck
-rustc --crate-type lib ./src/lib.rs # makes libquickcheck-{version}.rlib in CWD
-rustc -L ./ ./examples/reverse.rs
-RUST_LOG=quickcheck ./reverse
+```toml
+[dependencies.quickcheck]
+git = "https://github.com/BurntSushi/quickcheck"
 ```
 
-Alternatively, install `cargo-lite` with a Python 2 `pip` binary and use it to 
-install `quickcheck`:
+in their `Cargo.toml`. If the `#[quickcheck]` attribute is desired, then
 
-```bash
-pip2 install cargo-lite
-cargo-lite install git://github.com/BurntSushi/quickcheck # installs to ~/.rust
-rustc ~/.rust/src/quickcheck/examples/reverse.rs # creates 'reverse' in CWD
-RUST_LOG=quickcheck ./reverse
+```toml
+[dependencies.quickcheck_macros]
+git = "https://github.com/BurntSushi/quickcheck"
 ```
 
-Notice that the `-L` flag isn't needed for `rustc` here. It looks like `rustc` 
-knows to look in `~/.rust` for compiled libraries.
+should be added too (that is, both dependencies are needed to use
+`#[quickcheck]`).
 
-N.B. The `RUST_LOG=quickcheck` enables `debug!` so that it shows useful output 
-(like the number of tests passed). This is **not** needed to show witnesses for 
-failures.
+I am keeping this crate in sync with Rust's master branch (as enforced
+by `travis-ci`), so you'll need to build Rust from source first, or
+grab [the nightly build](http://www.rust-lang.org/install.html) from
+rust-lang.org.
 
+N.B. When using `quickcheck` (either directly or via the attributes),
+`RUST_LOG=quickcheck` enables `debug!` so that it shows useful output
+(like the number of tests passed). This is **not** needed to show
+witnesses for failures.
 
 ### Discarding test results (or, properties are polymorphic!)
 
