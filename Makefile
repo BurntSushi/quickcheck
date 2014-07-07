@@ -44,7 +44,7 @@ test-clean:
 	rm -rf ./quickcheck-test
 
 clean: test-clean
-	rm -f ./build/* $(LIB)
+	rm -f ./build/* $(LIB) $(MACRO_LIB)
 
 push:
 	git push origin master
