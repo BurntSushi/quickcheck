@@ -1,7 +1,7 @@
 // I have no idea what I'm doing with these attributes. Are we using
 // semantic versioning? Some packages include their full github URL.
 // Documentation for this stuff is extremely scarce.
-#![crate_id = "quickcheck#0.1.0"]
+#![crate_name = "quickcheck"]
 #![crate_type = "lib"]
 #![license = "UNLICENSE"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
@@ -295,7 +295,7 @@ mod tester {
             let f = *self;
             let mut r = safe(proc() { f(*oa) }).result(g);
             if r.is_failure() {
-                r.arguments = vec!(a.to_str());
+                r.arguments = vec!(a.to_string());
             }
             r
         }
@@ -310,7 +310,7 @@ mod tester {
             let f = *self;
             let mut r = safe(proc() { f(*oa, *ob) }).result(g);
             if r.is_failure() {
-                r.arguments = vec!(a.to_str(), b.to_str());
+                r.arguments = vec!(a.to_string(), b.to_string());
             }
             r
         }
@@ -325,7 +325,7 @@ mod tester {
             let f = *self;
             let mut r = safe(proc() { f(*oa, *ob, *oc) }).result(g);
             if r.is_failure() {
-                r.arguments = vec!(a.to_str(), b.to_str(), c.to_str());
+                r.arguments = vec!(a.to_string(), b.to_string(), c.to_string());
             }
             r
         }
@@ -406,7 +406,7 @@ mod tester {
             match t.try(fun) {
                 Ok(v) => Ok(v),
                 Err(_) => {
-                    let s = reader.read_to_str().unwrap();
+                    let s = reader.read_to_string().unwrap();
                     Err(s.as_slice().trim().into_string())
                 }
             }

@@ -1,7 +1,7 @@
 //! This crate provides the `#[quickcheck]` attribute. Its use is
 //! documented in the `quickcheck` crate.
 
-#![crate_id = "quickcheck_macros#0.1.0"]
+#![crate_name = "quickcheck_macros"]
 #![crate_type = "dylib"]
 #![license = "MIT/ASL2"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
