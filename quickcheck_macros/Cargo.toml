@@ -6,4 +6,4 @@ authors = ["Andrew Gallant <jamslam@gmail.com>"]
 [[lib]]
 name = "quickcheck_macros"
 path = "src/lib.rs"
-crate_type = ["dylib"]
+plugin = true
