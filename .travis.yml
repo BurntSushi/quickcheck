@@ -1,3 +1,4 @@
+language: c
 env:
   global:
     # Setting this means rustc links properly
