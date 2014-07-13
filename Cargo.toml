@@ -6,3 +6,6 @@ authors = ["Andrew Gallant <jamslam@gmail.com>"]
 [[lib]]
 name = "quickcheck"
 path = "src/lib.rs"
+
+[dependencies.quickcheck_macros]
+path = "quickcheck_macros/"
