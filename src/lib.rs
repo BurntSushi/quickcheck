@@ -445,7 +445,7 @@ mod test {
     fn prop_oob() {
         fn prop() -> bool {
             let zero: Vec<bool> = vec!();
-            *zero.get(0)
+            zero[0]
         }
         match qtest(prop) {
             Ok(n) => fail!("prop_oob should fail with a runtime error \
@@ -510,7 +510,7 @@ mod test {
             xs.sort_by(|x, y| x.cmp(y));
             let upto = if xs.len() == 0 { 0 } else { xs.len()-1 };
             for i in iter::range(0, upto) {
-                if xs.get(i) > xs.get(i+1) {
+                if xs[i] > xs[i+1] {
                     return false
                 }
             }

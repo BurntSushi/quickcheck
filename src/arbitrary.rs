@@ -355,7 +355,7 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: uint) -> Vec<Vec<A>> {
         };
         let shuffled = shuffle(xs2.as_slice(), k, n-k);
         let mut more: Vec<Vec<A>> = shuffled.iter().map(cat).collect();
-        more.unshift(xs2);
+        more.insert(0, xs2);
         more
     }
     shuffle(xs, k, xs.len())
