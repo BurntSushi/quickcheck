@@ -1,3 +1,4 @@
+use std::collections::TrieMap;
 use std::mem;
 use std::num;
 use std::rand::Rng;
@@ -256,6 +257,18 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
     }
 }
 
+impl<A: Arbitrary> Arbitrary for TrieMap<A> {
+    fn arbitrary<G: Gen>(g: &mut G) -> TrieMap<A> {
+        let vec: Vec<(uint, A)> = Arbitrary::arbitrary(g);
+        vec.move_iter().collect()
+    }
+
+    fn shrink(&self) -> Box<Shrinker<TrieMap<A>>> {
+        let vec: Vec<(uint, A)> = self.iter().map(|(a, b)| (a, b.clone())).collect();
+        box vec.shrink().map(|v| v.move_iter().collect::<TrieMap<A>>()) as Box<Shrinker<TrieMap<A>>>
+    }
+}
+
 impl Arbitrary for String {
     fn arbitrary<G: Gen>(g: &mut G) -> String {
         let size = { let s = g.size(); g.gen_range(0, s) };
@@ -336,7 +349,7 @@ impl Arbitrary for f64 {
 }
 
 /// Returns a sequence of vectors with each contiguous run of elements of
-/// length `k` removed. 
+/// length `k` removed.
 fn shuffle_vec<A: Clone>(xs: &[A], k: uint) -> Vec<Vec<A>> {
     fn shuffle<A: Clone>(xs: &[A], k: uint, n: uint) -> Vec<Vec<A>> {
         if k > n {
@@ -436,6 +449,7 @@ mod test {
     use std::hash::Hash;
     use std::iter;
     use std::collections::HashSet;
+    use std::collections::TrieMap;
     use std::rand;
     use super::Arbitrary;
 
@@ -589,6 +603,24 @@ mod test {
             vec!(vec!(), vec!(5), vec!(3), vec!(0,5), vec!(2,5),
                  vec!(3,0), vec!(3,3), vec!(3,4))
         );
+    }
+
+    #[test]
+    fn triemaps() {
+        eq({let it: TrieMap<int> = TrieMap::new(); it}, vec!());
+
+        {
+            let mut map = TrieMap::new();
+            map.insert(1, 1i);
+
+            let shrinks = vec![
+                {let mut m = TrieMap::new(); m.insert(1, 0i); m},
+                {let mut m = TrieMap::new(); m.insert(0, 1i); m},
+                TrieMap::new()
+            ];
+
+            eq(map, shrinks);
+        }
     }
 
     #[test]
