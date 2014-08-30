@@ -263,9 +263,13 @@ impl<A: Arbitrary> Arbitrary for TrieMap<A> {
         vec.move_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Shrinker<TrieMap<A>>> {
-        let vec: Vec<(uint, A)> = self.iter().map(|(a, b)| (a, b.clone())).collect();
-        box vec.shrink().map(|v| v.move_iter().collect::<TrieMap<A>>()) as Box<Shrinker<TrieMap<A>>>
+    fn shrink(&self) -> Box<Shrinker<TrieMap<A>>+'static> {
+        let vec: Vec<(uint, A)> = self.iter()
+                                      .map(|(a, b)| (a, b.clone()))
+                                      .collect();
+        box {
+            vec.shrink().map(|v| v.move_iter().collect::<TrieMap<A>>())
+        } as Box<Shrinker<TrieMap<A>>+'static>
     }
 }
 
