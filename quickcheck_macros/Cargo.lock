@@ -1,0 +1,4 @@
+[root]
+name = "quickcheck_macros"
+version = "0.1.0"
+

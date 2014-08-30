@@ -17,11 +17,6 @@
 extern crate collections;
 #[phase(plugin, link)] extern crate log;
 
-// During tests, this links with the `quickcheck` crate so that the
-// `#[quickcheck]` attribute can be tested.
-#[cfg(test)]
-extern crate quickcheck;
-
 pub use arbitrary::{Arbitrary, Gen, StdGen, Shrinker, gen, empty_shrinker, single_shrinker};
 pub use tester::{Testable, TestResult, Config};
 pub use tester::{quickcheck, quickcheck_config, quicktest, quicktest_config};
@@ -59,11 +54,11 @@ mod tester {
     /// ```rust
     /// fn prop_reverse_reverse() {
     ///     fn revrev(xs: Vec<uint>) -> bool {
-    ///         let rev = xs.clone().move_iter().rev().collect();
+    ///         let rev: Vec<uint> = xs.clone().move_iter().rev().collect();
     ///         let revrev = rev.move_iter().rev().collect();
     ///         xs == revrev
     ///     }
-    ///     check(revrev);
+    ///     quickcheck::quickcheck(revrev);
     /// }
     /// ```
     ///
@@ -344,7 +339,8 @@ mod tester {
 
     fn shrink_failure<G: Gen, A: AShow, B: AShow, C: AShow, T: Testable,
                       F: Fun<A, B, C, T>>
-                     (g: &mut G, mut shrinker: Box<Shrinker<(A, B, C)>>, fun: &F)
+                     (g: &mut G, mut shrinker: Box<Shrinker<(A, B, C)>+'static>,
+                      fun: &F)
                      -> Option<TestResult> {
         for (a, b, c) in shrinker {
             let r = fun.call(g, Some(&a), Some(&b), Some(&c));
@@ -565,9 +561,11 @@ mod test {
         qcheck(prop);
     }
 
+    #[cfg(ignoreme)]
     mod attribute {
         #[phase(plugin)]
         extern crate quickcheck_macros;
+        extern crate quickcheck;
 
         use quickcheck::TestResult;
 

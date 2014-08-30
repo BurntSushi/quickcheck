@@ -1,0 +1,11 @@
+[root]
+name = "quickcheck"
+version = "0.1.0"
+dependencies = [
+ "quickcheck_macros 0.1.0",
+]
+
+[[package]]
+name = "quickcheck_macros"
+version = "0.1.0"
+

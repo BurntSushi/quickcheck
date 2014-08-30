@@ -3,9 +3,8 @@ name = "quickcheck"
 version = "0.1.0"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 
-[[lib]]
+[lib]
 name = "quickcheck"
-path = "src/lib.rs"
 
 [dependencies.quickcheck_macros]
 path = "quickcheck_macros/"

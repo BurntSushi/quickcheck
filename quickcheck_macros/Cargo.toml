@@ -3,7 +3,7 @@ name = "quickcheck_macros"
 version = "0.1.0"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 
-[[lib]]
+[lib]
 name = "quickcheck_macros"
 path = "src/lib.rs"
 plugin = true
