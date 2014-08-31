@@ -7,4 +7,4 @@ authors = ["Andrew Gallant <jamslam@gmail.com>"]
 name = "quickcheck"
 
 [dependencies.quickcheck_macros]
-path = "quickcheck_macros/"
+path = "quickcheck_macros"
