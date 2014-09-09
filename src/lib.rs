@@ -25,9 +25,12 @@ pub use tester::{DEFAULT_CONFIG, DEFAULT_SIZE};
 mod arbitrary;
 
 mod tester {
+    use std::comm;
     use std::fmt::Show;
+    use std::io::ChanWriter;
     use std::iter;
     use std::rand::task_rng;
+    use std::task::TaskBuilder;
     use super::{Arbitrary, Gen, Shrinker, gen};
     use tester::trap::safe;
 
@@ -169,6 +172,23 @@ mod tester {
                 arguments: vec!(),
                 err: "".to_string(),
             }
+        }
+
+        /// Tests if a "procedure" fails when executed. The test passes only if `f` generates a
+        /// task failure during its execution.
+        pub fn must_fail<T: Send>(f: proc(): Send -> T) -> TestResult {
+            // A "/dev/null" sink for the stderr of the child task
+            let (tx, _) = comm::channel();
+            let dev_null = box ChanWriter::new(tx) as Box<Writer + Send>;
+
+            let failed =
+                TaskBuilder::new().
+                    // Redirect the stderr of the child task to "/dev/null"
+                    stderr(dev_null).
+                    try(f).
+                    is_err();
+
+            TestResult::from_bool(failed)
         }
 
         /// Returns `true` if and only if this test result describes a failing
