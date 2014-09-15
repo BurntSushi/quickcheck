@@ -26,7 +26,7 @@ use rustc::plugin::Registry;
 #[doc(hidden)]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(token::intern("quickcheck"),
-                                  ItemModifier(expand_meta_quickcheck));
+                                  ItemModifier(box expand_meta_quickcheck));
 }
 
 /// Expands the `#[quickcheck]` attribute.
