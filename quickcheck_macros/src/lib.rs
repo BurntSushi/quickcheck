@@ -14,7 +14,7 @@ extern crate rustc;
 use syntax::ast;
 use syntax::codemap;
 use syntax::parse::token;
-use syntax::ext::base::{ExtCtxt, ItemModifier};
+use syntax::ext::base::{ExtCtxt, Modifier};
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
 
@@ -25,7 +25,7 @@ use rustc::plugin::Registry;
 #[doc(hidden)]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(token::intern("quickcheck"),
-                                  ItemModifier(box expand_meta_quickcheck));
+                                  Modifier(box expand_meta_quickcheck));
 }
 
 /// Expands the `#[quickcheck]` attribute.
