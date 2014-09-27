@@ -239,7 +239,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
         // any of the elements.
         let mut k = self.len() / 2;
         while k > 0 {
-            xs.push_all_move(shuffle_vec(self.as_slice(), k));
+            xs.extend(shuffle_vec(self.as_slice(), k).into_iter());
             k = k / 2;
         }
 
@@ -253,14 +253,14 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
                 xs.push(change_one);
             }
         }
-        box xs.move_iter() as Box<Shrinker<Vec<A>>+'static>
+        box xs.into_iter() as Box<Shrinker<Vec<A>>+'static>
     }
 }
 
 impl<A: Arbitrary> Arbitrary for TrieMap<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> TrieMap<A> {
         let vec: Vec<(uint, A)> = Arbitrary::arbitrary(g);
-        vec.move_iter().collect()
+        vec.into_iter().collect()
     }
 
     fn shrink(&self) -> Box<Shrinker<TrieMap<A>>+'static> {
@@ -268,7 +268,7 @@ impl<A: Arbitrary> Arbitrary for TrieMap<A> {
                                       .map(|(a, b)| (a, b.clone()))
                                       .collect();
         box {
-            vec.shrink().map(|v| v.move_iter().collect::<TrieMap<A>>())
+            vec.shrink().map(|v| v.into_iter().collect::<TrieMap<A>>())
         } as Box<Shrinker<TrieMap<A>>+'static>
     }
 }
@@ -282,7 +282,7 @@ impl Arbitrary for String {
     fn shrink(&self) -> Box<Shrinker<String>+'static> {
         // Shrink a string by shrinking a vector of its characters.
         let chars: Vec<char> = self.as_slice().chars().collect();
-        let strs = chars.shrink().map(|x| x.move_iter().collect::<String>());
+        let strs = chars.shrink().map(|x| x.into_iter().collect::<String>());
         box strs as Box<Shrinker<String>+'static>
     }
 }
@@ -367,7 +367,7 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: uint) -> Vec<Vec<A>> {
 
         let cat = |x: &Vec<A>| {
             let mut pre = xs1.clone();
-            pre.push_all_move(x.clone());
+            pre.extend(x.clone().into_iter());
             pre
         };
         let shuffled = shuffle(xs2.as_slice(), k, n-k);
@@ -397,11 +397,11 @@ impl<A: Primitive + Signed + Send> SignedShrinker<A> {
             if shrinker.i.is_negative() {
                 box {
                     vec![num::zero(), shrinker.x.abs()]
-                }.move_iter().chain(shrinker) as Box<Shrinker<A>+'static>
+                }.into_iter().chain(shrinker) as Box<Shrinker<A>+'static>
             } else {
                 box {
                     vec![num::zero()]
-                }.move_iter().chain(shrinker) as Box<Shrinker<A>+'static>
+                }.into_iter().chain(shrinker) as Box<Shrinker<A>+'static>
             }
         }
     }
@@ -429,7 +429,7 @@ impl<A: Primitive + Unsigned + Send> UnsignedShrinker<A> {
         if x.is_zero() {
             empty_shrinker::<A>()
         } else {
-            box { vec![num::zero()] }.move_iter().chain(
+            box { vec![num::zero()] }.into_iter().chain(
                 UnsignedShrinker {
                     x: x,
                     i: half(x),
@@ -655,7 +655,7 @@ mod test {
         set(s.shrink().collect())
     }
     fn set<A: Eq + Hash>(xs: Vec<A>) -> HashSet<A> {
-        xs.move_iter().collect()
+        xs.into_iter().collect()
     }
 
     fn ordered_eq<A: Arbitrary + Eq + Show>(s: A, v: Vec<A>) {

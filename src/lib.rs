@@ -57,8 +57,8 @@ mod tester {
     /// ```rust
     /// fn prop_reverse_reverse() {
     ///     fn revrev(xs: Vec<uint>) -> bool {
-    ///         let rev: Vec<uint> = xs.clone().move_iter().rev().collect();
-    ///         let revrev = rev.move_iter().rev().collect();
+    ///         let rev: Vec<uint> = xs.clone().into_iter().rev().collect();
+    ///         let revrev = rev.into_iter().rev().collect();
     ///         xs == revrev
     ///     }
     ///     quickcheck::quickcheck(revrev);
@@ -473,8 +473,8 @@ mod test {
     #[test]
     fn prop_reverse_reverse() {
         fn prop(xs: Vec<uint>) -> bool {
-            let rev: Vec<uint> = xs.clone().move_iter().rev().collect();
-            let revrev = rev.move_iter().rev().collect();
+            let rev: Vec<uint> = xs.clone().into_iter().rev().collect();
+            let revrev = rev.into_iter().rev().collect();
             xs == revrev
         }
         qcheck(prop);
@@ -487,7 +487,7 @@ mod test {
                 return TestResult::discard()
             }
             return TestResult::from_bool(
-                xs == xs.clone().move_iter().rev().collect()
+                xs == xs.clone().into_iter().rev().collect()
             )
         }
         qcheck(prop);
@@ -496,12 +496,13 @@ mod test {
     #[test]
     fn reverse_app() {
         fn prop(xs: Vec<uint>, ys: Vec<uint>) -> bool {
-            let app = xs.clone().append(ys.as_slice());
-            let app_rev: Vec<uint> = app.move_iter().rev().collect();
+            let mut app = xs.clone();
+            app.push_all(ys.as_slice());
+            let app_rev: Vec<uint> = app.into_iter().rev().collect();
 
-            let rxs = xs.move_iter().rev().collect();
-            let mut rev_app = ys.move_iter().rev().collect::<Vec<uint>>();
-            rev_app.push_all_move(rxs);
+            let rxs: Vec<uint> = xs.into_iter().rev().collect();
+            let mut rev_app = ys.into_iter().rev().collect::<Vec<uint>>();
+            rev_app.extend(rxs.into_iter());
 
             app_rev == rev_app
         }
