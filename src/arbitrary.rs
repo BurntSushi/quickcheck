@@ -59,7 +59,7 @@ pub trait Shrinker<A> {
 }
 
 impl<A> Iterator<A> for Box<Shrinker<A>+'static> {
-    fn next(&mut self) -> Option<A> { self.next_shrink() }
+    fn next(&mut self) -> Option<A> { (**self).next_shrink() }
 }
 
 impl<T, A: Iterator<T>> Shrinker<T> for A {

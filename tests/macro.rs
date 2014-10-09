@@ -16,9 +16,9 @@ fn min(x: int, y: int) -> TestResult {
     }
 }
 
-// #[quickcheck] 
-// #[should_fail] 
-// fn fail_fn() -> bool { false } 
+#[quickcheck]
+#[should_fail]
+fn fail_fn() -> bool { false }
 
 #[quickcheck]
 static static_bool: bool = true;
