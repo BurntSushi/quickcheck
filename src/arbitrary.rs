@@ -221,6 +221,34 @@ impl<A: Arbitrary, B: Arbitrary, C: Arbitrary> Arbitrary for (A, B, C) {
     }
 }
 
+impl<A: Arbitrary, B: Arbitrary, C: Arbitrary, D: Arbitrary> Arbitrary for (A, B, C, D) {
+    fn arbitrary<G: Gen>(g: &mut G) -> (A, B, C, D) {
+        return (
+            Arbitrary::arbitrary(g),
+            Arbitrary::arbitrary(g),
+            Arbitrary::arbitrary(g),
+            Arbitrary::arbitrary(g),
+        )
+    }
+
+    fn shrink(&self) -> Box<Shrinker<(A, B, C, D)>+'static> {
+        let (ref a, ref b, ref c, ref d) = *self;
+        let sas = a.shrink().scan((b.clone(), c.clone(), d.clone()), |&(ref b, ref c, ref d), a| {
+            Some((a, b.clone(), c.clone(), d.clone()))
+        });
+        let sbs = b.shrink().scan((a.clone(), c.clone(), d.clone()), |&(ref a, ref c, ref d), b| {
+            Some((a.clone(), b, c.clone(), d.clone()))
+        });
+        let scs = c.shrink().scan((a.clone(), b.clone(), d.clone()), |&(ref a, ref b, ref d), c| {
+            Some((a.clone(), b.clone(), c, d.clone()))
+        });
+        let sds = d.shrink().scan((a.clone(), b.clone(), c.clone()), |&(ref a, ref b, ref c), d| {
+            Some((a.clone(), b.clone(), c.clone(), d))
+        });
+        box sas.chain(sbs).chain(scs).chain(sds) as Box<Shrinker<(A, B, C, D)>+'static>
+    }
+}
+
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> Vec<A> {
         let size = { let s = g.size(); g.gen_range(0, s) };
@@ -532,6 +560,14 @@ mod test {
         eq((true, false, false), vec!((false, false, false)));
         eq((true, true, false),
            vec!((false, true, false), (true, false, false)));
+    }
+
+    #[test]
+    fn quads() {
+        eq((false, false, false, false), vec!());
+        eq((true, false, false, false), vec!((false, false, false, false)));
+        eq((true, true, false, false),
+            vec!((false, true, false, false), (true, false, false, false)));
     }
 
     #[test]
