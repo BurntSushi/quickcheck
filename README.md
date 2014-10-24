@@ -60,7 +60,7 @@ To use the `#[quickcheck]` attribute, you must enable the `phase` feature and
 import the `quickcheck_macros` crate as a syntax extension:
 
 ```rust
-#![feature(plugin)]
+#![feature(phase)]
 #[phase(plugin)]
 extern crate quickcheck_macros;
 extern crate quickcheck;
