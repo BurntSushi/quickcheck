@@ -65,7 +65,7 @@ mod tester {
     /// }
     /// ```
     ///
-    /// In particular, `quickcheck` will call `fail!` if it finds a
+    /// In particular, `quickcheck` will call `panic!` if it finds a
     /// test failure. The failure message will include a witness to the
     /// failure.
     pub fn quickcheck<A: Testable>(f: A) {
@@ -78,7 +78,7 @@ mod tester {
     pub fn quickcheck_config<A: Testable, G: Gen>(c: Config, g: &mut G, f: A) {
         match quicktest_config(c, g, f) {
             Ok(ntests) => debug!("[quickcheck] Passed {:u} tests.", ntests),
-            Err(r) => fail!(r.failed_msg()),
+            Err(r) => panic!(r.failed_msg()),
         }
     }
 
@@ -464,7 +464,7 @@ mod test {
             zero[0]
         }
         match qtest(prop) {
-            Ok(n) => fail!("prop_oob should fail with a runtime error \
+            Ok(n) => panic!("prop_oob should fail with a runtime error \
                             but instead it passed {} tests.", n),
             _ => return,
         }
