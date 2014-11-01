@@ -1,4 +1,4 @@
-#![allow(non_uppercase_statics)]
+#![allow(non_upper_case_globals)]
 #![feature(phase)]
 
 #[phase(plugin)]

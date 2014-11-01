@@ -249,7 +249,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
         for (i, x) in self.iter().enumerate() {
             for sx in x.shrink() {
                 let mut change_one = self.clone();
-                *change_one.get_mut(i) = sx;
+                change_one[i] = sx;
                 xs.push(change_one);
             }
         }

@@ -9,12 +9,12 @@ fn sieve(n: uint) -> Vec<uint> {
     }
 
     let mut marked = Vec::from_fn(n+1, |_| false);
-    *marked.get_mut(0) = true;
-    *marked.get_mut(1) = true;
-    *marked.get_mut(2) = false;
+    marked[0] = true;
+    marked[1] = true;
+    marked[2] = false;
     for p in iter::range(2, n) {
         for i in iter::range_step(2 * p, n, p) { // whoops!
-            *marked.get_mut(i) = true;
+            marked[i] = true;
         }
     }
     let mut primes = vec!();
