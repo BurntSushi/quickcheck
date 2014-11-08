@@ -25,7 +25,7 @@ pub struct StdGen<R> {
 /// generator.
 ///
 /// The `size` parameter controls the size of random values generated.
-/// For example, it specifies the maximum length of a randomly generator vector
+/// For example, it specifies the maximum length of a randomly generated vector
 /// and also will specify the maximum magnitude of a randomly generated number.
 impl<R: Rng> StdGen<R> {
     pub fn new(rng: R, size: uint) -> StdGen<R> {
@@ -46,8 +46,8 @@ impl<R: Rng> Gen for StdGen<R> {
     fn size(&self) -> uint { self.size }
 }
 
-/// `~Shrinker` is an existential type that represents an arbitrary iterator
-/// by satisfying the `Iterator` trait.
+/// `Box<Shrinker>` is an existential type that represents an arbitrary
+/// iterator.
 ///
 /// This makes writing shrinkers easier.
 /// You should not have to implement this trait directly. By default, all
