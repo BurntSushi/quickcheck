@@ -2,6 +2,7 @@
 #![crate_type = "lib"]
 #![license = "UNLICENSE"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
+#![experimental]
 
 //! This crate is a port of
 //! [Haskell's QuickCheck](http://hackage.haskell.org/package/QuickCheck).
