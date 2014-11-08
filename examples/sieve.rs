@@ -18,7 +18,7 @@ fn sieve(n: uint) -> Vec<uint> {
         }
     }
     let mut primes = vec!();
-    for (i, m) in marked.iter().enumerate() {
+    for (i, &m) in marked.iter().enumerate() {
         if !m { primes.push(i) }
     }
     primes
