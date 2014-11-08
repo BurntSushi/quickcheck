@@ -74,8 +74,7 @@ impl<A> Iterator<A> for EmptyShrinker<A> {
 
 /// Creates a shrinker with zero elements.
 pub fn empty_shrinker<A>() -> Box<Shrinker<A>+'static> {
-    let zero: EmptyShrinker<A> = EmptyShrinker;
-    box zero as Box<Shrinker<A>+'static>
+    box EmptyShrinker
 }
 
 struct SingleShrinker<A> {
@@ -88,8 +87,7 @@ impl<A> Iterator<A> for SingleShrinker<A> {
 
 /// Creates a shrinker with a single element.
 pub fn single_shrinker<A: 'static>(value: A) -> Box<Shrinker<A>+'static> {
-    let one: SingleShrinker<A> = SingleShrinker { value: Some(value) };
-    box one as Box<Shrinker<A>+'static>
+    box SingleShrinker { value: Some(value) }
 }
 
 /// `Arbitrary` describes types whose values can be randomly generated and
