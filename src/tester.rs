@@ -55,6 +55,12 @@ impl<G: Gen> QuickCheck<G> {
         self
     }
 
+    /// Set the random number generator to be used by QuickCheck.
+    pub fn gen(mut self, gen: G) -> QuickCheck<G> {
+        self.gen = gen;
+        self
+    }
+
     /// Tests a property and returns the result.
     ///
     /// The result returned is either the number of tests passed or a witness
