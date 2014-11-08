@@ -231,9 +231,9 @@ mod tester {
     /// and potentially shrink those arguments if they produce a failure.
     ///
     /// It's unlikely that you'll have to implement this trait yourself.
-    /// This comes with a caveat: currently, only functions with 3 parameters 
+    /// This comes with a caveat: currently, only functions with 4 parameters 
     /// or fewer (both `fn` and `||` types) satisfy `Testable`. If you have
-    /// functions to test with more than 3 parameters, please
+    /// functions to test with more than 4 parameters, please
     /// [file a bug](https://github.com/BurntSushi/quickcheck/issues) and
     /// I'll hopefully add it. (As of now, it would be very difficult to
     /// add your own implementation outside of `quickcheck`, since the
@@ -263,47 +263,54 @@ mod tester {
 
     impl<T: Testable> Testable for fn() -> T {
         fn result<G: Gen>(&self, g: &mut G) -> TestResult {
-            shrink::<G, (), (), (), T, fn() -> T>(g, self)
+            shrink::<G, (), (), (), (), T, fn() -> T>(g, self)
         }
     }
 
     impl<A: AShow, T: Testable> Testable for fn(A) -> T {
         fn result<G: Gen>(&self, g: &mut G) -> TestResult {
-            shrink::<G, A, (), (), T, fn(A) -> T>(g, self)
+            shrink::<G, A, (), (), (), T, fn(A) -> T>(g, self)
         }
     }
 
     impl<A: AShow, B: AShow, T: Testable> Testable for fn(A, B) -> T {
         fn result<G: Gen>(&self, g: &mut G) -> TestResult {
-            shrink::<G, A, B, (), T, fn(A, B) -> T>(g, self)
+            shrink::<G, A, B, (), (), T, fn(A, B) -> T>(g, self)
         }
     }
 
     impl<A: AShow, B: AShow, C: AShow, T: Testable>
         Testable for fn(A, B, C) -> T {
         fn result<G: Gen>(&self, g: &mut G) -> TestResult {
-            shrink::<G, A, B, C, T, fn(A, B, C) -> T>(g, self)
+            shrink::<G, A, B, C, (), T, fn(A, B, C) -> T>(g, self)
         }
     }
 
-    trait Fun<A, B, C, T> {
+    impl<A: AShow, B: AShow, C: AShow, D: AShow, T: Testable>
+        Testable for fn(A, B, C, D) -> T {
+        fn result<G: Gen>(&self, g: &mut G) -> TestResult {
+            shrink::<G, A, B, C, D, T, fn(A, B, C, D) -> T>(g, self)
+        }
+    }
+
+    trait Fun<A, B, C, D, T> {
         fn call<G: Gen>(&self, g: &mut G,
-                        a: Option<&A>, b: Option<&B>, c: Option<&C>)
+                        a: Option<&A>, b: Option<&B>, c: Option<&C>, d: Option<&D>)
                        -> TestResult;
     }
 
-    impl<A: AShow, B: AShow, C: AShow, T: Testable> Fun<A, B, C, T> for fn() -> T {
+    impl<A: AShow, B: AShow, C: AShow, D: AShow, T: Testable> Fun<A, B, C, D, T> for fn() -> T {
         fn call<G: Gen>(&self, g: &mut G,
-                        _: Option<&A>, _: Option<&B>, _: Option<&C>)
+                        _: Option<&A>, _: Option<&B>, _: Option<&C>, _: Option<&D>)
                        -> TestResult {
             let f = *self;
             safe(proc() { f() }).result(g)
         }
     }
 
-    impl<A: AShow, B: AShow, C: AShow, T: Testable> Fun<A, B, C, T> for fn(A) -> T {
+    impl<A: AShow, B: AShow, C: AShow, D: AShow, T: Testable> Fun<A, B, C, D, T> for fn(A) -> T {
         fn call<G: Gen>(&self, g: &mut G,
-                        a: Option<&A>, _: Option<&B>, _: Option<&C>)
+                        a: Option<&A>, _: Option<&B>, _: Option<&C>, _: Option<&D>)
                        -> TestResult {
             let a = a.unwrap();
             let oa = box a.clone();
@@ -316,9 +323,9 @@ mod tester {
         }
     }
 
-    impl<A: AShow, B: AShow, C: AShow, T: Testable> Fun<A, B, C, T> for fn(A, B) -> T {
+    impl<A: AShow, B: AShow, C: AShow, D: AShow, T: Testable> Fun<A, B, C, D, T> for fn(A, B) -> T {
         fn call<G: Gen>(&self, g: &mut G,
-                        a: Option<&A>, b: Option<&B>, _: Option<&C>)
+                        a: Option<&A>, b: Option<&B>, _: Option<&C>, _: Option<&D>)
                        -> TestResult {
             let (a, b) = (a.unwrap(), b.unwrap());
             let (oa, ob) = (box a.clone(), box b.clone());
@@ -331,9 +338,9 @@ mod tester {
         }
     }
 
-    impl<A: AShow, B: AShow, C: AShow, T: Testable> Fun<A, B, C, T> for fn(A, B, C) -> T {
+    impl<A: AShow, B: AShow, C: AShow, D: AShow, T: Testable> Fun<A, B, C, D, T> for fn(A, B, C) -> T {
         fn call<G: Gen>(&self, g: &mut G,
-                        a: Option<&A>, b: Option<&B>, c: Option<&C>)
+                        a: Option<&A>, b: Option<&B>, c: Option<&C>, _: Option<&D>)
                        -> TestResult {
             let (a, b, c) = (a.unwrap(), b.unwrap(), c.unwrap());
             let (oa, ob, oc) = (box a.clone(), box b.clone(), box c.clone());
@@ -346,24 +353,39 @@ mod tester {
         }
     }
 
-    fn shrink<G: Gen, A: AShow, B: AShow, C: AShow, T: Testable,
-              F: Fun<A, B, C, T>>
-             (g: &mut G, fun: &F) -> TestResult {
-        let (a, b, c): (A, B, C) = arby(g);
-        let r = fun.call(g, Some(&a), Some(&b), Some(&c));
-        match r.status {
-            Pass|Discard => r,
-            Fail => shrink_failure(g, (a, b, c).shrink(), fun).unwrap_or(r),
+    impl<A: AShow, B: AShow, C: AShow, D: AShow, T: Testable> Fun<A, B, C, D, T> for fn(A, B, C, D) -> T {
+        fn call<G: Gen>(&self, g: &mut G,
+                        a: Option<&A>, b: Option<&B>, c: Option<&C>, d: Option<&D>)
+                       -> TestResult {
+            let (a, b, c, d) = (a.unwrap(), b.unwrap(), c.unwrap(), d.unwrap());
+            let (oa, ob, oc, od) = (box a.clone(), box b.clone(), box c.clone(), box d.clone());
+            let f = *self;
+            let mut r = safe(proc() { f(*oa, *ob, *oc, *od) }).result(g);
+            if r.is_failure() {
+                r.arguments = vec!(a.to_string(), b.to_string(), c.to_string(), d.to_string());
+            }
+            r
         }
     }
 
-    fn shrink_failure<G: Gen, A: AShow, B: AShow, C: AShow, T: Testable,
-                      F: Fun<A, B, C, T>>
-                     (g: &mut G, mut shrinker: Box<Shrinker<(A, B, C)>+'static>,
+    fn shrink<G: Gen, A: AShow, B: AShow, C: AShow, D: AShow, T: Testable,
+              F: Fun<A, B, C, D, T>>
+             (g: &mut G, fun: &F) -> TestResult {
+        let (a, b, c, d): (A, B, C, D) = arby(g);
+        let r = fun.call(g, Some(&a), Some(&b), Some(&c), Some(&d));
+        match r.status {
+            Pass|Discard => r,
+            Fail => shrink_failure(g, (a, b, c, d).shrink(), fun).unwrap_or(r),
+        }
+    }
+
+    fn shrink_failure<G: Gen, A: AShow, B: AShow, C: AShow, D: AShow, T: Testable,
+                      F: Fun<A, B, C, D, T>>
+                     (g: &mut G, mut shrinker: Box<Shrinker<(A, B, C, D)>+'static>,
                       fun: &F)
                      -> Option<TestResult> {
-        for (a, b, c) in shrinker {
-            let r = fun.call(g, Some(&a), Some(&b), Some(&c));
+        for (a, b, c, d) in shrinker {
+            let r = fun.call(g, Some(&a), Some(&b), Some(&c), Some(&d));
             match r.status {
                 // The shrunk value does not witness a failure, so
                 // throw it away.
@@ -372,7 +394,7 @@ mod tester {
                 // The shrunk value *does* witness a failure, so keep trying
                 // to shrink it.
                 Fail => {
-                    let shrunk = shrink_failure(g, (a, b, c).shrink(), fun);
+                    let shrunk = shrink_failure(g, (a, b, c, d).shrink(), fun);
 
                     // If we couldn't witness a failure on any shrunk value,
                     // then return the failure we already have.
