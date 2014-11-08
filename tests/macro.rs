@@ -10,9 +10,9 @@ use quickcheck::TestResult;
 #[quickcheck]
 fn min(x: int, y: int) -> TestResult {
     if x < y {
-        return TestResult::discard()
+        TestResult::discard()
     } else {
-        return TestResult::from_bool(::std::cmp::min(x, y) == y)
+        TestResult::from_bool(::std::cmp::min(x, y) == y)
     }
 }
 

@@ -1,6 +1,3 @@
-// I have no idea what I'm doing with these attributes. Are we using
-// semantic versioning? Some packages include their full github URL.
-// Documentation for this stuff is extremely scarce.
 #![crate_name = "quickcheck"]
 #![crate_type = "lib"]
 #![license = "UNLICENSE"]
@@ -17,7 +14,10 @@
 extern crate collections;
 #[phase(plugin, link)] extern crate log;
 
-pub use arbitrary::{Arbitrary, Gen, StdGen, Shrinker, gen, empty_shrinker, single_shrinker};
+pub use arbitrary::{
+    Arbitrary, Gen, StdGen, Shrinker, gen,
+    empty_shrinker, single_shrinker,
+};
 pub use tester::{Testable, TestResult, Config};
 pub use tester::{quickcheck, quickcheck_config, quicktest, quicktest_config};
 pub use tester::{DEFAULT_CONFIG, DEFAULT_SIZE};
@@ -77,7 +77,7 @@ mod tester {
     /// possibly minimal witness for test failures.
     pub fn quickcheck_config<A: Testable, G: Gen>(c: Config, g: &mut G, f: A) {
         match quicktest_config(c, g, f) {
-            Ok(ntests) => debug!("[quickcheck] Passed {:u} tests.", ntests),
+            Ok(ntests) => info!("(Passed {:u} quickcheck tests.)", ntests),
             Err(r) => panic!(r.failed_msg()),
         }
     }
