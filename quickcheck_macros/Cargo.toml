@@ -7,3 +7,6 @@ authors = ["Andrew Gallant <jamslam@gmail.com>"]
 name = "quickcheck_macros"
 path = "src/lib.rs"
 plugin = true
+
+[dependencies.quickcheck]
+path = ".."

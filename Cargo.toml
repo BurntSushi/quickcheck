@@ -6,5 +6,5 @@ authors = ["Andrew Gallant <jamslam@gmail.com>"]
 [lib]
 name = "quickcheck"
 
-[dependencies.quickcheck_macros]
+[dev-dependencies.quickcheck_macros]
 path = "quickcheck_macros"
