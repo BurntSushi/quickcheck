@@ -102,8 +102,7 @@ in their `Cargo.toml`. If the `#[quickcheck]` attribute is desired, then
 git = "https://github.com/BurntSushi/quickcheck"
 ```
 
-should be added too (that is, both dependencies are needed to use
-`#[quickcheck]`).
+should be added instead.
 
 I am keeping this crate in sync with Rust's master branch (as enforced
 by `travis-ci`), so you'll need to build Rust from source first, or
@@ -111,9 +110,10 @@ grab [the nightly build](http://www.rust-lang.org/install.html) from
 rust-lang.org.
 
 N.B. When using `quickcheck` (either directly or via the attributes),
-`RUST_LOG=quickcheck` enables `debug!` so that it shows useful output
+`RUST_LOG=quickcheck` enables `info!` so that it shows useful output
 (like the number of tests passed). This is **not** needed to show
 witnesses for failures.
+
 
 ### Discarding test results (or, properties are polymorphic!)
 
@@ -283,12 +283,12 @@ fn sieve(n: uint) -> Vec<uint> {
     }
 
     let mut marked = Vec::from_fn(n+1, |_| false);
-    *marked.get_mut(0) = true;
-    *marked.get_mut(1) = true;
-    *marked.get_mut(2) = false;
+    marked[0] = true;
+    marked[1] = true;
+    marked[2] = false;
     for p in iter::range(2, n) {
         for i in iter::range_step(2 * p, n, p) {
-            *marked.get_mut(i) = true;
+            marked[i] = true;
         }
     }
     let mut primes = vec!();
@@ -319,18 +319,18 @@ prime. For that, we'll need an `is_prime` function:
 ```rust
 fn is_prime(n: uint) -> bool {
     if n == 0 || n == 1 {
-        return false
+        return false;
     } else if n == 2 {
-        return true
+        return true;
     }
 
     let max_possible = (n as f64).sqrt().ceil() as uint;
     for i in iter::range_inclusive(2, max_possible) {
         if n % i == 0 {
-            return false
+            return false;
         }
     }
-    return true
+    true
 }
 ```
 
@@ -400,7 +400,7 @@ shrinking on failures caused by runtime errors.
 
 I think I've captured the key features, but there are still things missing:
 
-* As of now, only functions with 3 or fewer parameters can be quickchecked.
+* As of now, only functions with 4 or fewer parameters can be quickchecked.
 This limitation can be lifted to some `N`, but requires an implementation
 for each `n` of the `Testable` trait.
 * Functions that fail because of a stack overflow are not caught by QuickCheck. 
@@ -443,12 +443,4 @@ critical features. (I don't think any of them build either.)
 * [lilac/quick-check](https://github.com/lilac/quick-check) - This is a fork of
   `blake2-ppc/qc.rs`. I can't see any substantial changes, although it is using
   `proc` in the laziness code, so perhaps they've gotten it to work.
-
-
-### Request for review
-
-This is my first Rust project, so I've undoubtedly written unidiomatic code. In 
-fact, it would be fair to say that the code in this project just happened to be 
-what I could manage to get by the compiler (with respect to region/linear 
-types).
 

@@ -3,16 +3,6 @@ use std::mem;
 use std::num;
 use std::rand::Rng;
 
-/// Returns a `Gen` with the given configuration using any random number
-/// generator.
-///
-/// The `size` parameter controls the size of random values generated.
-/// For example, it specifies the maximum length of a randomly generator vector
-/// and also will specify the maximum magnitude of a randomly generated number.
-pub fn gen<R: Rng>(rng: R, size: uint) -> StdGen<R> {
-    StdGen{rng: rng, size: size}
-}
-
 /// `Gen` wraps a `rand::Rng` with parameters to control the distribution of
 /// random values.
 ///
@@ -29,6 +19,18 @@ pub trait Gen : Rng {
 pub struct StdGen<R> {
     rng: R,
     size: uint,
+}
+
+/// Returns a `StdGen` with the given configuration using any random number
+/// generator.
+///
+/// The `size` parameter controls the size of random values generated.
+/// For example, it specifies the maximum length of a randomly generator vector
+/// and also will specify the maximum magnitude of a randomly generated number.
+impl<R: Rng> StdGen<R> {
+    pub fn new(rng: R, size: uint) -> StdGen<R> {
+        StdGen { rng: rng, size: size }
+    }
 }
 
 impl<R: Rng> Rng for StdGen<R> {
@@ -171,7 +173,7 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
 
 impl<A: Arbitrary, B: Arbitrary> Arbitrary for (A, B) {
     fn arbitrary<G: Gen>(g: &mut G) -> (A, B) {
-        return (Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
+        (Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
     }
 
     // Shrinking a tuple is done by shrinking the first element and generating 
@@ -181,7 +183,7 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for (A, B) {
     //
     //     shrink((a, b)) =
     //         let (sa, sb) = (a.shrink(), b.shrink());
-    //         vec!((sa1, b), ..., (saN, b), (a, sb1), ..., (a, sbN))
+    //         vec![(sa1, b), ..., (saN, b), (a, sb1), ..., (a, sbN)]
     //
     fn shrink(&self) -> Box<Shrinker<(A, B)>+'static> {
         let (ref a, ref b) = *self;
@@ -191,17 +193,15 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for (A, B) {
         let sbs = b.shrink().scan(a.clone(), |a, b| {
             Some((a.clone(), b))
         });
-        box sas.chain(sbs) as Box<Shrinker<(A, B)>+'static>
+        box sas.chain(sbs)
     }
 }
 
 impl<A: Arbitrary, B: Arbitrary, C: Arbitrary> Arbitrary for (A, B, C) {
     fn arbitrary<G: Gen>(g: &mut G) -> (A, B, C) {
-        return (
-            Arbitrary::arbitrary(g),
-            Arbitrary::arbitrary(g),
-            Arbitrary::arbitrary(g),
-        )
+        (Arbitrary::arbitrary(g),
+         Arbitrary::arbitrary(g),
+         Arbitrary::arbitrary(g))
     }
 
     fn shrink(&self) -> Box<Shrinker<(A, B, C)>+'static> {
@@ -215,35 +215,41 @@ impl<A: Arbitrary, B: Arbitrary, C: Arbitrary> Arbitrary for (A, B, C) {
         let scs = c.shrink().scan((a.clone(), b.clone()), |&(ref a, ref b), c| {
             Some((a.clone(), b.clone(), c))
         });
-        box sas.chain(sbs).chain(scs) as Box<Shrinker<(A, B, C)>+'static>
+        box sas.chain(sbs).chain(scs)
     }
 }
 
 impl<A: Arbitrary, B: Arbitrary, C: Arbitrary, D: Arbitrary> Arbitrary for (A, B, C, D) {
     fn arbitrary<G: Gen>(g: &mut G) -> (A, B, C, D) {
-        return (
-            Arbitrary::arbitrary(g),
-            Arbitrary::arbitrary(g),
-            Arbitrary::arbitrary(g),
-            Arbitrary::arbitrary(g),
-        )
+        (Arbitrary::arbitrary(g),
+         Arbitrary::arbitrary(g),
+         Arbitrary::arbitrary(g),
+         Arbitrary::arbitrary(g))
     }
 
     fn shrink(&self) -> Box<Shrinker<(A, B, C, D)>+'static> {
         let (ref a, ref b, ref c, ref d) = *self;
-        let sas = a.shrink().scan((b.clone(), c.clone(), d.clone()), |&(ref b, ref c, ref d), a| {
-            Some((a, b.clone(), c.clone(), d.clone()))
-        });
-        let sbs = b.shrink().scan((a.clone(), c.clone(), d.clone()), |&(ref a, ref c, ref d), b| {
-            Some((a.clone(), b, c.clone(), d.clone()))
-        });
-        let scs = c.shrink().scan((a.clone(), b.clone(), d.clone()), |&(ref a, ref b, ref d), c| {
-            Some((a.clone(), b.clone(), c, d.clone()))
-        });
-        let sds = d.shrink().scan((a.clone(), b.clone(), c.clone()), |&(ref a, ref b, ref c), d| {
-            Some((a.clone(), b.clone(), c.clone(), d))
-        });
-        box sas.chain(sbs).chain(scs).chain(sds) as Box<Shrinker<(A, B, C, D)>+'static>
+        let sas = a.shrink().scan(
+            (b.clone(), c.clone(), d.clone()),
+            |&(ref b, ref c, ref d), a| {
+                Some((a, b.clone(), c.clone(), d.clone()))
+            });
+        let sbs = b.shrink().scan(
+            (a.clone(), c.clone(), d.clone()),
+            |&(ref a, ref c, ref d), b| {
+                Some((a.clone(), b, c.clone(), d.clone()))
+            });
+        let scs = c.shrink().scan(
+            (a.clone(), b.clone(), d.clone()),
+            |&(ref a, ref b, ref d), c| {
+                Some((a.clone(), b.clone(), c, d.clone()))
+            });
+        let sds = d.shrink().scan(
+            (a.clone(), b.clone(), c.clone()),
+            |&(ref a, ref b, ref c), d| {
+                Some((a.clone(), b.clone(), c.clone(), d))
+            });
+        box sas.chain(sbs).chain(scs).chain(sds)
     }
 }
 
@@ -255,11 +261,11 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
 
     fn shrink(&self) -> Box<Shrinker<Vec<A>>+'static> {
         if self.len() == 0 {
-            return empty_shrinker()
+            return empty_shrinker();
         }
 
         // Start the shrunk values with an empty vector.
-        let mut xs: Vec<Vec<A>> = vec!(vec!());
+        let mut xs: Vec<Vec<A>> = vec![vec![]];
 
         // Explore the space of different sized vectors without shrinking
         // any of the elements.
@@ -279,7 +285,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
                 xs.push(change_one);
             }
         }
-        box xs.into_iter() as Box<Shrinker<Vec<A>>+'static>
+        box xs.into_iter()
     }
 }
 
@@ -293,9 +299,7 @@ impl<A: Arbitrary> Arbitrary for TrieMap<A> {
         let vec: Vec<(uint, A)> = self.iter()
                                       .map(|(a, b)| (a, b.clone()))
                                       .collect();
-        box {
-            vec.shrink().map(|v| v.into_iter().collect::<TrieMap<A>>())
-        } as Box<Shrinker<TrieMap<A>>+'static>
+        box vec.shrink().map(|v| v.into_iter().collect::<TrieMap<A>>())
     }
 }
 
@@ -308,8 +312,7 @@ impl Arbitrary for String {
     fn shrink(&self) -> Box<Shrinker<String>+'static> {
         // Shrink a string by shrinking a vector of its characters.
         let chars: Vec<char> = self.as_slice().chars().collect();
-        let strs = chars.shrink().map(|x| x.into_iter().collect::<String>());
-        box strs as Box<Shrinker<String>+'static>
+        box chars.shrink().map(|x| x.into_iter().collect::<String>())
     }
 }
 
@@ -323,7 +326,7 @@ impl Arbitrary for char {
 }
 
 macro_rules! signed_arbitrary {
-    ($($ty: ty),*) => {
+    ($($ty:ty),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
@@ -333,15 +336,16 @@ macro_rules! signed_arbitrary {
                     SignedShrinker::new(*self)
                 }
             }
-            )*
+        )*
     }
 }
+
 signed_arbitrary! {
     int, i8, i16, i32, i64
 }
 
 macro_rules! unsigned_arbitrary {
-    ($($ty: ty),*) => {
+    ($($ty:ty),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
@@ -351,9 +355,10 @@ macro_rules! unsigned_arbitrary {
                     UnsignedShrinker::new(*self)
                 }
             }
-            )*
+        )*
     }
 }
+
 unsigned_arbitrary! {
     uint, u8, u16, u32, u64
 }
@@ -364,7 +369,7 @@ impl Arbitrary for f32 {
     }
     fn shrink(&self) -> Box<Shrinker<f32>+'static> {
         let it = SignedShrinker::new(self.to_i32().unwrap());
-        box it.map(|x| x.to_f32().unwrap()) as Box<Shrinker<f32>+'static>
+        box it.map(|x| x.to_f32().unwrap())
     }
 }
 
@@ -374,7 +379,7 @@ impl Arbitrary for f64 {
     }
     fn shrink(&self) -> Box<Shrinker<f64>+'static> {
         let it = SignedShrinker::new(self.to_i64().unwrap());
-        box it.map(|x| x.to_f64().unwrap()) as Box<Shrinker<f64>+'static>
+        box it.map(|x| x.to_f64().unwrap())
     }
 }
 
@@ -383,12 +388,12 @@ impl Arbitrary for f64 {
 fn shuffle_vec<A: Clone>(xs: &[A], k: uint) -> Vec<Vec<A>> {
     fn shuffle<A: Clone>(xs: &[A], k: uint, n: uint) -> Vec<Vec<A>> {
         if k > n {
-            return vec!()
+            return vec![];
         }
         let xs1: Vec<A> = xs.slice_to(k).iter().map(|x| x.clone()).collect();
         let xs2: Vec<A> = xs.slice_from(k).iter().map(|x| x.clone()).collect();
         if xs2.len() == 0 {
-            return vec!(vec!())
+            return vec![vec![]];
         }
 
         let cat = |x: &Vec<A>| {
@@ -414,20 +419,17 @@ struct SignedShrinker<A> {
 impl<A: Primitive + Signed + Send> SignedShrinker<A> {
     fn new(x: A) -> Box<Shrinker<A>+'static> {
         if x.is_zero() {
-            empty_shrinker::<A>()
+            empty_shrinker()
         } else {
             let shrinker = SignedShrinker {
                 x: x,
                 i: half(x),
             };
             if shrinker.i.is_negative() {
-                box {
-                    vec![num::zero(), shrinker.x.abs()]
-                }.into_iter().chain(shrinker) as Box<Shrinker<A>+'static>
+                box vec![num::zero(), shrinker.x.abs()]
+                        .into_iter().chain(shrinker)
             } else {
-                box {
-                    vec![num::zero()]
-                }.into_iter().chain(shrinker) as Box<Shrinker<A>+'static>
+                box vec![num::zero()].into_iter().chain(shrinker)
             }
         }
     }
@@ -455,12 +457,12 @@ impl<A: Primitive + Unsigned + Send> UnsignedShrinker<A> {
         if x.is_zero() {
             empty_shrinker::<A>()
         } else {
-            box { vec![num::zero()] }.into_iter().chain(
+            box vec![num::zero()].into_iter().chain(
                 UnsignedShrinker {
                     x: x,
                     i: half(x),
                 }
-            ) as Box<Shrinker<A>+'static>
+            )
         }
     }
 }
@@ -508,7 +510,7 @@ mod test {
     }
 
     fn gen() -> super::StdGen<rand::TaskRng> {
-        super::gen(rand::task_rng(), 5)
+        super::StdGen::new(rand::task_rng(), 5)
     }
 
     fn rep(f: ||) {
@@ -520,20 +522,20 @@ mod test {
     // Shrink testing.
     #[test]
     fn unit() {
-        eq((), vec!());
+        eq((), vec![]);
     }
 
     #[test]
     fn bools() {
-        eq(false, vec!());
-        eq(true, vec!(false));
+        eq(false, vec![]);
+        eq(true, vec![false]);
     }
 
     #[test]
     fn options() {
-        eq(None::<()>, vec!());
-        eq(Some(false), vec!(None));
-        eq(Some(true), vec!(None, Some(false)));
+        eq(None::<()>, vec![]);
+        eq(Some(false), vec![None]);
+        eq(Some(true), vec![None, Some(false)]);
     }
 
     #[test]
@@ -541,115 +543,115 @@ mod test {
         // Result<A, B> doesn't implement the Hash trait, so these tests
         // depends on the order of shrunk results. Ug.
         // TODO: Fix this.
-        ordered_eq(Ok::<bool, ()>(true), vec!(Ok(false)));
-        ordered_eq(Err::<(), bool>(true), vec!(Err(false)));
+        ordered_eq(Ok::<bool, ()>(true), vec![Ok(false)]);
+        ordered_eq(Err::<(), bool>(true), vec![Err(false)]);
     }
 
     #[test]
     fn tuples() {
-        eq((false, false), vec!());
-        eq((true, false), vec!((false, false)));
-        eq((true, true), vec!((false, true), (true, false)));
+        eq((false, false), vec![]);
+        eq((true, false), vec![(false, false)]);
+        eq((true, true), vec![(false, true), (true, false)]);
     }
 
     #[test]
     fn triples() {
-        eq((false, false, false), vec!());
-        eq((true, false, false), vec!((false, false, false)));
+        eq((false, false, false), vec![]);
+        eq((true, false, false), vec![(false, false, false)]);
         eq((true, true, false),
-           vec!((false, true, false), (true, false, false)));
+           vec![(false, true, false), (true, false, false)]);
     }
 
     #[test]
     fn quads() {
-        eq((false, false, false, false), vec!());
-        eq((true, false, false, false), vec!((false, false, false, false)));
+        eq((false, false, false, false), vec![]);
+        eq((true, false, false, false), vec![(false, false, false, false)]);
         eq((true, true, false, false),
-            vec!((false, true, false, false), (true, false, false, false)));
+            vec![(false, true, false, false), (true, false, false, false)]);
     }
 
     #[test]
     fn ints() {
         // TODO: Test overflow?
-        eq(5i, vec!(0, 3, 4));
-        eq(-5i, vec!(5, 0, -3, -4));
-        eq(0i, vec!());
+        eq(5i, vec![0, 3, 4]);
+        eq(-5i, vec![5, 0, -3, -4]);
+        eq(0i, vec![]);
     }
 
     #[test]
     fn ints8() {
-        eq(5i8, vec!(0, 3, 4));
-        eq(-5i8, vec!(5, 0, -3, -4));
-        eq(0i8, vec!());
+        eq(5i8, vec![0, 3, 4]);
+        eq(-5i8, vec![5, 0, -3, -4]);
+        eq(0i8, vec![]);
     }
 
     #[test]
     fn ints16() {
-        eq(5i16, vec!(0, 3, 4));
-        eq(-5i16, vec!(5, 0, -3, -4));
-        eq(0i16, vec!());
+        eq(5i16, vec![0, 3, 4]);
+        eq(-5i16, vec![5, 0, -3, -4]);
+        eq(0i16, vec![]);
     }
 
     #[test]
     fn ints32() {
-        eq(5i32, vec!(0, 3, 4));
-        eq(-5i32, vec!(5, 0, -3, -4));
-        eq(0i32, vec!());
+        eq(5i32, vec![0, 3, 4]);
+        eq(-5i32, vec![5, 0, -3, -4]);
+        eq(0i32, vec![]);
     }
 
     #[test]
     fn ints64() {
-        eq(5i64, vec!(0, 3, 4));
-        eq(-5i64, vec!(5, 0, -3, -4));
-        eq(0i64, vec!());
+        eq(5i64, vec![0, 3, 4]);
+        eq(-5i64, vec![5, 0, -3, -4]);
+        eq(0i64, vec![]);
     }
 
     #[test]
     fn uints() {
-        eq(5u, vec!(0, 3, 4));
-        eq(0u, vec!());
+        eq(5u, vec![0, 3, 4]);
+        eq(0u, vec![]);
     }
 
     #[test]
     fn uints8() {
-        eq(5u8, vec!(0, 3, 4));
-        eq(0u8, vec!());
+        eq(5u8, vec![0, 3, 4]);
+        eq(0u8, vec![]);
     }
 
     #[test]
     fn uints16() {
-        eq(5u16, vec!(0, 3, 4));
-        eq(0u16, vec!());
+        eq(5u16, vec![0, 3, 4]);
+        eq(0u16, vec![]);
     }
 
     #[test]
     fn uints32() {
-        eq(5u32, vec!(0, 3, 4));
-        eq(0u32, vec!());
+        eq(5u32, vec![0, 3, 4]);
+        eq(0u32, vec![]);
     }
 
     #[test]
     fn uints64() {
-        eq(5u64, vec!(0, 3, 4));
-        eq(0u64, vec!());
+        eq(5u64, vec![0, 3, 4]);
+        eq(0u64, vec![]);
     }
 
     #[test]
     fn vecs() {
-        eq({let it: Vec<int> = vec!(); it}, vec!());
-        eq({let it: Vec<Vec<int>> = vec!(vec!()); it}, vec!(vec!()));
-        eq(vec!(1i), vec!(vec!(), vec!(0)));
-        eq(vec!(11i), vec!(vec!(), vec!(0), vec!(6), vec!(9), vec!(10)));
+        eq({let it: Vec<int> = vec![]; it}, vec![]);
+        eq({let it: Vec<Vec<int>> = vec![vec![]]; it}, vec![vec![]]);
+        eq(vec![1i], vec![vec![], vec![0]]);
+        eq(vec![11i], vec![vec![], vec![0], vec![6], vec![9], vec![10]]);
         eq(
-            vec!(3i, 5),
-            vec!(vec!(), vec!(5), vec!(3), vec!(0,5), vec!(2,5),
-                 vec!(3,0), vec!(3,3), vec!(3,4))
+            vec![3i, 5],
+            vec![vec![], vec![5], vec![3], vec![0,5], vec![2,5],
+                 vec![3,0], vec![3,3], vec![3,4]]
         );
     }
 
     #[test]
     fn triemaps() {
-        eq({let it: TrieMap<int> = TrieMap::new(); it}, vec!());
+        eq({let it: TrieMap<int> = TrieMap::new(); it}, vec![]);
 
         {
             let mut map = TrieMap::new();
@@ -667,17 +669,17 @@ mod test {
 
     #[test]
     fn chars() {
-        eq('a', vec!());
+        eq('a', vec![]);
     }
 
     #[test]
     fn strs() {
-        eq("".to_string(), vec!());
-        eq("A".to_string(), vec!("".to_string()));
-        eq("ABC".to_string(), vec!("".to_string(),
+        eq("".to_string(), vec![]);
+        eq("A".to_string(), vec!["".to_string()]);
+        eq("ABC".to_string(), vec!["".to_string(),
                                    "AB".to_string(),
                                    "BC".to_string(),
-                                   "AC".to_string()));
+                                   "AC".to_string()]);
     }
 
     // All this jazz is for testing set equality on the results of a shrinker.

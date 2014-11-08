@@ -1,30 +1,14 @@
 use std::cmp::Ord;
 use std::iter;
-use std::rand::task_rng;
-use super::{Config, Testable, TestResult, gen};
-use super::{quickcheck_config, quicktest_config};
-
-static SIZE: uint = 100;
-static CONFIG: Config = Config {
-    tests: 100,
-    max_tests: 10000,
-};
-
-fn qcheck<A: Testable>(f: A) {
-    quickcheck_config(CONFIG, &mut gen(task_rng(), SIZE), f)
-}
-
-fn qtest<A: Testable>(f: A) -> Result<uint, TestResult> {
-    quicktest_config(CONFIG, &mut gen(task_rng(), SIZE), f)
-}
+use super::{QuickCheck, TestResult, quickcheck};
 
 #[test]
 fn prop_oob() {
     fn prop() -> bool {
-        let zero: Vec<bool> = vec!();
+        let zero: Vec<bool> = vec![];
         zero[0]
     }
-    match qtest(prop) {
+    match QuickCheck::new().quicktest(prop) {
         Ok(n) => panic!("prop_oob should fail with a runtime error \
                         but instead it passed {} tests.", n),
         _ => return,
@@ -38,7 +22,7 @@ fn prop_reverse_reverse() {
         let revrev = rev.into_iter().rev().collect();
         xs == revrev
     }
-    qcheck(prop);
+    quickcheck(prop);
 }
 
 #[test]
@@ -51,7 +35,7 @@ fn reverse_single() {
             xs == xs.clone().into_iter().rev().collect()
         )
     }
-    qcheck(prop);
+    quickcheck(prop);
 }
 
 #[test]
@@ -67,7 +51,7 @@ fn reverse_app() {
 
         app_rev == rev_app
     }
-    qcheck(prop);
+    quickcheck(prop);
 }
 
 #[test]
@@ -79,7 +63,7 @@ fn max() {
             return TestResult::from_bool(::std::cmp::max(x, y) == y)
         }
     }
-    qcheck(prop);
+    quickcheck(prop);
 }
 
 #[test]
@@ -94,7 +78,7 @@ fn sort() {
         }
         true
     }
-    qcheck(prop);
+    quickcheck(prop);
 }
 
 #[test]
@@ -102,7 +86,7 @@ fn sort() {
 fn sieve_of_eratosthenes() {
     fn sieve(n: uint) -> Vec<uint> {
         if n <= 1 {
-            return vec!()
+            return vec![];
         }
 
         let mut marked = Vec::from_fn(n+1, |_| false);
@@ -114,7 +98,7 @@ fn sieve_of_eratosthenes() {
                 marked[i] = true;
             }
         }
-        let mut primes = vec!();
+        let mut primes = vec![];
         for (i, &m) in marked.iter().enumerate() {
             if !m { primes.push(i) }
         }
@@ -127,18 +111,18 @@ fn sieve_of_eratosthenes() {
     }
     fn is_prime(n: uint) -> bool {
         if n == 0 || n == 1 {
-            return false
+            return false;
         } else if n == 2 {
-            return true
+            return true;
         }
 
         let max_possible = (n as f64).sqrt().ceil() as uint;
         for i in iter::range_inclusive(2, max_possible) {
             if n % i == 0 {
-                return false
+                return false;
             }
         }
-        return true
+        true
     }
-    qcheck(prop);
+    quickcheck(prop);
 }

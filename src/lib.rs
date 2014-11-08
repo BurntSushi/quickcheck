@@ -15,14 +15,10 @@ extern crate collections;
 #[phase(plugin, link)] extern crate log;
 
 pub use arbitrary::{
-    Arbitrary, Gen, StdGen, Shrinker, gen,
+    Arbitrary, Gen, StdGen, Shrinker,
     empty_shrinker, single_shrinker,
 };
-pub use tester::{
-    Testable, TestResult, Config,
-    quickcheck, quickcheck_config, quicktest, quicktest_config,
-    DEFAULT_CONFIG, DEFAULT_SIZE,
-};
+pub use tester::{QuickCheck, Testable, TestResult, quickcheck};
 
 mod arbitrary;
 mod tester;

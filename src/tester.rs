@@ -2,102 +2,121 @@ use std::comm;
 use std::fmt::Show;
 use std::io::ChanWriter;
 use std::iter;
-use std::rand::task_rng;
+use std::rand;
 use std::task::TaskBuilder;
-use super::{Arbitrary, Gen, Shrinker, gen};
+use super::{Arbitrary, Gen, Shrinker, StdGen};
 use tester::trap::safe;
 
-/// Default size hint used in `quickcheck` for sampling from a random
-/// distribution.
-pub static DEFAULT_SIZE: uint = 100;
-
-/// Default configuration used in `quickcheck`.
-pub static DEFAULT_CONFIG: Config = Config{
-    tests: 100,
-    max_tests: 10000,
-};
-
-/// Does randomized testing on `f` and produces a possibly minimal
-/// witness for test failures.
-///
-/// This function is equivalent to calling `quickcheck_config` with
-/// `DEFAULT_CONFIG` and a `Gen` with size `DEFAULT_SIZE`.
-///
-/// As of now, it is intended for `quickcheck` to be used inside Rust's
-/// unit testing system. For example, to check if
-/// `reverse(reverse(xs)) == xs`, you could use:
-///
-/// ```rust
-/// fn prop_reverse_reverse() {
-///     fn revrev(xs: Vec<uint>) -> bool {
-///         let rev: Vec<uint> = xs.clone().into_iter().rev().collect();
-///         let revrev = rev.into_iter().rev().collect();
-///         xs == revrev
-///     }
-///     quickcheck::quickcheck(revrev);
-/// }
-/// ```
-///
-/// In particular, `quickcheck` will call `panic!` if it finds a
-/// test failure. The failure message will include a witness to the
-/// failure.
-pub fn quickcheck<A: Testable>(f: A) {
-    let g = &mut gen(task_rng(), DEFAULT_SIZE);
-    quickcheck_config(DEFAULT_CONFIG, g, f)
+/// The main QuickCheck type for setting configuration and running QuickCheck.
+pub struct QuickCheck<G> {
+    tests: uint,
+    max_tests: uint,
+    gen: G,
 }
 
-/// Does randomized testing on `f` with the given config and produces a 
-/// possibly minimal witness for test failures.
-pub fn quickcheck_config<A: Testable, G: Gen>(c: Config, g: &mut G, f: A) {
-    match quicktest_config(c, g, f) {
-        Ok(ntests) => info!("(Passed {:u} quickcheck tests.)", ntests),
-        Err(r) => panic!(r.failed_msg()),
+impl QuickCheck<StdGen<rand::TaskRng>> {
+    /// Creates a new QuickCheck value.
+    ///
+    /// This can be used to run QuickCheck on things that implement
+    /// `Testable`. You may also adjust the configuration, such as
+    /// the number of tests to run.
+    ///
+    /// By default, the maximum number of passed tests is set to `100`,
+    /// the max number of overall tests is set to `10000` and the generator
+    /// is set to a `StdGen` with a default size of `100`.
+    pub fn new() -> QuickCheck<StdGen<rand::TaskRng>> {
+        QuickCheck {
+            tests: 100,
+            max_tests: 10000,
+            gen: StdGen::new(rand::task_rng(), 100),
+        }
     }
 }
 
-/// Like `quickcheck`, but returns either the number of tests passed
-/// or a witness of failure.
-pub fn quicktest<A: Testable>(f: A) -> Result<uint, TestResult> {
-    let g = &mut gen(task_rng(), DEFAULT_SIZE);
-    quicktest_config(DEFAULT_CONFIG, g, f)
-}
+impl<G: Gen> QuickCheck<G> {
+    /// Set the number of tests to run.
+    ///
+    /// This actually refers to the maximum number of *passed* tests that
+    /// can occur. Namely, if a test causes a failure, future testing on that
+    /// property stops. Additionally, if tests are discarded, there may be
+    /// fewer than `tests` passed.
+    pub fn tests(mut self, tests: uint) -> QuickCheck<G> {
+        self.tests = tests;
+        self
+    }
 
-/// Like `quickcheck_config`, but returns either the number of tests passed
-/// or a witness of failure.
-pub fn quicktest_config<A: Testable, G: Gen>
-                       (c: Config, g: &mut G, f: A)
-                       -> Result<uint, TestResult> {
-    let mut ntests: uint = 0;
-    for _ in iter::range(0, c.max_tests) {
-        if ntests >= c.tests {
-            break
-        }
-        let r = f.result(g);
-        match r.status {
-            Pass => ntests = ntests + 1,
-            Discard => continue,
-            Fail => {
-                return Err(r)
+    /// Set the maximum number of tests to run.
+    ///
+    /// The number of invocations of a property will never exceed this number.
+    /// This is necessary to cap the number of tests because QuickCheck
+    /// properties can discard tests.
+    pub fn max_tests(mut self, max_tests: uint) -> QuickCheck<G> {
+        self.max_tests = max_tests;
+        self
+    }
+
+    /// Tests a property and returns the result.
+    ///
+    /// The result returned is either the number of tests passed or a witness
+    /// of failure.
+    ///
+    /// (If you're using Rust's unit testing infrastructure, then you'll
+    /// want to use the `quickcheck` method, which will `panic!` on failure.)
+    pub fn quicktest<A>(&mut self, f: A) -> Result<uint, TestResult>
+                    where A: Testable {
+        let mut ntests: uint = 0;
+        for _ in iter::range(0, self.max_tests) {
+            if ntests >= self.tests {
+                break
+            }
+            let r = f.result(&mut self.gen);
+            match r.status {
+                Pass => ntests += 1,
+                Discard => continue,
+                Fail => return Err(r),
             }
         }
+        Ok(ntests)
     }
-    Ok(ntests)
+
+    /// Tests a property and calls `panic!` on failure.
+    ///
+    /// The `panic!` message will include a (hopefully) minimal witness of
+    /// failure.
+    ///
+    /// It is appropriate to use this method with Rust's unit testing
+    /// infrastructure.
+    ///
+    /// Note that if the environment variable `RUST_LOG` is set to enable
+    /// `info` level log messages for the `quickcheck` crate, then this will
+    /// include output on how many QuickCheck tests were passed.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quickcheck::QuickCheck;
+    ///
+    /// fn prop_reverse_reverse() {
+    ///     fn revrev(xs: Vec<uint>) -> bool {
+    ///         let rev: Vec<uint> = xs.clone().into_iter().rev().collect();
+    ///         let revrev = rev.into_iter().rev().collect();
+    ///         xs == revrev
+    ///     }
+    ///     QuickCheck::new().quickcheck(revrev);
+    /// }
+    /// ```
+    pub fn quickcheck<A>(&mut self, f: A) where A: Testable {
+        match self.quicktest(f) {
+            Ok(ntests) => info!("(Passed {} QuickCheck tests.)", ntests),
+            Err(result) => panic!(result.failed_msg()),
+        }
+    }
 }
 
-/// Config contains various parameters for controlling automated testing.
+/// Convenience function for running QuickCheck.
 ///
-/// Note that the distribution of random values is controlled by the
-/// generator passed to `quickcheck_config`.
-pub struct Config {
-    /// The number of tests to run on a function where the result is
-    /// either a pass or a failure. (i.e., This doesn't include discarded
-    /// test results.)
-    pub tests: uint,
-
-    /// The maximum number of tests to run for each function including
-    /// discarded test results.
-    pub max_tests: uint,
-}
+/// This is an alias for `QuickCheck::new().quickcheck(f)`.
+pub fn quickcheck<A: Testable>(f: A) { QuickCheck::new().quickcheck(f) }
 
 /// Describes the status of a single instance of a test.
 ///
@@ -135,7 +154,7 @@ impl TestResult {
     pub fn discard() -> TestResult {
         TestResult {
             status: Discard,
-            arguments: vec!(),
+            arguments: vec![],
             err: "".to_string(),
         }
     }
@@ -146,7 +165,7 @@ impl TestResult {
     pub fn from_bool(b: bool) -> TestResult {
         TestResult {
             status: if b { Pass } else { Fail },
-            arguments: vec!(),
+            arguments: vec![],
             err: "".to_string(),
         }
     }
