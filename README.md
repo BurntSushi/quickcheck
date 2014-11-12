@@ -38,7 +38,7 @@ use quickcheck::quickcheck;
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
     let mut rev = vec!();
     for x in xs.iter() {
-        rev.unshift(x.clone())
+        rev.insert(0, x.clone())
     }
     rev
 }
@@ -68,7 +68,7 @@ extern crate quickcheck;
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
     let mut rev = vec!();
     for x in xs.iter() {
-        rev.unshift(x.clone())
+        rev.insert(0, x.clone())
     }
     rev
 }
@@ -229,7 +229,7 @@ function for reversing vectors as: (my apologies for the contrived example)
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
     let mut rev = vec!();
     for i in iter::range(1, xs.len()) {
-        rev.unshift(xs[i].clone())
+        rev.insert(0, xs[i].clone())
     }
     rev
 }
