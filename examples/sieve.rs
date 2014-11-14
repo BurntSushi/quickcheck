@@ -1,7 +1,8 @@
 extern crate quickcheck;
 
-use std::iter;
 use quickcheck::quickcheck;
+use std::iter;
+use std::num::Float;
 
 fn sieve(n: uint) -> Vec<uint> {
     if n <= 1 {

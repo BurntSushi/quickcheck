@@ -1,6 +1,6 @@
 use std::collections::TrieMap;
 use std::mem;
-use std::num;
+use std::num::{Primitive, SignedInt, UnsignedInt, mod};
 use std::rand::Rng;
 
 /// `Gen` wraps a `rand::Rng` with parameters to control the distribution of
@@ -416,7 +416,7 @@ struct SignedShrinker<A> {
     i: A,
 }
 
-impl<A: Primitive + Signed + Send> SignedShrinker<A> {
+impl<A: Primitive + SignedInt + Send> SignedShrinker<A> {
     fn new(x: A) -> Box<Shrinker<A>+'static> {
         if x.is_zero() {
             empty_shrinker()
@@ -435,7 +435,7 @@ impl<A: Primitive + Signed + Send> SignedShrinker<A> {
     }
 }
 
-impl<A: Primitive + Signed> Iterator<A> for SignedShrinker<A> {
+impl<A: Primitive + SignedInt> Iterator<A> for SignedShrinker<A> {
     fn next(&mut self) -> Option<A> {
         if (self.x - self.i).abs() < self.x.abs() {
             let result = Some(self.x - self.i);
@@ -452,7 +452,7 @@ struct UnsignedShrinker<A> {
     i: A,
 }
 
-impl<A: Primitive + Unsigned + Send> UnsignedShrinker<A> {
+impl<A: Primitive + UnsignedInt + Send> UnsignedShrinker<A> {
     fn new(x: A) -> Box<Shrinker<A>+'static> {
         if x.is_zero() {
             empty_shrinker::<A>()
@@ -467,7 +467,7 @@ impl<A: Primitive + Unsigned + Send> UnsignedShrinker<A> {
     }
 }
 
-impl<A: Primitive + Unsigned> Iterator<A> for UnsignedShrinker<A> {
+impl<A: Primitive + UnsignedInt> Iterator<A> for UnsignedShrinker<A> {
     fn next(&mut self) -> Option<A> {
         if self.x - self.i < self.x {
             let result = Some(self.x - self.i);
