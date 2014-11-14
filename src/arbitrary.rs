@@ -1,6 +1,6 @@
 use std::collections::TrieMap;
 use std::mem;
-use std::num::{Primitive, SignedInt, UnsignedInt, mod};
+use std::num::{Int, Primitive, SignedInt, UnsignedInt, mod};
 use std::rand::Rng;
 
 /// `Gen` wraps a `rand::Rng` with parameters to control the distribution of
@@ -418,7 +418,7 @@ struct SignedShrinker<A> {
 
 impl<A: Primitive + SignedInt + Send> SignedShrinker<A> {
     fn new(x: A) -> Box<Shrinker<A>+'static> {
-        if x.is_zero() {
+        if x == Int::zero() {
             empty_shrinker()
         } else {
             let shrinker = SignedShrinker {
@@ -426,10 +426,10 @@ impl<A: Primitive + SignedInt + Send> SignedShrinker<A> {
                 i: half(x),
             };
             if shrinker.i.is_negative() {
-                box vec![num::zero(), shrinker.x.abs()]
+                box vec![Int::zero(), shrinker.x.abs()]
                         .into_iter().chain(shrinker)
             } else {
-                box vec![num::zero()].into_iter().chain(shrinker)
+                box vec![Int::zero()].into_iter().chain(shrinker)
             }
         }
     }
@@ -454,10 +454,10 @@ struct UnsignedShrinker<A> {
 
 impl<A: Primitive + UnsignedInt + Send> UnsignedShrinker<A> {
     fn new(x: A) -> Box<Shrinker<A>+'static> {
-        if x.is_zero() {
+        if x == Int::zero() {
             empty_shrinker::<A>()
         } else {
-            box vec![num::zero()].into_iter().chain(
+            box vec![Int::zero()].into_iter().chain(
                 UnsignedShrinker {
                     x: x,
                     i: half(x),
