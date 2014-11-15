@@ -1,6 +1,6 @@
 use std::collections::TrieMap;
 use std::mem;
-use std::num;
+use std::num::{Int, Primitive, SignedInt, UnsignedInt, mod};
 use std::rand::Rng;
 
 /// `Gen` wraps a `rand::Rng` with parameters to control the distribution of
@@ -416,9 +416,9 @@ struct SignedShrinker<A> {
     i: A,
 }
 
-impl<A: Primitive + Signed + Send> SignedShrinker<A> {
+impl<A: Primitive + SignedInt + Send> SignedShrinker<A> {
     fn new(x: A) -> Box<Shrinker<A>+'static> {
-        if x.is_zero() {
+        if x == Int::zero() {
             empty_shrinker()
         } else {
             let shrinker = SignedShrinker {
@@ -426,16 +426,16 @@ impl<A: Primitive + Signed + Send> SignedShrinker<A> {
                 i: half(x),
             };
             if shrinker.i.is_negative() {
-                box vec![num::zero(), shrinker.x.abs()]
+                box vec![Int::zero(), shrinker.x.abs()]
                         .into_iter().chain(shrinker)
             } else {
-                box vec![num::zero()].into_iter().chain(shrinker)
+                box vec![Int::zero()].into_iter().chain(shrinker)
             }
         }
     }
 }
 
-impl<A: Primitive + Signed> Iterator<A> for SignedShrinker<A> {
+impl<A: Primitive + SignedInt> Iterator<A> for SignedShrinker<A> {
     fn next(&mut self) -> Option<A> {
         if (self.x - self.i).abs() < self.x.abs() {
             let result = Some(self.x - self.i);
@@ -452,12 +452,12 @@ struct UnsignedShrinker<A> {
     i: A,
 }
 
-impl<A: Primitive + Unsigned + Send> UnsignedShrinker<A> {
+impl<A: Primitive + UnsignedInt + Send> UnsignedShrinker<A> {
     fn new(x: A) -> Box<Shrinker<A>+'static> {
-        if x.is_zero() {
+        if x == Int::zero() {
             empty_shrinker::<A>()
         } else {
-            box vec![num::zero()].into_iter().chain(
+            box vec![Int::zero()].into_iter().chain(
                 UnsignedShrinker {
                     x: x,
                     i: half(x),
@@ -467,7 +467,7 @@ impl<A: Primitive + Unsigned + Send> UnsignedShrinker<A> {
     }
 }
 
-impl<A: Primitive + Unsigned> Iterator<A> for UnsignedShrinker<A> {
+impl<A: Primitive + UnsignedInt> Iterator<A> for UnsignedShrinker<A> {
     fn next(&mut self) -> Option<A> {
         if self.x - self.i < self.x {
             let result = Some(self.x - self.i);
