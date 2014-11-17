@@ -64,7 +64,12 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
             let inner_ident = cx.expr_ident(span, prop.ident);
             let check_call = cx.expr_call_global(span, check_path, vec![inner_ident]);
             let body = cx.block(span, vec![inner_fn], Some(check_call));
-            let test = cx.item_fn(span, item.ident, Vec::new(), cx.ty_nil(), body);
+            let nil = P(ast::Ty {
+                id: ast::DUMMY_NODE_ID,
+                node: ast::TyTup(vec![]),
+                span: codemap::DUMMY_SP,
+            });
+            let test = cx.item_fn(span, item.ident, Vec::new(), nil, body);
 
             // Copy attributes from original function
             let mut attrs = item.attrs.clone();
