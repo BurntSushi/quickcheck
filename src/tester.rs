@@ -6,6 +6,7 @@ use std::rand;
 use std::task::TaskBuilder;
 use super::{Arbitrary, Gen, Shrinker, StdGen};
 use tester::trap::safe;
+use tester::Status::{Discard, Fail, Pass};
 
 /// The main QuickCheck type for setting configuration and running QuickCheck.
 pub struct QuickCheck<G> {
