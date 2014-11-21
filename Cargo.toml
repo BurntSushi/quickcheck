@@ -2,9 +2,14 @@
 name = "quickcheck"
 version = "0.1.2"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
+description = "Automatic property based testing with shrinking."
+documentation = "http://burntsushi.net/rustdoc/quickcheck/"
+homepage = "https://github.com/BurntSushi/quickcheck"
+repository = "https://github.com/BurntSushi/quickcheck"
+readme = "README.md"
+keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
+license = "Unlicense"
 
 [lib]
 name = "quickcheck"
 
-[dev-dependencies.quickcheck_macros]
-path = "quickcheck_macros"

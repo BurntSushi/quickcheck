@@ -2,6 +2,13 @@
 name = "quickcheck_macros"
 version = "0.1.2"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
+description = "A macro attribute for quickcheck."
+documentation = "http://burntsushi.net/rustdoc/quickcheck/"
+homepage = "https://github.com/BurntSushi/quickcheck"
+repository = "https://github.com/BurntSushi/quickcheck"
+readme = "../README.md"
+keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
+license = "Unlicense"
 
 [lib]
 name = "quickcheck_macros"
@@ -10,3 +17,4 @@ plugin = true
 
 [dependencies.quickcheck]
 path = ".."
+version = "~0.1.2"
