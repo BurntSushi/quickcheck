@@ -171,73 +171,42 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
     }
 }
 
-impl<A: Arbitrary, B: Arbitrary> Arbitrary for (A, B) {
-    fn arbitrary<G: Gen>(g: &mut G) -> (A, B) {
-        (Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
-    }
+macro_rules! impl_arb_for_tuple(
+    (($var_a:ident, $type_a:ident) $(, ($var_n:ident, $type_n:ident))*) => (
+        impl<$type_a: Arbitrary, $($type_n: Arbitrary),*> Arbitrary for ($type_a, $($type_n),*) {
+            fn arbitrary<G: Gen>(g: &mut G) -> ($type_a, $($type_n),*) {
+                (
+                    Arbitrary::arbitrary(g),
+                    $({
+                        let arb: $type_n = Arbitrary::arbitrary(g);
+                        arb
+                    },
+                    )*
+                )
+            }
 
-    // Shrinking a tuple is done by shrinking the first element and generating 
-    // a new tuple with each shrunk element from the first along with a copy of 
-    // the given second element. Vice versa for the second element. More 
-    // precisely:
-    //
-    //     shrink((a, b)) =
-    //         let (sa, sb) = (a.shrink(), b.shrink());
-    //         vec![(sa1, b), ..., (saN, b), (a, sb1), ..., (a, sbN)]
-    //
-    fn shrink(&self) -> Box<Shrinker<(A, B)>+'static> {
-        let (ref a, ref b) = *self;
-        let sas = a.shrink().scan(b.clone(), |b, a| {
-            Some((a, b.clone()))
-        });
-        let sbs = b.shrink().scan(a.clone(), |a, b| {
-            Some((a.clone(), b))
-        });
-        box sas.chain(sbs)
-    }
-}
+            fn shrink(&self) -> Box<Shrinker<($type_a, $($type_n),*)> + 'static> {
+                let (ref $var_a, $(ref $var_n),*) = *self;
+                let sa = $var_a.shrink().scan(
+                    ($($var_n.clone(),)*),
+                    |&($(ref $var_n,)*), $var_a|
+                        Some(($var_a, $($var_n.clone(),)*))
+                );
+                let srest = ($($var_n.clone(),)*).shrink()
+                    .scan($var_a.clone(), |$var_a, ($($var_n,)*)|
+                        Some(($var_a.clone(), $($var_n,)*))
+                    );
+                box sa.chain(srest)
+            }
+        }
+    );
+)
 
-impl<A: Arbitrary, B: Arbitrary, C: Arbitrary> Arbitrary for (A, B, C) {
-    fn arbitrary<G: Gen>(g: &mut G) -> (A, B, C) {
-        (Arbitrary::arbitrary(g),
-         Arbitrary::arbitrary(g),
-         Arbitrary::arbitrary(g))
-    }
+impl_arb_for_tuple!((a, A))
+impl_arb_for_tuple!((a, A), (b, B))
+impl_arb_for_tuple!((a, A), (b, B), (c, C))
+impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D))
 
-    fn shrink(&self) -> Box<Shrinker<(A, B, C)>+'static> {
-        let (ref a, ref b, ref c) = *self;
-        let sa = a.shrink().scan(
-            (b.clone(), c.clone()),
-            |&(ref b, ref c), a|
-                Some((a, b.clone(), c.clone()))
-        );
-        let srest = (b.clone(), c.clone()).shrink()
-            .scan(a.clone(), |a, (b, c)| Some((a.clone(), b, c)));
-        box sa.chain(srest)
-    }
-}
-
-
-impl<A: Arbitrary, B: Arbitrary, C: Arbitrary, D: Arbitrary> Arbitrary for (A, B, C, D) {
-    fn arbitrary<G: Gen>(g: &mut G) -> (A, B, C, D) {
-        (Arbitrary::arbitrary(g),
-         Arbitrary::arbitrary(g),
-         Arbitrary::arbitrary(g),
-         Arbitrary::arbitrary(g))
-    }
-
-    fn shrink(&self) -> Box<Shrinker<(A, B, C, D)>+'static> {
-        let (ref a, ref b, ref c, ref d) = *self;
-        let sa = a.shrink().scan(
-            (b.clone(), c.clone(), d.clone()),
-            |&(ref b, ref c, ref d), a|
-                Some((a, b.clone(), c.clone(), d.clone()))
-        );
-        let srest = (b.clone(), c.clone(), d.clone()).shrink()
-            .scan(a.clone(), |a, (b, c, d)| Some((a.clone(), b, c, d)));
-        box sa.chain(srest)
-    }
-}
 
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> Vec<A> {
