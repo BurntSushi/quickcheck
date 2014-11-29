@@ -206,18 +206,17 @@ impl<A: Arbitrary, B: Arbitrary, C: Arbitrary> Arbitrary for (A, B, C) {
 
     fn shrink(&self) -> Box<Shrinker<(A, B, C)>+'static> {
         let (ref a, ref b, ref c) = *self;
-        let sas = a.shrink().scan((b.clone(), c.clone()), |&(ref b, ref c), a| {
-            Some((a, b.clone(), c.clone()))
-        });
-        let sbs = b.shrink().scan((a.clone(), c.clone()), |&(ref a, ref c), b| {
-            Some((a.clone(), b, c.clone()))
-        });
-        let scs = c.shrink().scan((a.clone(), b.clone()), |&(ref a, ref b), c| {
-            Some((a.clone(), b.clone(), c))
-        });
-        box sas.chain(sbs).chain(scs)
+        let sa = a.shrink().scan(
+            (b.clone(), c.clone()),
+            |&(ref b, ref c), a|
+                Some((a, b.clone(), c.clone()))
+        );
+        let srest = (b.clone(), c.clone()).shrink()
+            .scan(a.clone(), |a, (b, c)| Some((a.clone(), b, c)));
+        box sa.chain(srest)
     }
 }
+
 
 impl<A: Arbitrary, B: Arbitrary, C: Arbitrary, D: Arbitrary> Arbitrary for (A, B, C, D) {
     fn arbitrary<G: Gen>(g: &mut G) -> (A, B, C, D) {
@@ -229,27 +228,14 @@ impl<A: Arbitrary, B: Arbitrary, C: Arbitrary, D: Arbitrary> Arbitrary for (A, B
 
     fn shrink(&self) -> Box<Shrinker<(A, B, C, D)>+'static> {
         let (ref a, ref b, ref c, ref d) = *self;
-        let sas = a.shrink().scan(
+        let sa = a.shrink().scan(
             (b.clone(), c.clone(), d.clone()),
-            |&(ref b, ref c, ref d), a| {
+            |&(ref b, ref c, ref d), a|
                 Some((a, b.clone(), c.clone(), d.clone()))
-            });
-        let sbs = b.shrink().scan(
-            (a.clone(), c.clone(), d.clone()),
-            |&(ref a, ref c, ref d), b| {
-                Some((a.clone(), b, c.clone(), d.clone()))
-            });
-        let scs = c.shrink().scan(
-            (a.clone(), b.clone(), d.clone()),
-            |&(ref a, ref b, ref d), c| {
-                Some((a.clone(), b.clone(), c, d.clone()))
-            });
-        let sds = d.shrink().scan(
-            (a.clone(), b.clone(), c.clone()),
-            |&(ref a, ref b, ref c), d| {
-                Some((a.clone(), b.clone(), c.clone(), d))
-            });
-        box sas.chain(sbs).chain(scs).chain(sds)
+        );
+        let srest = (b.clone(), c.clone(), d.clone()).shrink()
+            .scan(a.clone(), |a, (b, c, d)| Some((a.clone(), b, c, d)));
+        box sa.chain(srest)
     }
 }
 
