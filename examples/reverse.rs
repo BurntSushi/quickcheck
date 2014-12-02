@@ -11,8 +11,8 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
 }
 
 fn main() {
-    fn prop(xs: Vec<int>) -> bool {
+    fn equality_after_applying_twice(xs: Vec<int>) -> bool {
         xs == reverse(reverse(xs.as_slice()).as_slice())
     }
-    quickcheck(prop);
+    quickcheck(equality_after_applying_twice);
 }
