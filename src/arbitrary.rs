@@ -95,10 +95,10 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<Shrinker<A>+'static> {
 /// `Arbitrary` describes types whose values can be randomly generated and
 /// shrunk.
 ///
-/// Aside from shrinking, `Arbitrary` is different from the `std::Rand` trait 
+/// Aside from shrinking, `Arbitrary` is different from the `std::Rand` trait
 /// in that it uses a `Gen` to control the distribution of random values.
 ///
-/// As of now, all types that implement `Arbitrary` must also implement 
+/// As of now, all types that implement `Arbitrary` must also implement
 /// `Clone`. (I'm not sure if this is a permanent restriction.)
 ///
 /// They must also be sendable since every test is run inside its own task.
