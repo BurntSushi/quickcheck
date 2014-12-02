@@ -1,6 +1,4 @@
 #![crate_name = "quickcheck"]
-#![crate_type = "lib"]
-#![license = "UNLICENSE"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
 #![experimental]
 
