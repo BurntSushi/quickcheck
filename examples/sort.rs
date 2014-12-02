@@ -21,9 +21,10 @@ fn sortk<T: Clone + Ord>(x: &T, xs: &[T]) -> Vec<T> {
 }
 
 fn sort<T: Clone + Ord>(list: &[T]) -> Vec<T> {
-    match list {
-        [] => vec!(),
-        [ref x, ..xs] => sortk(x, xs)
+    if list.is_empty() {
+        vec![]
+    } else {
+        sortk(&list[0], list.tail())
     }
 }
 
