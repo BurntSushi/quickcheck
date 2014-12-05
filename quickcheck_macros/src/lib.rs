@@ -3,7 +3,6 @@
 
 #![crate_name = "quickcheck_macros"]
 #![crate_type = "dylib"]
-#![license = "MIT/ASL2"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
 
 #![feature(plugin_registrar)]
