@@ -105,8 +105,8 @@ impl<G: Gen> QuickCheck<G> {
     ///
     /// fn prop_reverse_reverse() {
     ///     fn revrev(xs: Vec<uint>) -> bool {
-    ///         let rev: Vec<uint> = xs.clone().into_iter().rev().collect();
-    ///         let revrev = rev.into_iter().rev().collect();
+    ///         let rev: Vec<_> = xs.clone().into_iter().rev().collect();
+    ///         let revrev: Vec<_> = rev.into_iter().rev().collect();
     ///         xs == revrev
     ///     }
     ///     QuickCheck::new().quickcheck(revrev);
@@ -218,7 +218,7 @@ impl TestResult {
     }
 }
 
-/// `Testable` describes types (e.g., a function) whose values can be 
+/// `Testable` describes types (e.g., a function) whose values can be
 /// tested.
 ///
 /// Anything that can be tested must be capable of producing a `TestResult`
@@ -229,7 +229,7 @@ impl TestResult {
 /// and potentially shrink those arguments if they produce a failure.
 ///
 /// It's unlikely that you'll have to implement this trait yourself.
-/// This comes with a caveat: currently, only functions with 4 parameters 
+/// This comes with a caveat: currently, only functions with 4 parameters
 /// or fewer (both `fn` and `||` types) satisfy `Testable`. If you have
 /// functions to test with more than 4 parameters, please
 /// [file a bug](https://github.com/BurntSushi/quickcheck/issues) and

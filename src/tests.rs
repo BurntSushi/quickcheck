@@ -19,8 +19,8 @@ fn prop_oob() {
 #[test]
 fn prop_reverse_reverse() {
     fn prop(xs: Vec<uint>) -> bool {
-        let rev: Vec<uint> = xs.clone().into_iter().rev().collect();
-        let revrev = rev.into_iter().rev().collect();
+        let rev: Vec<_> = xs.clone().into_iter().rev().collect();
+        let revrev: Vec<_> = rev.into_iter().rev().collect();
         xs == revrev
     }
     quickcheck(prop);
@@ -33,7 +33,7 @@ fn reverse_single() {
             return TestResult::discard()
         }
         return TestResult::from_bool(
-            xs == xs.clone().into_iter().rev().collect()
+            xs == xs.clone().into_iter().rev().collect::<Vec<_>>()
         )
     }
     quickcheck(prop);
