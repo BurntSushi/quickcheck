@@ -9,7 +9,7 @@ fn main() {
         if index < length {
             TestResult::discard()
         } else {
-            TestResult::must_fail(proc() {
+            TestResult::must_fail(move || {
                 v[index]
             })
         }

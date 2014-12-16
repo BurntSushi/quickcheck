@@ -159,12 +159,12 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
         match *self {
             Ok(ref x) => {
                 let xs: Box<Shrinker<A>+'static> = x.shrink();
-                let tagged = xs.map::<'static, Result<A, B>>(Ok);
+                let tagged = xs.map(Ok);
                 box tagged as Box<Shrinker<Result<A, B>>+'static>
             }
             Err(ref x) => {
                 let xs: Box<Shrinker<B>+'static> = x.shrink();
-                let tagged = xs.map::<'static, Result<A, B>>(Err);
+                let tagged = xs.map(Err);
                 box tagged as Box<Shrinker<Result<A, B>>+'static>
             }
         }
@@ -364,7 +364,7 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: uint) -> Vec<Vec<A>> {
             return vec![vec![]];
         }
 
-        let cat = |x: &Vec<A>| {
+        let cat = |&mut: x: &Vec<A>| {
             let mut pre = xs1.clone();
             pre.extend(x.clone().into_iter());
             pre

@@ -179,7 +179,7 @@ impl TestResult {
 
     /// Tests if a "procedure" fails when executed. The test passes only if
     /// `f` generates a task failure during its execution.
-    pub fn must_fail<T: Send>(f: proc(): Send -> T) -> TestResult {
+    pub fn must_fail<T: Send, F: FnOnce() -> T + Send>(f: F) -> TestResult {
         let (tx, _) = comm::channel();
         TestResult::from_bool(
             TaskBuilder::new()
@@ -306,7 +306,7 @@ macro_rules! impl_fun_call(
         let f = $f;
         let mut r = {
             let ($($name,)*) = ($(box $name.clone(),)*);
-            safe(proc() { f($(*$name,)*) }).result($g)
+            safe(move || { f($(*$name,)*) }).result($g)
         };
         if r.is_failure() {
             r.arguments = vec![$($name.to_string(),)*];
@@ -322,7 +322,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn() -> T
                     _: Option<&C>, _: Option<&D>)
                    -> TestResult {
         let f = *self;
-        safe(proc() { f() }).result(g)
+        safe(move || { f() }).result(g)
     }
 }
 
@@ -407,7 +407,7 @@ fn shrink_failure<G, T, A, B, C, D, F>
 
 #[cfg(quickfail)]
 mod trap {
-    pub fn safe<T: Send>(fun: proc() -> T) -> Result<T, String> {
+    pub fn safe<T: Send, F: FnOnce() -> T>(fun: F) -> Result<T, String> {
         Ok(fun())
     }
 }
@@ -431,7 +431,7 @@ mod trap {
     //
     // Moreover, this feature seems to prevent an implementation of
     // Testable for a stack closure type. *sigh*
-    pub fn safe<T: Send>(fun: proc():Send -> T) -> Result<T, String> {
+    pub fn safe<T: Send, F: FnOnce() -> T + Send>(fun: F) -> Result<T, String> {
         let (send, recv) = channel();
         let stdout = ChanWriter::new(send.clone());
         let stderr = ChanWriter::new(send);
