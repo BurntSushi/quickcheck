@@ -300,7 +300,7 @@ trait Fun<A, B, C, D, T> {
               where G: Gen;
 }
 
-macro_rules! impl_fun_call(
+macro_rules! impl_fun_call {
     ($f:expr, $g:expr, $($name:ident,)+) => ({
         let ($($name,)*) = ($($name.unwrap(),)*);
         let f = $f;
@@ -313,7 +313,7 @@ macro_rules! impl_fun_call(
         }
         r
     });
-)
+}
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn() -> T
     where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
