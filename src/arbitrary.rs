@@ -171,9 +171,10 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
     }
 }
 
-macro_rules! impl_arb_for_tuple(
+macro_rules! impl_arb_for_tuple {
     (($var_a:ident, $type_a:ident) $(, ($var_n:ident, $type_n:ident))*) => (
-        impl<$type_a: Arbitrary, $($type_n: Arbitrary),*> Arbitrary for ($type_a, $($type_n),*) {
+        impl<$type_a: Arbitrary, $($type_n: Arbitrary),*> Arbitrary
+                for ($type_a, $($type_n),*) {
             fn arbitrary<GEN: Gen>(g: &mut GEN) -> ($type_a, $($type_n),*) {
                 (
                     Arbitrary::arbitrary(g),
@@ -185,7 +186,8 @@ macro_rules! impl_arb_for_tuple(
                 )
             }
 
-            fn shrink(&self) -> Box<Shrinker<($type_a, $($type_n),*)> + 'static> {
+            fn shrink(&self)
+                     -> Box<Shrinker<($type_a, $($type_n),*)> + 'static> {
                 let (ref $var_a, $(ref $var_n),*) = *self;
                 let sa = $var_a.shrink().scan(
                     ($($var_n.clone(),)*),
@@ -200,26 +202,26 @@ macro_rules! impl_arb_for_tuple(
             }
         }
     );
-)
+}
 
-impl_arb_for_tuple!((a, A))
-impl_arb_for_tuple!((a, A), (b, B))
-impl_arb_for_tuple!((a, A), (b, B), (c, C))
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D))
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E))
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F))
+impl_arb_for_tuple!((a, A));
+impl_arb_for_tuple!((a, A), (b, B));
+impl_arb_for_tuple!((a, A), (b, B), (c, C));
+impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D));
+impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E));
+impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F));
 impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G))
+                    (g, G));
 impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G), (h, H))
+                    (g, G), (h, H));
 impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G), (h, H), (i, I))
+                    (g, G), (h, H), (i, I));
 impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G), (h, H), (i, I), (j, J))
+                    (g, G), (h, H), (i, I), (j, J));
 impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G), (h, H), (i, I), (j, J), (k, K))
+                    (g, G), (h, H), (i, I), (j, J), (k, K));
 impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G), (h, H), (i, I), (j, J), (k, K), (l, L))
+                    (g, G), (h, H), (i, I), (j, J), (k, K), (l, L));
 
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> Vec<A> {

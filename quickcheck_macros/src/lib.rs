@@ -57,11 +57,16 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
             // ::quickcheck::quickcheck
             let check_ident = token::str_to_ident("quickcheck");
             let check_path = vec!(check_ident, check_ident);
-            // Wrap original function in new outer function, calling ::quickcheck::quickcheck()
-            let fn_decl = P(codemap::respan(span, ast::DeclItem(prop.clone())));
-            let inner_fn = P(codemap::respan(span, ast::StmtDecl(fn_decl, ast::DUMMY_NODE_ID)));
+            // Wrap original function in new outer function,
+            // calling ::quickcheck::quickcheck()
+            let fn_decl =
+                P(codemap::respan(span, ast::DeclItem(prop.clone())));
+            let inner_fn =
+                P(codemap::respan(
+                    span, ast::StmtDecl(fn_decl, ast::DUMMY_NODE_ID)));
             let inner_ident = cx.expr_ident(span, prop.ident);
-            let check_call = cx.expr_call_global(span, check_path, vec![inner_ident]);
+            let check_call =
+                cx.expr_call_global(span, check_path, vec![inner_ident]);
             let body = cx.block(span, vec![inner_fn], Some(check_call));
             let nil = P(ast::Ty {
                 id: ast::DUMMY_NODE_ID,
@@ -73,12 +78,15 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
             // Copy attributes from original function
             let mut attrs = item.attrs.clone();
             // Add #[test] attribute
-            attrs.push(cx.attribute(span, cx.meta_word(span, token::intern_and_get_ident("test"))));
+            attrs.push(cx.attribute(
+                span, cx.meta_word(
+                    span, token::intern_and_get_ident("test"))));
             // Attach the attributes to the outer function
             P(ast::Item {attrs: attrs, ..(*test).clone()})
         },
         _ => {
-            cx.span_err(span, "#[quickcheck] only supported on statics and functions");
+            cx.span_err(
+                span, "#[quickcheck] only supported on statics and functions");
             item
         }
     }
