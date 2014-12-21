@@ -1,4 +1,4 @@
-use std::collections::TrieMap;
+use collect::TrieMap;
 use std::mem;
 use std::num::{Int, Primitive, SignedInt, UnsignedInt, mod};
 use std::rand::Rng;
@@ -451,11 +451,11 @@ impl<A: Primitive + UnsignedInt> Iterator<A> for UnsignedShrinker<A> {
 
 #[cfg(test)]
 mod test {
+    use collect::TrieMap;
     use std::fmt::Show;
     use std::hash::Hash;
     use std::iter;
     use std::collections::HashSet;
-    use std::collections::TrieMap;
     use std::rand;
     use super::Arbitrary;
 
