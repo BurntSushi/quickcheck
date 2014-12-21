@@ -10,7 +10,7 @@
 
 #![feature(macro_rules, phase)]
 
-extern crate collections;
+extern crate collect;
 #[phase(plugin, link)] extern crate log;
 
 pub use arbitrary::{

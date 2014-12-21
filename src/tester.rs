@@ -3,7 +3,7 @@ use std::fmt::Show;
 use std::io::ChanWriter;
 use std::iter;
 use std::rand;
-use std::task::TaskBuilder;
+use std::thread;
 use super::{Arbitrary, Gen, Shrinker, StdGen};
 use tester::trap::safe;
 use tester::Status::{Discard, Fail, Pass};
@@ -182,11 +182,12 @@ impl TestResult {
     pub fn must_fail<T: Send, F: FnOnce() -> T + Send>(f: F) -> TestResult {
         let (tx, _) = comm::channel();
         TestResult::from_bool(
-            TaskBuilder::new()
-                        .stdout(box ChanWriter::new(tx.clone()))
-                        .stderr(box ChanWriter::new(tx))
-                        .try(f)
-                        .is_err())
+            thread::Builder::new()
+                            .stdout(box ChanWriter::new(tx.clone()))
+                            .stderr(box ChanWriter::new(tx))
+                            .spawn(f)
+                            .join()
+                            .is_err())
     }
 
     /// Returns `true` if and only if this test result describes a failing
@@ -317,10 +318,10 @@ macro_rules! impl_fun_call {
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn() -> T
     where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
-    fn call<G: Gen>(&self, g: &mut G,
-                    _: Option<&A>, _: Option<&B>,
-                    _: Option<&C>, _: Option<&D>)
-                   -> TestResult {
+    fn call<G>(&self, g: &mut G,
+               _: Option<&A>, _: Option<&B>,
+               _: Option<&C>, _: Option<&D>)
+              -> TestResult where G: Gen {
         let f = *self;
         safe(move || { f() }).result(g)
     }
@@ -328,40 +329,40 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn() -> T
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A) -> T
     where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
-    fn call<G: Gen>(&self, g: &mut G,
-                    a: Option<&A>, _: Option<&B>,
-                    _: Option<&C>, _: Option<&D>)
-                   -> TestResult {
+    fn call<G>(&self, g: &mut G,
+               a: Option<&A>, _: Option<&B>,
+               _: Option<&C>, _: Option<&D>)
+              -> TestResult where G: Gen {
         impl_fun_call!(*self, g, a,)
     }
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B) -> T
     where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
-    fn call<G: Gen>(&self, g: &mut G,
-                    a: Option<&A>, b: Option<&B>,
-                    _: Option<&C>, _: Option<&D>)
-                   -> TestResult {
+    fn call<G>(&self, g: &mut G,
+               a: Option<&A>, b: Option<&B>,
+               _: Option<&C>, _: Option<&D>)
+              -> TestResult where G: Gen {
         impl_fun_call!(*self, g, a, b,)
     }
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C) -> T
     where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
-    fn call<G: Gen>(&self, g: &mut G,
-                    a: Option<&A>, b: Option<&B>,
-                    c: Option<&C>, _: Option<&D>)
-                   -> TestResult {
+    fn call<G>(&self, g: &mut G,
+               a: Option<&A>, b: Option<&B>,
+               c: Option<&C>, _: Option<&D>)
+              -> TestResult where G: Gen {
         impl_fun_call!(*self, g, a, b, c,)
     }
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C, D) -> T
     where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
-    fn call<G: Gen>(&self, g: &mut G,
-                    a: Option<&A>, b: Option<&B>,
-                    c: Option<&C>, d: Option<&D>)
-                   -> TestResult {
+    fn call<G>(&self, g: &mut G,
+               a: Option<&A>, b: Option<&B>,
+               c: Option<&C>, d: Option<&D>)
+              -> TestResult where G: Gen {
         impl_fun_call!(*self, g, a, b, c, d,)
     }
 }
@@ -416,7 +417,7 @@ mod trap {
 mod trap {
     use std::comm::channel;
     use std::io::{ChanReader, ChanWriter};
-    use std::task::TaskBuilder;
+    use std::thread;
 
     // This is my bright idea for capturing runtime errors caused by a
     // test. Actually, it looks like rustc uses a similar approach.
@@ -438,11 +439,11 @@ mod trap {
         let stderr = ChanWriter::new(send);
         let mut reader = ChanReader::new(recv);
 
-        let t = TaskBuilder::new()
-                            .named("safefn")
-                            .stdout(box stdout)
-                            .stderr(box stderr);
-        match t.try(fun) {
+        let t = thread::Builder::new()
+                                .name("safefn".to_string())
+                                .stdout(box stdout)
+                                .stderr(box stderr);
+        match t.spawn(fun).join() {
             Ok(v) => Ok(v),
             Err(_) => {
                 let s = reader.read_to_string().unwrap();

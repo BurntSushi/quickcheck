@@ -13,3 +13,6 @@ license = "Unlicense"
 [lib]
 name = "quickcheck"
 
+[dependencies.collect]
+
+git = "https://github.com/Gankro/collect-rs/"
