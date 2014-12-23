@@ -41,7 +41,7 @@ fn main() {
     fn keeps_length(xs: Vec<int>) -> bool {
         xs.len() == sort(xs.as_slice()).len()
     }
-    quickcheck(keeps_length);
+    quickcheck(keeps_length as fn(Vec<int>) -> bool);
 
-    quickcheck(is_sorted)
+    quickcheck(is_sorted as fn(Vec<int>) -> bool)
 }

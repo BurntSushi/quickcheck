@@ -17,5 +17,5 @@ fn main() {
         }
         TestResult::from_bool(xs == reverse(xs.as_slice()))
     }
-    quickcheck(prop);
+    quickcheck(prop as fn(Vec<int>) -> TestResult);
 }

@@ -47,5 +47,5 @@ fn prop_all_prime(n: uint) -> bool {
 }
 
 fn main() {
-    quickcheck(prop_all_prime);
+    quickcheck(prop_all_prime as fn(uint) -> bool);
 }

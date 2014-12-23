@@ -9,7 +9,7 @@ fn prop_oob() {
         let zero: Vec<bool> = vec![];
         zero[0]
     }
-    match QuickCheck::new().quicktest(prop) {
+    match QuickCheck::new().quicktest(prop as fn() -> bool) {
         Ok(n) => panic!("prop_oob should fail with a runtime error \
                         but instead it passed {} tests.", n),
         _ => return,
@@ -23,7 +23,7 @@ fn prop_reverse_reverse() {
         let revrev: Vec<_> = rev.into_iter().rev().collect();
         xs == revrev
     }
-    quickcheck(prop);
+    quickcheck(prop as fn(Vec<uint>) -> bool);
 }
 
 #[test]
@@ -36,7 +36,7 @@ fn reverse_single() {
             xs == xs.clone().into_iter().rev().collect::<Vec<_>>()
         )
     }
-    quickcheck(prop);
+    quickcheck(prop as fn(Vec<uint>) -> TestResult);
 }
 
 #[test]
@@ -52,7 +52,7 @@ fn reverse_app() {
 
         app_rev == rev_app
     }
-    quickcheck(prop);
+    quickcheck(prop as fn(Vec<uint>, Vec<uint>) -> bool);
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn max() {
             return TestResult::from_bool(::std::cmp::max(x, y) == y)
         }
     }
-    quickcheck(prop);
+    quickcheck(prop as fn(int, int) -> TestResult);
 }
 
 #[test]
@@ -79,7 +79,7 @@ fn sort() {
         }
         true
     }
-    quickcheck(prop);
+    quickcheck(prop as fn(Vec<int>) -> bool);
 }
 
 #[test]
@@ -125,5 +125,5 @@ fn sieve_of_eratosthenes() {
         }
         true
     }
-    quickcheck(prop);
+    quickcheck(prop as fn(uint) -> bool);
 }

@@ -14,5 +14,5 @@ fn main() {
     fn equality_after_applying_twice(xs: Vec<int>) -> bool {
         xs == reverse(reverse(xs.as_slice()).as_slice())
     }
-    quickcheck(equality_after_applying_twice);
+    quickcheck(equality_after_applying_twice as fn(Vec<int>) -> bool);
 }
