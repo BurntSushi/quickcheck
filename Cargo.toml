@@ -1,6 +1,6 @@
 [package]
 name = "quickcheck"
-version = "0.1.11"
+version = "0.1.12"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "Automatic property based testing with shrinking."
 documentation = "http://burntsushi.net/rustdoc/quickcheck/"
