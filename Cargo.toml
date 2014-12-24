@@ -1,6 +1,6 @@
 [package]
 name = "quickcheck"
-version = "0.1.15"
+version = "0.1.16"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "Automatic property based testing with shrinking."
 documentation = "http://burntsushi.net/rustdoc/quickcheck/"
@@ -15,4 +15,4 @@ name = "quickcheck"
 
 [dependencies.collect]
 optional = true
-version = "0.1.15"
+version = "0.1.16"
