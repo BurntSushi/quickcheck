@@ -10,6 +10,7 @@
 
 #![feature(macro_rules, phase)]
 
+#[cfg(feature = "collect")]
 extern crate collect;
 #[phase(plugin, link)] extern crate log;
 
