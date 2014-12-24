@@ -13,6 +13,6 @@ license = "Unlicense"
 [lib]
 name = "quickcheck"
 
-[dependencies]
-collect = "*"
-
+[dependencies.collect]
+optional = true
+version = "*"

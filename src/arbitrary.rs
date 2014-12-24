@@ -1,3 +1,4 @@
+#[cfg(feature = "collect")]
 use collect::TrieMap;
 use std::mem;
 use std::num::{Int, Primitive, SignedInt, UnsignedInt, mod};
@@ -259,6 +260,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
     }
 }
 
+#[cfg(feature = "collect")]
 impl<A: Arbitrary> Arbitrary for TrieMap<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> TrieMap<A> {
         let vec: Vec<(uint, A)> = Arbitrary::arbitrary(g);
@@ -451,6 +453,7 @@ impl<A: Primitive + UnsignedInt> Iterator<A> for UnsignedShrinker<A> {
 
 #[cfg(test)]
 mod test {
+    #[cfg(feature = "collect")]
     use collect::TrieMap;
     use std::fmt::Show;
     use std::hash::Hash;
@@ -619,6 +622,7 @@ mod test {
         );
     }
 
+    #[cfg(feature = "collect")]
     #[test]
     fn triemaps() {
         eq({let it: TrieMap<int> = TrieMap::new(); it}, vec![]);
