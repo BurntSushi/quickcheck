@@ -14,5 +14,5 @@ fn main() {
             })
         }
     }
-    quickcheck(prop);
+    quickcheck(prop as fn(uint, uint) -> TestResult);
 }

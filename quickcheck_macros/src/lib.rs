@@ -11,6 +11,7 @@ extern crate syntax;
 extern crate rustc;
 
 use syntax::ast;
+use syntax::ast::Ty_::TyBareFn;
 use syntax::codemap;
 use syntax::parse::token;
 use syntax::ext::base::{ExtCtxt, Modifier};
@@ -43,7 +44,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
 ///     fn check_something(_: uint) -> bool {
 ///         true
 ///     }
-///     ::quickcheck::quickcheck(check_something)
+///     ::quickcheck::quickcheck(check_something as fn(uint) -> bool)
 /// }
 /// ```
 fn expand_meta_quickcheck(cx: &mut ExtCtxt,
@@ -51,43 +52,64 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
                           _: &ast::MetaItem,
                           item: P<ast::Item>) -> P<ast::Item> {
     match item.node {
-        ast::ItemFn(..) | ast::ItemStatic(..) => {
-            // Copy original function without attributes
-            let prop = P(ast::Item {attrs: Vec::new(), ..(*item).clone()});
-            // ::quickcheck::quickcheck
-            let check_ident = token::str_to_ident("quickcheck");
-            let check_path = vec!(check_ident, check_ident);
-            // Wrap original function in new outer function,
-            // calling ::quickcheck::quickcheck()
-            let fn_decl =
-                P(codemap::respan(span, ast::DeclItem(prop.clone())));
-            let inner_fn =
-                P(codemap::respan(
-                    span, ast::StmtDecl(fn_decl, ast::DUMMY_NODE_ID)));
-            let inner_ident = cx.expr_ident(span, prop.ident);
-            let check_call =
-                cx.expr_call_global(span, check_path, vec![inner_ident]);
-            let body = cx.block(span, vec![inner_fn], Some(check_call));
-            let nil = P(ast::Ty {
-                id: ast::DUMMY_NODE_ID,
-                node: ast::TyTup(vec![]),
-                span: codemap::DUMMY_SP,
-            });
-            let test = cx.item_fn(span, item.ident, Vec::new(), nil, body);
+        ast::ItemFn(ref decl, unsafety, abi, _, _) => {
+            let prop_ident = cx.expr_ident(span, item.ident);
+            let prop_ty = cx.ty(span, TyBareFn(P(ast::BareFnTy {
+                unsafety: unsafety,
+                abi: abi,
+                lifetimes: vec![],
+                decl: decl.clone(),
+            })));
+            let inner_ident = cx.expr_cast(span, prop_ident, prop_ty);
 
-            // Copy attributes from original function
-            let mut attrs = item.attrs.clone();
-            // Add #[test] attribute
-            attrs.push(cx.attribute(
-                span, cx.meta_word(
-                    span, token::intern_and_get_ident("test"))));
-            // Attach the attributes to the outer function
-            P(ast::Item {attrs: attrs, ..(*test).clone()})
+            return wrap_item(cx, span, &*item, inner_ident);
+        },
+        ast::ItemStatic(..) => {
+            let inner_ident = cx.expr_ident(span, item.ident);
+
+            return wrap_item(cx, span, &*item, inner_ident);
         },
         _ => {
             cx.span_err(
                 span, "#[quickcheck] only supported on statics and functions");
-            item
         }
     }
+
+    item
+}
+
+fn wrap_item(cx: &mut ExtCtxt,
+             span: codemap::Span,
+             item: &ast::Item,
+             inner_ident: P<ast::Expr>) -> P<ast::Item> {
+    // Copy original function without attributes
+    let prop = P(ast::Item {attrs: Vec::new(), ..item.clone()});
+    // ::quickcheck::quickcheck
+    let check_ident = token::str_to_ident("quickcheck");
+    let check_path = vec!(check_ident, check_ident);
+    // Wrap original function in new outer function,
+    // calling ::quickcheck::quickcheck()
+    let fn_decl =
+        P(codemap::respan(span, ast::DeclItem(prop.clone())));
+    let inner_fn =
+        P(codemap::respan(
+            span, ast::StmtDecl(fn_decl, ast::DUMMY_NODE_ID)));
+    let check_call =
+        cx.expr_call_global(span, check_path, vec![inner_ident]);
+    let body = cx.block(span, vec![inner_fn], Some(check_call));
+    let nil = P(ast::Ty {
+        id: ast::DUMMY_NODE_ID,
+        node: ast::TyTup(vec![]),
+        span: codemap::DUMMY_SP,
+    });
+    let test = cx.item_fn(span, item.ident, Vec::new(), nil, body);
+
+    // Copy attributes from original function
+    let mut attrs = item.attrs.clone();
+    // Add #[test] attribute
+    attrs.push(cx.attribute(
+        span, cx.meta_word(
+            span, token::intern_and_get_ident("test"))));
+    // Attach the attributes to the outer function
+    P(ast::Item {attrs: attrs, ..(*test).clone()})
 }

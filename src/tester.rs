@@ -109,7 +109,7 @@ impl<G: Gen> QuickCheck<G> {
     ///         let revrev: Vec<_> = rev.into_iter().rev().collect();
     ///         xs == revrev
     ///     }
-    ///     QuickCheck::new().quickcheck(revrev);
+    ///     QuickCheck::new().quickcheck(revrev as fn(Vec<uint>) -> bool);
     /// }
     /// ```
     pub fn quickcheck<A>(&mut self, f: A) where A: Testable {
