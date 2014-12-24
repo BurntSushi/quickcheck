@@ -1,8 +1,9 @@
-#[cfg(feature = "collect")]
-use collect::TrieMap;
 use std::mem;
 use std::num::{Int, Primitive, SignedInt, UnsignedInt, mod};
 use std::rand::Rng;
+
+#[cfg(feature = "collect")]
+use collect::TrieMap;
 
 /// `Gen` wraps a `rand::Rng` with parameters to control the distribution of
 /// random values.
@@ -453,14 +454,15 @@ impl<A: Primitive + UnsignedInt> Iterator<A> for UnsignedShrinker<A> {
 
 #[cfg(test)]
 mod test {
-    #[cfg(feature = "collect")]
-    use collect::TrieMap;
     use std::fmt::Show;
     use std::hash::Hash;
     use std::iter;
     use std::collections::HashSet;
     use std::rand;
     use super::Arbitrary;
+
+    #[cfg(feature = "collect")]
+    use collect::TrieMap;
 
     // Arbitrary testing. (Not much here. What else can I reasonably test?)
     #[test]

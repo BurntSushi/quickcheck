@@ -15,4 +15,4 @@ name = "quickcheck"
 
 [dependencies.collect]
 optional = true
-version = "0.1.17"
+version = "*"

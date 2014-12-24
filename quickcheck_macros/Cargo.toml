@@ -17,4 +17,4 @@ plugin = true
 
 [dependencies.quickcheck]
 path = ".."
-version = "0.1.17"
+version = "*"
