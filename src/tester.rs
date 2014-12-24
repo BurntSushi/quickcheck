@@ -447,7 +447,7 @@ mod trap {
             Ok(v) => Ok(v),
             Err(_) => {
                 let s = reader.read_to_string().unwrap();
-                Err(s.as_slice().trim().into_string())
+                Err(s.as_slice().trim().to_string())
             }
         }
     }
