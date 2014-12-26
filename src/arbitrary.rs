@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::hash::Hash;
 use std::mem;
 use std::num::{Int, Primitive, SignedInt, UnsignedInt, mod};
 use std::rand::Rng;
@@ -276,6 +278,18 @@ impl<A: Arbitrary> Arbitrary for TrieMap<A> {
     }
 }
 
+impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
+    fn arbitrary<G: Gen>(g: &mut G) -> HashMap<K, V> {
+        let vec: Vec<(K, V)> = Arbitrary::arbitrary(g);
+        vec.into_iter().collect()
+    }
+
+    fn shrink(&self) -> Box<Shrinker<HashMap<K, V>>+'static> {
+        let vec: Vec<(K, V)> = self.clone().into_iter().collect();
+        box vec.shrink().map(|v| v.into_iter().collect::<HashMap<K, V>>())
+    }
+}
+
 impl Arbitrary for String {
     fn arbitrary<G: Gen>(g: &mut G) -> String {
         let size = { let s = g.size(); g.gen_range(0, s) };
@@ -457,7 +471,7 @@ mod test {
     use std::fmt::Show;
     use std::hash::Hash;
     use std::iter;
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
     use std::rand;
     use super::Arbitrary;
 
@@ -640,6 +654,24 @@ mod test {
             ];
 
             eq(map, shrinks);
+        }
+    }
+
+    #[test]
+    fn hashmaps() {
+        ordered_eq({let it: HashMap<uint, int> = HashMap::new(); it}, vec![]);
+
+        {
+            let mut map = HashMap::new();
+            map.insert(1u, 1i);
+
+            let shrinks = vec![
+                HashMap::new(),
+                {let mut m = HashMap::new(); m.insert(0, 1); m},
+                {let mut m = HashMap::new(); m.insert(1, 0); m},
+            ];
+
+            ordered_eq(map, shrinks);
         }
     }
 
