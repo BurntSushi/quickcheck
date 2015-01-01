@@ -498,8 +498,8 @@ mod test {
         super::Arbitrary::arbitrary(&mut gen())
     }
 
-    fn gen() -> super::StdGen<rand::TaskRng> {
-        super::StdGen::new(rand::task_rng(), 5)
+    fn gen() -> super::StdGen<rand::ThreadRng> {
+        super::StdGen::new(rand::thread_rng(), 5)
     }
 
     fn rep(f: ||) {

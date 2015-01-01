@@ -15,7 +15,7 @@ pub struct QuickCheck<G> {
     gen: G,
 }
 
-impl QuickCheck<StdGen<rand::TaskRng>> {
+impl QuickCheck<StdGen<rand::ThreadRng>> {
     /// Creates a new QuickCheck value.
     ///
     /// This can be used to run QuickCheck on things that implement
@@ -25,11 +25,11 @@ impl QuickCheck<StdGen<rand::TaskRng>> {
     /// By default, the maximum number of passed tests is set to `100`,
     /// the max number of overall tests is set to `10000` and the generator
     /// is set to a `StdGen` with a default size of `100`.
-    pub fn new() -> QuickCheck<StdGen<rand::TaskRng>> {
+    pub fn new() -> QuickCheck<StdGen<rand::ThreadRng>> {
         QuickCheck {
             tests: 100,
             max_tests: 10000,
-            gen: StdGen::new(rand::task_rng(), 100),
+            gen: StdGen::new(rand::thread_rng(), 100),
         }
     }
 }
