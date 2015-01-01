@@ -1,10 +1,11 @@
 extern crate quickcheck;
 
+use std::iter::range;
 use quickcheck::{TestResult, quickcheck};
 
 fn main() {
     fn prop(length: uint, index: uint) -> TestResult {
-        let v = Vec::from_fn(length, |i| i);
+        let v: Vec<_> = range(0, length).collect();
 
         if index < length {
             TestResult::discard()

@@ -90,7 +90,7 @@ fn sieve_of_eratosthenes() {
             return vec![];
         }
 
-        let mut marked = Vec::from_fn(n+1, |_| false);
+        let mut marked: Vec<_> = iter::range(0, n+1).map(|_| false).collect();
         marked[0] = true;
         marked[1] = true;
         marked[2] = false;

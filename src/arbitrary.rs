@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::iter::range;
 use std::mem;
 use std::num::{Int, Primitive, SignedInt, UnsignedInt, mod};
 use std::rand::Rng;
@@ -230,7 +231,7 @@ impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> Vec<A> {
         let size = { let s = g.size(); g.gen_range(0, s) };
-        Vec::from_fn(size, |_| Arbitrary::arbitrary(g))
+        range(0, size).map(|_| Arbitrary::arbitrary(g)).collect()
     }
 
     fn shrink(&self) -> Box<Shrinker<Vec<A>>+'static> {
