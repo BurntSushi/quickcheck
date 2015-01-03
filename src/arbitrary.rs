@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::iter::range;
 use std::mem;
-use std::num::{Int, Primitive, SignedInt, UnsignedInt, mod};
+use std::num::{Int, Primitive, SignedInt, UnsignedInt, self};
 use std::rand::Rng;
 
 #[cfg(feature = "collect")]
@@ -356,8 +356,8 @@ impl Arbitrary for f32 {
         let s = g.size(); g.gen_range(-(s as f32), s as f32)
     }
     fn shrink(&self) -> Box<Shrinker<f32>+'static> {
-        let it = SignedShrinker::new(self.to_i32().unwrap());
-        box it.map(|x| x.to_f32().unwrap())
+        let it = SignedShrinker::new(*self as i32);
+        box it.map(|x| x as f32)
     }
 }
 
@@ -366,8 +366,8 @@ impl Arbitrary for f64 {
         let s = g.size(); g.gen_range(-(s as f64), s as f64)
     }
     fn shrink(&self) -> Box<Shrinker<f64>+'static> {
-        let it = SignedShrinker::new(self.to_i64().unwrap());
-        box it.map(|x| x.to_f64().unwrap())
+        let it = SignedShrinker::new(*self as i64);
+        box it.map(|x| x as f64)
     }
 }
 
