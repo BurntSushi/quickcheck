@@ -1,4 +1,4 @@
-use std::comm;
+use std::sync::mpsc::channel;
 use std::fmt::Show;
 use std::io::ChanWriter;
 use std::iter;
@@ -128,7 +128,7 @@ pub fn quickcheck<A: Testable>(f: A) { QuickCheck::new().quickcheck(f) }
 /// Describes the status of a single instance of a test.
 ///
 /// All testable things must be capable of producing a `TestResult`.
-#[deriving(Clone, Show)]
+#[derive(Clone, Show)]
 pub struct TestResult {
     status: Status,
     arguments: Vec<String>,
@@ -136,7 +136,7 @@ pub struct TestResult {
 }
 
 /// Whether a test has passed, failed or been discarded.
-#[deriving(Clone, Show)]
+#[derive(Clone, Show)]
 enum Status { Pass, Fail, Discard }
 
 impl TestResult {
@@ -180,7 +180,7 @@ impl TestResult {
     /// Tests if a "procedure" fails when executed. The test passes only if
     /// `f` generates a task failure during its execution.
     pub fn must_fail<T: Send, F: FnOnce() -> T + Send>(f: F) -> TestResult {
-        let (tx, _) = comm::channel();
+        let (tx, _) = channel();
         TestResult::from_bool(
             thread::Builder::new()
                             .stdout(box ChanWriter::new(tx.clone()))
@@ -415,7 +415,7 @@ mod trap {
 
 #[cfg(not(quickfail))]
 mod trap {
-    use std::comm::channel;
+    use std::sync::mpsc::channel;
     use std::io::{ChanReader, ChanWriter};
     use std::thread;
 
