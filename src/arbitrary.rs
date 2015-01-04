@@ -65,17 +65,19 @@ pub trait Shrinker<A> {
     fn next_shrink(&mut self) -> Option<A>;
 }
 
-impl<A> Iterator<A> for Box<Shrinker<A>+'static> {
+impl<A> Iterator for Box<Shrinker<A>+'static> {
+    type Item = A;
     fn next(&mut self) -> Option<A> { (**self).next_shrink() }
 }
 
-impl<T, A: Iterator<T>> Shrinker<T> for A {
+impl<T, A: Iterator<Item=T>> Shrinker<T> for A {
     fn next_shrink(&mut self) -> Option<T> { self.next() }
 }
 
 struct EmptyShrinker<A>;
 
-impl<A> Iterator<A> for EmptyShrinker<A> {
+impl<A> Iterator for EmptyShrinker<A> {
+    type Item = A;
     fn next(&mut self) -> Option<A> { None }
 }
 
@@ -88,7 +90,8 @@ struct SingleShrinker<A> {
     value: Option<A>
 }
 
-impl<A> Iterator<A> for SingleShrinker<A> {
+impl<A> Iterator for SingleShrinker<A> {
+    type Item = A;
     fn next(&mut self) -> Option<A> { mem::replace(&mut self.value, None) }
 }
 
@@ -423,7 +426,8 @@ impl<A: Primitive + SignedInt + Send> SignedShrinker<A> {
     }
 }
 
-impl<A: Primitive + SignedInt> Iterator<A> for SignedShrinker<A> {
+impl<A: Primitive + SignedInt> Iterator for SignedShrinker<A> {
+    type Item = A;
     fn next(&mut self) -> Option<A> {
         if (self.x - self.i).abs() < self.x.abs() {
             let result = Some(self.x - self.i);
@@ -455,7 +459,8 @@ impl<A: Primitive + UnsignedInt + Send> UnsignedShrinker<A> {
     }
 }
 
-impl<A: Primitive + UnsignedInt> Iterator<A> for UnsignedShrinker<A> {
+impl<A: Primitive + UnsignedInt> Iterator for UnsignedShrinker<A> {
+    type Item = A;
     fn next(&mut self) -> Option<A> {
         if self.x - self.i < self.x {
             let result = Some(self.x - self.i);

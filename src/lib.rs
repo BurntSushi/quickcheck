@@ -1,14 +1,14 @@
-#![crate_name = "quickcheck"]
-#![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
-#![experimental]
-
 //! This crate is a port of
 //! [Haskell's QuickCheck](http://hackage.haskell.org/package/QuickCheck).
 //!
 //! For detailed examples, please see the
 //! [README](https://github.com/BurntSushi/quickcheck).
 
-#![feature(macro_rules, phase)]
+#![crate_name = "quickcheck"]
+#![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
+#![experimental]
+
+#![feature(associated_types, macro_rules, phase)]
 
 #[cfg(feature = "collect")]
 extern crate collect;
