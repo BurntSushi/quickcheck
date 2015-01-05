@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::iter::range;
 use std::mem;
-use std::num::{Int, Primitive, SignedInt, UnsignedInt, self};
+use std::num::{self, Int, SignedInt, UnsignedInt};
 use std::rand::Rng;
 
 #[cfg(feature = "collect")]
@@ -400,14 +400,14 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: uint) -> Vec<Vec<A>> {
     shuffle(xs, k, xs.len())
 }
 
-fn half<A: Primitive>(x: A) -> A { x / num::cast(2i).unwrap() }
+fn half<A: Int>(x: A) -> A { x / num::cast(2i).unwrap() }
 
 struct SignedShrinker<A> {
     x: A,
     i: A,
 }
 
-impl<A: Primitive + SignedInt + Send> SignedShrinker<A> {
+impl<A: SignedInt + Send> SignedShrinker<A> {
     fn new(x: A) -> Box<Shrinker<A>+'static> {
         if x == Int::zero() {
             empty_shrinker()
@@ -426,7 +426,7 @@ impl<A: Primitive + SignedInt + Send> SignedShrinker<A> {
     }
 }
 
-impl<A: Primitive + SignedInt> Iterator for SignedShrinker<A> {
+impl<A: SignedInt> Iterator for SignedShrinker<A> {
     type Item = A;
     fn next(&mut self) -> Option<A> {
         if (self.x - self.i).abs() < self.x.abs() {
@@ -444,7 +444,7 @@ struct UnsignedShrinker<A> {
     i: A,
 }
 
-impl<A: Primitive + UnsignedInt + Send> UnsignedShrinker<A> {
+impl<A: UnsignedInt + Send> UnsignedShrinker<A> {
     fn new(x: A) -> Box<Shrinker<A>+'static> {
         if x == Int::zero() {
             empty_shrinker::<A>()
@@ -459,7 +459,7 @@ impl<A: Primitive + UnsignedInt + Send> UnsignedShrinker<A> {
     }
 }
 
-impl<A: Primitive + UnsignedInt> Iterator for UnsignedShrinker<A> {
+impl<A: UnsignedInt> Iterator for UnsignedShrinker<A> {
     type Item = A;
     fn next(&mut self) -> Option<A> {
         if self.x - self.i < self.x {
