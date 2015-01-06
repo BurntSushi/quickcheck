@@ -16,3 +16,6 @@ name = "quickcheck"
 [dependencies.collect]
 optional = true
 version = "*"
+
+[dependencies]
+log = "*"
