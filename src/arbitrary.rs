@@ -492,12 +492,12 @@ mod test {
 
     #[test]
     fn arby_int() {
-        rep(|| { let n: int = arby(); assert!(n >= -5 && n <= 5); } );
+        rep(&mut || { let n: int = arby(); assert!(n >= -5 && n <= 5); } );
     }
 
     #[test]
     fn arby_uint() {
-        rep(|| { let n: uint = arby(); assert!(n <= 5); } );
+        rep(&mut || { let n: uint = arby(); assert!(n <= 5); } );
     }
 
     fn arby<A: super::Arbitrary>() -> A {
@@ -508,7 +508,7 @@ mod test {
         super::StdGen::new(rand::thread_rng(), 5)
     }
 
-    fn rep(f: ||) {
+    fn rep<F>(f: &mut F) where F : FnMut() -> () {
         for _ in iter::range(0u, 100) {
             f()
         }
