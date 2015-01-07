@@ -8,11 +8,9 @@
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
 #![experimental]
 
-#![feature(associated_types, macro_rules, phase)]
-
 #[cfg(feature = "collect")]
 extern crate collect;
-#[phase(plugin, link)] extern crate log;
+#[macro_use] extern crate log;
 
 pub use arbitrary::{
     Arbitrary, Gen, StdGen, Shrinker,

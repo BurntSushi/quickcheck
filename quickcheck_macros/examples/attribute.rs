@@ -1,8 +1,9 @@
-#![feature(phase)]
+#![feature(plugin)]
 #![allow(dead_code)]
 
 extern crate quickcheck;
-#[phase(plugin)]
+#[plugin]
+#[no_link]
 extern crate quickcheck_macros;
 
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
