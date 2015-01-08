@@ -1,5 +1,5 @@
 use std::sync::mpsc::channel;
-use std::fmt::Show;
+use std::fmt;
 use std::io::ChanWriter;
 use std::iter;
 use std::rand;
@@ -185,7 +185,7 @@ impl TestResult {
             thread::Builder::new()
                             .stdout(box ChanWriter::new(tx.clone()))
                             .stderr(box ChanWriter::new(tx))
-                            .spawn(f)
+                            .scoped(f)
                             .join()
                             .is_err())
     }
@@ -266,28 +266,28 @@ impl<T> Testable for fn() -> T where T: Testable {
     }
 }
 
-impl<A, T> Testable for fn(A) -> T where A: AShow, T: Testable {
+impl<A, T> Testable for fn(A) -> T where A: AString, T: Testable {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, (), (), (), fn(A) -> T>(g, self)
     }
 }
 
 impl<A, B, T> Testable for fn(A, B) -> T
-    where A: AShow, B: AShow, T: Testable {
+    where A: AString, B: AString, T: Testable {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, B, (), (), fn(A, B) -> T>(g, self)
     }
 }
 
 impl<A, B, C, T> Testable for fn(A, B, C) -> T
-    where A: AShow, B: AShow, C: AShow, T: Testable {
+    where A: AString, B: AString, C: AString, T: Testable {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, B, C, (), fn(A, B, C) -> T>(g, self)
     }
 }
 
 impl<A, B, C, D, T,> Testable for fn(A, B, C, D) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+    where A: AString, B: AString, C: AString, D: AString, T: Testable {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, B, C, D, fn(A, B, C, D) -> T>(g, self)
     }
@@ -317,7 +317,7 @@ macro_rules! impl_fun_call {
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn() -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+    where A: AString, B: AString, C: AString, D: AString, T: Testable {
     fn call<G>(&self, g: &mut G,
                _: Option<&A>, _: Option<&B>,
                _: Option<&C>, _: Option<&D>)
@@ -328,7 +328,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn() -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+    where A: AString, B: AString, C: AString, D: AString, T: Testable {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, _: Option<&B>,
                _: Option<&C>, _: Option<&D>)
@@ -338,7 +338,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A) -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+    where A: AString, B: AString, C: AString, D: AString, T: Testable {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, b: Option<&B>,
                _: Option<&C>, _: Option<&D>)
@@ -348,7 +348,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B) -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+    where A: AString, B: AString, C: AString, D: AString, T: Testable {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, b: Option<&B>,
                c: Option<&C>, _: Option<&D>)
@@ -358,7 +358,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C) -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C, D) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+    where A: AString, B: AString, C: AString, D: AString, T: Testable {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, b: Option<&B>,
                c: Option<&C>, d: Option<&D>)
@@ -368,7 +368,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C, D) -> T
 }
 
 fn shrink<G, T, A, B, C, D, F>(g: &mut G, fun: &F) -> TestResult
-    where G: Gen, T: Testable, A: AShow, B: AShow, C: AShow, D: AShow,
+    where G: Gen, T: Testable, A: AString, B: AString, C: AString, D: AString,
           F: Fun<A, B, C, D, T> {
     let (a, b, c, d): (A, B, C, D) = arby(g);
     let r = fun.call(g, Some(&a), Some(&b), Some(&c), Some(&d));
@@ -383,7 +383,7 @@ fn shrink_failure<G, T, A, B, C, D, F>
                   mut shrinker: Box<Shrinker<(A, B, C, D)>+'static>,
                   fun: &F)
                  -> Option<TestResult>
-    where G: Gen, T: Testable, A: AShow, B: AShow, C: AShow, D: AShow,
+    where G: Gen, T: Testable, A: AString, B: AString, C: AString, D: AString,
           F: Fun<A, B, C, D, T> {
     for (a, b, c, d) in shrinker {
         let r = fun.call(g, Some(&a), Some(&b), Some(&c), Some(&d));
@@ -443,7 +443,7 @@ mod trap {
                                 .name("safefn".to_string())
                                 .stdout(box stdout)
                                 .stderr(box stderr);
-        match t.spawn(fun).join() {
+        match t.scoped(fun).join() {
             Ok(v) => Ok(v),
             Err(_) => {
                 let s = reader.read_to_string().unwrap();
@@ -454,6 +454,6 @@ mod trap {
 }
 
 /// Convenient aliases.
-trait AShow : Arbitrary + Show {}
-impl<A: Arbitrary + Show> AShow for A {}
+trait AString : Arbitrary + fmt::String {}
+impl<A: Arbitrary + fmt::String> AString for A {}
 fn arby<A: Arbitrary, G: Gen>(g: &mut G) -> A { Arbitrary::arbitrary(g) }
