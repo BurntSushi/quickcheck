@@ -18,17 +18,17 @@ fn prop_oob() {
 
 #[test]
 fn prop_reverse_reverse() {
-    fn prop(xs: Vec<uint>) -> bool {
+    fn prop(xs: Vec<usize>) -> bool {
         let rev: Vec<_> = xs.clone().into_iter().rev().collect();
         let revrev: Vec<_> = rev.into_iter().rev().collect();
         xs == revrev
     }
-    quickcheck(prop as fn(Vec<uint>) -> bool);
+    quickcheck(prop as fn(Vec<usize>) -> bool);
 }
 
 #[test]
 fn reverse_single() {
-    fn prop(xs: Vec<uint>) -> TestResult {
+    fn prop(xs: Vec<usize>) -> TestResult {
         if xs.len() != 1 {
             return TestResult::discard()
         }
@@ -36,40 +36,40 @@ fn reverse_single() {
             xs == xs.clone().into_iter().rev().collect::<Vec<_>>()
         )
     }
-    quickcheck(prop as fn(Vec<uint>) -> TestResult);
+    quickcheck(prop as fn(Vec<usize>) -> TestResult);
 }
 
 #[test]
 fn reverse_app() {
-    fn prop(xs: Vec<uint>, ys: Vec<uint>) -> bool {
+    fn prop(xs: Vec<usize>, ys: Vec<usize>) -> bool {
         let mut app = xs.clone();
         app.push_all(ys.as_slice());
-        let app_rev: Vec<uint> = app.into_iter().rev().collect();
+        let app_rev: Vec<usize> = app.into_iter().rev().collect();
 
-        let rxs: Vec<uint> = xs.into_iter().rev().collect();
-        let mut rev_app = ys.into_iter().rev().collect::<Vec<uint>>();
+        let rxs: Vec<usize> = xs.into_iter().rev().collect();
+        let mut rev_app = ys.into_iter().rev().collect::<Vec<usize>>();
         rev_app.extend(rxs.into_iter());
 
         app_rev == rev_app
     }
-    quickcheck(prop as fn(Vec<uint>, Vec<uint>) -> bool);
+    quickcheck(prop as fn(Vec<usize>, Vec<usize>) -> bool);
 }
 
 #[test]
 fn max() {
-    fn prop(x: int, y: int) -> TestResult {
+    fn prop(x: isize, y: isize) -> TestResult {
         if x > y {
             return TestResult::discard()
         } else {
             return TestResult::from_bool(::std::cmp::max(x, y) == y)
         }
     }
-    quickcheck(prop as fn(int, int) -> TestResult);
+    quickcheck(prop as fn(isize, isize) -> TestResult);
 }
 
 #[test]
 fn sort() {
-    fn prop(mut xs: Vec<int>) -> bool {
+    fn prop(mut xs: Vec<isize>) -> bool {
         xs.sort_by(|x, y| x.cmp(y));
         let upto = if xs.len() == 0 { 0 } else { xs.len()-1 };
         for i in iter::range(0, upto) {
@@ -79,13 +79,13 @@ fn sort() {
         }
         true
     }
-    quickcheck(prop as fn(Vec<int>) -> bool);
+    quickcheck(prop as fn(Vec<isize>) -> bool);
 }
 
 #[test]
 #[should_fail]
 fn sieve_of_eratosthenes() {
-    fn sieve(n: uint) -> Vec<uint> {
+    fn sieve(n: usize) -> Vec<usize> {
         if n <= 1 {
             return vec![];
         }
@@ -106,18 +106,18 @@ fn sieve_of_eratosthenes() {
         primes
     }
 
-    fn prop(n: uint) -> bool {
+    fn prop(n: usize) -> bool {
         let primes = sieve(n);
         primes.iter().all(|&i| is_prime(i))
     }
-    fn is_prime(n: uint) -> bool {
+    fn is_prime(n: usize) -> bool {
         if n == 0 || n == 1 {
             return false;
         } else if n == 2 {
             return true;
         }
 
-        let max_possible = (n as f64).sqrt().ceil() as uint;
+        let max_possible = (n as f64).sqrt().ceil() as usize;
         for i in iter::range_inclusive(2, max_possible) {
             if n % i == 0 {
                 return false;
@@ -125,5 +125,5 @@ fn sieve_of_eratosthenes() {
         }
         true
     }
-    quickcheck(prop as fn(uint) -> bool);
+    quickcheck(prop as fn(usize) -> bool);
 }

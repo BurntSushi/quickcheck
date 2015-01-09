@@ -9,7 +9,7 @@ extern crate quickcheck;
 use quickcheck::TestResult;
 
 #[quickcheck]
-fn min(x: int, y: int) -> TestResult {
+fn min(x: isize, y: isize) -> TestResult {
     if x < y {
         TestResult::discard()
     } else {

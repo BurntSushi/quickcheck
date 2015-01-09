@@ -8,6 +8,10 @@
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
 #![experimental]
 
+// TODO(burntsushi) audit use of unstable and int/uint
+#![feature(int_uint)]
+#![allow(unstable)]
+
 #[cfg(feature = "collect")]
 extern crate collect;
 #[macro_use] extern crate log;

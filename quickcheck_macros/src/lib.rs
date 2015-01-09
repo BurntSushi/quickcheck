@@ -6,6 +6,8 @@
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
 
 #![feature(plugin_registrar)]
+// TODO(burntsushi) audit use of unstable
+#![allow(unstable)]
 
 extern crate syntax;
 extern crate rustc;
@@ -25,7 +27,7 @@ use rustc::plugin::Registry;
 #[doc(hidden)]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(token::intern("quickcheck"),
-                                  Modifier(box expand_meta_quickcheck));
+                                  Modifier(Box::new(expand_meta_quickcheck)));
 }
 
 /// Expands the `#[quickcheck]` attribute.
@@ -33,7 +35,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
 /// Expands:
 /// ```
 /// #[quickcheck]
-/// fn check_something(_: uint) -> bool {
+/// fn check_something(_: usize) -> bool {
 ///     true
 /// }
 /// ```
@@ -41,10 +43,10 @@ pub fn plugin_registrar(reg: &mut Registry) {
 /// ```
 /// #[test]
 /// fn check_something() {
-///     fn check_something(_: uint) -> bool {
+///     fn check_something(_: usize) -> bool {
 ///         true
 ///     }
-///     ::quickcheck::quickcheck(check_something as fn(uint) -> bool)
+///     ::quickcheck::quickcheck(check_something as fn(usize) -> bool)
 /// }
 /// ```
 fn expand_meta_quickcheck(cx: &mut ExtCtxt,

@@ -1,5 +1,5 @@
-use std::collections::HashMap;
-use std::hash::Hash;
+use std::collections::hash_map::{HashMap, self};
+use std::hash::{Hash, Hasher};
 use std::iter::range;
 use std::mem;
 use std::num::{self, Int, SignedInt, UnsignedInt};
@@ -14,7 +14,7 @@ use collect::TrieMap;
 /// A value with type satisfying the `Gen` trait can be constructed with the
 /// `gen` function in this crate.
 pub trait Gen : Rng {
-    fn size(&self) -> uint;
+    fn size(&self) -> usize;
 }
 
 /// StdGen is the default implementation of `Gen`.
@@ -23,7 +23,7 @@ pub trait Gen : Rng {
 /// crate.
 pub struct StdGen<R> {
     rng: R,
-    size: uint,
+    size: usize,
 }
 
 /// Returns a `StdGen` with the given configuration using any random number
@@ -33,7 +33,7 @@ pub struct StdGen<R> {
 /// For example, it specifies the maximum length of a randomly generated vector
 /// and also will specify the maximum magnitude of a randomly generated number.
 impl<R: Rng> StdGen<R> {
-    pub fn new(rng: R, size: uint) -> StdGen<R> {
+    pub fn new(rng: R, size: usize) -> StdGen<R> {
         StdGen { rng: rng, size: size }
     }
 }
@@ -48,7 +48,7 @@ impl<R: Rng> Rng for StdGen<R> {
 }
 
 impl<R: Rng> Gen for StdGen<R> {
-    fn size(&self) -> uint { self.size }
+    fn size(&self) -> usize { self.size }
 }
 
 /// `Box<Shrinker>` is an existential type that represents an arbitrary
@@ -83,7 +83,7 @@ impl<A> Iterator for EmptyShrinker<A> {
 
 /// Creates a shrinker with zero elements.
 pub fn empty_shrinker<A>() -> Box<Shrinker<A>+'static> {
-    box EmptyShrinker
+    Box::new(EmptyShrinker)
 }
 
 struct SingleShrinker<A> {
@@ -97,7 +97,7 @@ impl<A> Iterator for SingleShrinker<A> {
 
 /// Creates a shrinker with a single element.
 pub fn single_shrinker<A: 'static>(value: A) -> Box<Shrinker<A>+'static> {
-    box SingleShrinker { value: Some(value) }
+    Box::new(SingleShrinker { value: Some(value) })
 }
 
 /// `Arbitrary` describes types whose values can be randomly generated and
@@ -148,7 +148,7 @@ impl<A: Arbitrary> Arbitrary for Option<A> {
             }
             Some(ref x) => {
                 let chain = single_shrinker(None).chain(x.shrink().map(Some));
-                box chain as Box<Shrinker<Option<A>>+'static>
+                Box::new(chain) as Box<Shrinker<Option<A>>+'static>
             }
         }
     }
@@ -168,12 +168,12 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
             Ok(ref x) => {
                 let xs: Box<Shrinker<A>+'static> = x.shrink();
                 let tagged = xs.map(Ok);
-                box tagged as Box<Shrinker<Result<A, B>>+'static>
+                Box::new(tagged) as Box<Shrinker<Result<A, B>>+'static>
             }
             Err(ref x) => {
                 let xs: Box<Shrinker<B>+'static> = x.shrink();
                 let tagged = xs.map(Err);
-                box tagged as Box<Shrinker<Result<A, B>>+'static>
+                Box::new(tagged) as Box<Shrinker<Result<A, B>>+'static>
             }
         }
     }
@@ -199,14 +199,14 @@ macro_rules! impl_arb_for_tuple {
                 let (ref $var_a, $(ref $var_n),*) = *self;
                 let sa = $var_a.shrink().scan(
                     ($($var_n.clone(),)*),
-                    |&($(ref $var_n,)*), $var_a|
+                    |&mut ($(ref $var_n,)*), $var_a|
                         Some(($var_a, $($var_n.clone(),)*))
                 );
                 let srest = ($($var_n.clone(),)*).shrink()
                     .scan($var_a.clone(), |$var_a, ($($var_n,)*)|
                         Some(($var_a.clone(), $($var_n,)*))
                     );
-                box sa.chain(srest)
+                Box::new(sa.chain(srest))
             }
         }
     );
@@ -263,26 +263,26 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
                 xs.push(change_one);
             }
         }
-        box xs.into_iter()
+        Box::new(xs.into_iter())
     }
 }
 
 #[cfg(feature = "collect")]
 impl<A: Arbitrary> Arbitrary for TrieMap<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> TrieMap<A> {
-        let vec: Vec<(uint, A)> = Arbitrary::arbitrary(g);
+        let vec: Vec<(usize, A)> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
     }
 
     fn shrink(&self) -> Box<Shrinker<TrieMap<A>>+'static> {
-        let vec: Vec<(uint, A)> = self.iter()
+        let vec: Vec<(usize, A)> = self.iter()
                                       .map(|(a, b)| (a, b.clone()))
                                       .collect();
-        box vec.shrink().map(|v| v.into_iter().collect::<TrieMap<A>>())
+        Box::new(vec.shrink().map(|v| v.into_iter().collect::<TrieMap<A>>()))
     }
 }
 
-impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
+impl<K: Arbitrary + Eq + Hash<hash_map::Hasher>, V: Arbitrary> Arbitrary for HashMap<K, V> {
     fn arbitrary<G: Gen>(g: &mut G) -> HashMap<K, V> {
         let vec: Vec<(K, V)> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
@@ -290,7 +290,7 @@ impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
 
     fn shrink(&self) -> Box<Shrinker<HashMap<K, V>>+'static> {
         let vec: Vec<(K, V)> = self.clone().into_iter().collect();
-        box vec.shrink().map(|v| v.into_iter().collect::<HashMap<K, V>>())
+        Box::new(vec.shrink().map(|v| v.into_iter().collect::<HashMap<K, V>>()))
     }
 }
 
@@ -303,7 +303,7 @@ impl Arbitrary for String {
     fn shrink(&self) -> Box<Shrinker<String>+'static> {
         // Shrink a string by shrinking a vector of its characters.
         let chars: Vec<char> = self.as_slice().chars().collect();
-        box chars.shrink().map(|x| x.into_iter().collect::<String>())
+        Box::new(chars.shrink().map(|x| x.into_iter().collect::<String>()))
     }
 }
 
@@ -332,7 +332,7 @@ macro_rules! signed_arbitrary {
 }
 
 signed_arbitrary! {
-    int, i8, i16, i32, i64
+    isize, i8, i16, i32, i64
 }
 
 macro_rules! unsigned_arbitrary {
@@ -351,7 +351,7 @@ macro_rules! unsigned_arbitrary {
 }
 
 unsigned_arbitrary! {
-    uint, u8, u16, u32, u64
+    usize, u8, u16, u32, u64
 }
 
 impl Arbitrary for f32 {
@@ -360,7 +360,7 @@ impl Arbitrary for f32 {
     }
     fn shrink(&self) -> Box<Shrinker<f32>+'static> {
         let it = SignedShrinker::new(*self as i32);
-        box it.map(|x| x as f32)
+        Box::new(it.map(|x| x as f32))
     }
 }
 
@@ -370,14 +370,14 @@ impl Arbitrary for f64 {
     }
     fn shrink(&self) -> Box<Shrinker<f64>+'static> {
         let it = SignedShrinker::new(*self as i64);
-        box it.map(|x| x as f64)
+        Box::new(it.map(|x| x as f64))
     }
 }
 
 /// Returns a sequence of vectors with each contiguous run of elements of
 /// length `k` removed.
-fn shuffle_vec<A: Clone>(xs: &[A], k: uint) -> Vec<Vec<A>> {
-    fn shuffle<A: Clone>(xs: &[A], k: uint, n: uint) -> Vec<Vec<A>> {
+fn shuffle_vec<A: Clone>(xs: &[A], k: usize) -> Vec<Vec<A>> {
+    fn shuffle<A: Clone>(xs: &[A], k: usize, n: usize) -> Vec<Vec<A>> {
         if k > n {
             return vec![];
         }
@@ -417,10 +417,9 @@ impl<A: SignedInt + Send> SignedShrinker<A> {
                 i: half(x),
             };
             if shrinker.i.is_negative() {
-                box vec![Int::zero(), shrinker.x.abs()]
-                        .into_iter().chain(shrinker)
+                Box::new(vec![Int::zero(), shrinker.x.abs()].into_iter().chain(shrinker))
             } else {
-                box vec![Int::zero()].into_iter().chain(shrinker)
+                Box::new(vec![Int::zero()].into_iter().chain(shrinker))
             }
         }
     }
@@ -449,12 +448,12 @@ impl<A: UnsignedInt + Send> UnsignedShrinker<A> {
         if x == Int::zero() {
             empty_shrinker::<A>()
         } else {
-            box vec![Int::zero()].into_iter().chain(
+            Box::new(vec![Int::zero()].into_iter().chain(
                 UnsignedShrinker {
                     x: x,
                     i: half(x),
                 }
-            )
+            ))
         }
     }
 }
@@ -474,10 +473,11 @@ impl<A: UnsignedInt> Iterator for UnsignedShrinker<A> {
 
 #[cfg(test)]
 mod test {
+    use std::collections::hash_map;
+    use std::collections::{HashMap, HashSet};
     use std::fmt::Show;
     use std::hash::Hash;
     use std::iter;
-    use std::collections::{HashMap, HashSet};
     use std::rand;
     use super::Arbitrary;
 
@@ -492,12 +492,12 @@ mod test {
 
     #[test]
     fn arby_int() {
-        rep(&mut || { let n: int = arby(); assert!(n >= -5 && n <= 5); } );
+        rep(&mut || { let n: isize = arby(); assert!(n >= -5 && n <= 5); } );
     }
 
     #[test]
     fn arby_uint() {
-        rep(&mut || { let n: uint = arby(); assert!(n <= 5); } );
+        rep(&mut || { let n: usize = arby(); assert!(n <= 5); } );
     }
 
     fn arby<A: super::Arbitrary>() -> A {
@@ -633,8 +633,8 @@ mod test {
 
     #[test]
     fn vecs() {
-        eq({let it: Vec<int> = vec![]; it}, vec![]);
-        eq({let it: Vec<Vec<int>> = vec![vec![]]; it}, vec![vec![]]);
+        eq({let it: Vec<isize> = vec![]; it}, vec![]);
+        eq({let it: Vec<Vec<isize>> = vec![vec![]]; it}, vec![vec![]]);
         eq(vec![1i], vec![vec![], vec![0]]);
         eq(vec![11i], vec![vec![], vec![0], vec![6], vec![9], vec![10]]);
         eq(
@@ -647,7 +647,7 @@ mod test {
     #[cfg(feature = "collect")]
     #[test]
     fn triemaps() {
-        eq({let it: TrieMap<int> = TrieMap::new(); it}, vec![]);
+        eq({let it: TrieMap<isize> = TrieMap::new(); it}, vec![]);
 
         {
             let mut map = TrieMap::new();
@@ -665,7 +665,7 @@ mod test {
 
     #[test]
     fn hashmaps() {
-        ordered_eq({let it: HashMap<uint, int> = HashMap::new(); it}, vec![]);
+        ordered_eq({let it: HashMap<usize, isize> = HashMap::new(); it}, vec![]);
 
         {
             let mut map = HashMap::new();
@@ -697,14 +697,14 @@ mod test {
     }
 
     // All this jazz is for testing set equality on the results of a shrinker.
-    fn eq<A: Arbitrary + Eq + Show + Hash>(s: A, v: Vec<A>) {
+    fn eq<A: Arbitrary + Eq + Show + Hash<hash_map::Hasher>>(s: A, v: Vec<A>) {
         let (left, right) = (shrunk(s), set(v));
         assert_eq!(left, right);
     }
-    fn shrunk<A: Arbitrary + Eq + Hash>(s: A) -> HashSet<A> {
+    fn shrunk<A: Arbitrary + Eq + Hash<hash_map::Hasher>>(s: A) -> HashSet<A> {
         set(s.shrink().collect())
     }
-    fn set<A: Eq + Hash>(xs: Vec<A>) -> HashSet<A> {
+    fn set<A: Eq + Hash<hash_map::Hasher>>(xs: Vec<A>) -> HashSet<A> {
         xs.into_iter().collect()
     }
 

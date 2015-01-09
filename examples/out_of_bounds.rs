@@ -4,7 +4,7 @@ use std::iter::range;
 use quickcheck::{TestResult, quickcheck};
 
 fn main() {
-    fn prop(length: uint, index: uint) -> TestResult {
+    fn prop(length: usize, index: usize) -> TestResult {
         let v: Vec<_> = range(0, length).collect();
 
         if index < length {
@@ -15,5 +15,5 @@ fn main() {
             })
         }
     }
-    quickcheck(prop as fn(uint, uint) -> TestResult);
+    quickcheck(prop as fn(usize, usize) -> TestResult);
 }
