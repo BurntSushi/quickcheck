@@ -10,8 +10,8 @@ use tester::Status::{Discard, Fail, Pass};
 
 /// The main QuickCheck type for setting configuration and running QuickCheck.
 pub struct QuickCheck<G> {
-    tests: uint,
-    max_tests: uint,
+    tests: usize,
+    max_tests: usize,
     gen: G,
 }
 
@@ -41,7 +41,7 @@ impl<G: Gen> QuickCheck<G> {
     /// can occur. Namely, if a test causes a failure, future testing on that
     /// property stops. Additionally, if tests are discarded, there may be
     /// fewer than `tests` passed.
-    pub fn tests(mut self, tests: uint) -> QuickCheck<G> {
+    pub fn tests(mut self, tests: usize) -> QuickCheck<G> {
         self.tests = tests;
         self
     }
@@ -51,7 +51,7 @@ impl<G: Gen> QuickCheck<G> {
     /// The number of invocations of a property will never exceed this number.
     /// This is necessary to cap the number of tests because QuickCheck
     /// properties can discard tests.
-    pub fn max_tests(mut self, max_tests: uint) -> QuickCheck<G> {
+    pub fn max_tests(mut self, max_tests: usize) -> QuickCheck<G> {
         self.max_tests = max_tests;
         self
     }
@@ -69,9 +69,9 @@ impl<G: Gen> QuickCheck<G> {
     ///
     /// (If you're using Rust's unit testing infrastructure, then you'll
     /// want to use the `quickcheck` method, which will `panic!` on failure.)
-    pub fn quicktest<A>(&mut self, f: A) -> Result<uint, TestResult>
+    pub fn quicktest<A>(&mut self, f: A) -> Result<usize, TestResult>
                     where A: Testable {
-        let mut ntests: uint = 0;
+        let mut ntests: usize = 0;
         for _ in iter::range(0, self.max_tests) {
             if ntests >= self.tests {
                 break
@@ -104,12 +104,12 @@ impl<G: Gen> QuickCheck<G> {
     /// use quickcheck::QuickCheck;
     ///
     /// fn prop_reverse_reverse() {
-    ///     fn revrev(xs: Vec<uint>) -> bool {
+    ///     fn revrev(xs: Vec<usize>) -> bool {
     ///         let rev: Vec<_> = xs.clone().into_iter().rev().collect();
     ///         let revrev: Vec<_> = rev.into_iter().rev().collect();
     ///         xs == revrev
     ///     }
-    ///     QuickCheck::new().quickcheck(revrev as fn(Vec<uint>) -> bool);
+    ///     QuickCheck::new().quickcheck(revrev as fn(Vec<usize>) -> bool);
     /// }
     /// ```
     pub fn quickcheck<A>(&mut self, f: A) where A: Testable {
@@ -183,9 +183,9 @@ impl TestResult {
         let (tx, _) = channel();
         TestResult::from_bool(
             thread::Builder::new()
-                            .stdout(box ChanWriter::new(tx.clone()))
-                            .stderr(box ChanWriter::new(tx))
-                            .spawn(f)
+                            .stdout(Box::new(ChanWriter::new(tx.clone())))
+                            .stderr(Box::new(ChanWriter::new(tx)))
+                            .scoped(f)
                             .join()
                             .is_err())
     }
@@ -306,11 +306,11 @@ macro_rules! impl_fun_call {
         let ($($name,)*) = ($($name.unwrap(),)*);
         let f = $f;
         let mut r = {
-            let ($($name,)*) = ($(box $name.clone(),)*);
+            let ($($name,)*) = ($(Box::new($name.clone()),)*);
             safe(move || { f($(*$name,)*) }).result($g)
         };
         if r.is_failure() {
-            r.arguments = vec![$($name.to_string(),)*];
+            r.arguments = vec![$(format!("{:?}", $name),)*];
         }
         r
     });
@@ -441,9 +441,9 @@ mod trap {
 
         let t = thread::Builder::new()
                                 .name("safefn".to_string())
-                                .stdout(box stdout)
-                                .stderr(box stderr);
-        match t.spawn(fun).join() {
+                                .stdout(Box::new(stdout))
+                                .stderr(Box::new(stderr));
+        match t.scoped(fun).join() {
             Ok(v) => Ok(v),
             Err(_) => {
                 let s = reader.read_to_string().unwrap();

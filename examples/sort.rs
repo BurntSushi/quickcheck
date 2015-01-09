@@ -29,7 +29,7 @@ fn sort<T: Clone + Ord>(list: &[T]) -> Vec<T> {
 }
 
 fn main() {
-    fn is_sorted(xs: Vec<int>) -> bool {
+    fn is_sorted(xs: Vec<isize>) -> bool {
         for win in xs.as_slice().windows(2) {
             if win[0] > win[1] {
                 return false
@@ -38,10 +38,10 @@ fn main() {
         true
     }
 
-    fn keeps_length(xs: Vec<int>) -> bool {
+    fn keeps_length(xs: Vec<isize>) -> bool {
         xs.len() == sort(xs.as_slice()).len()
     }
-    quickcheck(keeps_length as fn(Vec<int>) -> bool);
+    quickcheck(keeps_length as fn(Vec<isize>) -> bool);
 
-    quickcheck(is_sorted as fn(Vec<int>) -> bool)
+    quickcheck(is_sorted as fn(Vec<isize>) -> bool)
 }

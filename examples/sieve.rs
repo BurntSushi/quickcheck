@@ -5,7 +5,7 @@ use std::num::Float;
 
 use quickcheck::quickcheck;
 
-fn sieve(n: uint) -> Vec<uint> {
+fn sieve(n: usize) -> Vec<usize> {
     if n <= 1 {
         return vec!()
     }
@@ -26,14 +26,14 @@ fn sieve(n: uint) -> Vec<uint> {
     primes
 }
 
-fn is_prime(n: uint) -> bool {
+fn is_prime(n: usize) -> bool {
     if n == 0 || n == 1 {
         return false
     } else if n == 2 {
         return true
     }
 
-    let max_possible = (n as f64).sqrt().ceil() as uint;
+    let max_possible = (n as f64).sqrt().ceil() as usize;
     for i in iter::range_inclusive(2, max_possible) {
         if n % i == 0 {
             return false
@@ -42,11 +42,11 @@ fn is_prime(n: uint) -> bool {
     return true
 }
 
-fn prop_all_prime(n: uint) -> bool {
+fn prop_all_prime(n: usize) -> bool {
     let primes = sieve(n);
     primes.iter().all(|&i| is_prime(i))
 }
 
 fn main() {
-    quickcheck(prop_all_prime as fn(uint) -> bool);
+    quickcheck(prop_all_prime as fn(usize) -> bool);
 }

@@ -15,7 +15,7 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
 }
 
 #[quickcheck]
-fn double_reversal_is_identity(xs: Vec<int>) -> bool {
+fn double_reversal_is_identity(xs: Vec<isize>) -> bool {
     xs == reverse(reverse(xs.as_slice()).as_slice())
 }
 
