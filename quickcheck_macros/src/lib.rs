@@ -5,9 +5,8 @@
 #![crate_type = "dylib"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
 
-#![feature(plugin_registrar)]
-// TODO(burntsushi) audit use of unstable
 #![allow(unstable)]
+#![feature(plugin_registrar)]
 
 extern crate syntax;
 extern crate rustc;

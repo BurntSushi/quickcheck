@@ -249,7 +249,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
         // any of the elements.
         let mut k = self.len() / 2;
         while k > 0 {
-            xs.extend(shuffle_vec(self.as_slice(), k).into_iter());
+            xs.extend(shuffle_vec(&**self, k).into_iter());
             k = k / 2;
         }
 
@@ -302,7 +302,7 @@ impl Arbitrary for String {
 
     fn shrink(&self) -> Box<Shrinker<String>+'static> {
         // Shrink a string by shrinking a vector of its characters.
-        let chars: Vec<char> = self.as_slice().chars().collect();
+        let chars: Vec<char> = self.chars().collect();
         Box::new(chars.shrink().map(|x| x.into_iter().collect::<String>()))
     }
 }
@@ -392,7 +392,7 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: usize) -> Vec<Vec<A>> {
             pre.extend(x.clone().into_iter());
             pre
         };
-        let shuffled = shuffle(xs2.as_slice(), k, n-k);
+        let shuffled = shuffle(&*xs2, k, n-k);
         let mut more: Vec<Vec<A>> = shuffled.iter().map(cat).collect();
         more.insert(0, xs2);
         more
@@ -400,7 +400,7 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: usize) -> Vec<Vec<A>> {
     shuffle(xs, k, xs.len())
 }
 
-fn half<A: Int>(x: A) -> A { x / num::cast(2i).unwrap() }
+fn half<A: Int>(x: A) -> A { x / num::cast(2is).unwrap() }
 
 struct SignedShrinker<A> {
     x: A,
@@ -509,7 +509,7 @@ mod test {
     }
 
     fn rep<F>(f: &mut F) where F : FnMut() -> () {
-        for _ in iter::range(0u, 100) {
+        for _ in iter::range(0us, 100) {
             f()
         }
     }
@@ -568,9 +568,9 @@ mod test {
     #[test]
     fn ints() {
         // TODO: Test overflow?
-        eq(5i, vec![0, 3, 4]);
-        eq(-5i, vec![5, 0, -3, -4]);
-        eq(0i, vec![]);
+        eq(5is, vec![0, 3, 4]);
+        eq(-5is, vec![5, 0, -3, -4]);
+        eq(0is, vec![]);
     }
 
     #[test]
@@ -603,8 +603,8 @@ mod test {
 
     #[test]
     fn uints() {
-        eq(5u, vec![0, 3, 4]);
-        eq(0u, vec![]);
+        eq(5us, vec![0, 3, 4]);
+        eq(0us, vec![]);
     }
 
     #[test]
@@ -635,10 +635,10 @@ mod test {
     fn vecs() {
         eq({let it: Vec<isize> = vec![]; it}, vec![]);
         eq({let it: Vec<Vec<isize>> = vec![vec![]]; it}, vec![vec![]]);
-        eq(vec![1i], vec![vec![], vec![0]]);
-        eq(vec![11i], vec![vec![], vec![0], vec![6], vec![9], vec![10]]);
+        eq(vec![1is], vec![vec![], vec![0]]);
+        eq(vec![11is], vec![vec![], vec![0], vec![6], vec![9], vec![10]]);
         eq(
-            vec![3i, 5],
+            vec![3is, 5],
             vec![vec![], vec![5], vec![3], vec![0,5], vec![2,5],
                  vec![3,0], vec![3,3], vec![3,4]]
         );
@@ -654,8 +654,8 @@ mod test {
             map.insert(1, 1i);
 
             let shrinks = vec![
-                {let mut m = TrieMap::new(); m.insert(1, 0i); m},
-                {let mut m = TrieMap::new(); m.insert(0, 1i); m},
+                {let mut m = TrieMap::new(); m.insert(1, 0is); m},
+                {let mut m = TrieMap::new(); m.insert(0, 1is); m},
                 TrieMap::new()
             ];
 
@@ -669,7 +669,7 @@ mod test {
 
         {
             let mut map = HashMap::new();
-            map.insert(1u, 1i);
+            map.insert(1us, 1is);
 
             let shrinks = vec![
                 HashMap::new(),

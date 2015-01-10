@@ -1,4 +1,7 @@
-// This is a buggy quick sort implementation, QuickCheck will find the bug for you
+// This is a buggy quick sort implementation, QuickCheck will find the bug for
+// you.
+
+#![allow(unstable)]
 
 extern crate quickcheck;
 
@@ -13,8 +16,8 @@ fn larger_than<T: Clone + Ord>(xs: &[T], pivot: &T) -> Vec<T> {
 }
 
 fn sortk<T: Clone + Ord>(x: &T, xs: &[T]) -> Vec<T> {
-    let mut result : Vec<T> = sort(smaller_than(xs, x).as_slice());
-    let last_part = sort(larger_than(xs, x).as_slice());
+    let mut result : Vec<T> = sort(&*smaller_than(xs, x));
+    let last_part = sort(&*larger_than(xs, x));
     result.push(x.clone());
     result.extend(last_part.iter().map(|x| x.clone()));
     result
@@ -30,7 +33,7 @@ fn sort<T: Clone + Ord>(list: &[T]) -> Vec<T> {
 
 fn main() {
     fn is_sorted(xs: Vec<isize>) -> bool {
-        for win in xs.as_slice().windows(2) {
+        for win in xs.windows(2) {
             if win[0] > win[1] {
                 return false
             }
@@ -39,7 +42,7 @@ fn main() {
     }
 
     fn keeps_length(xs: Vec<isize>) -> bool {
-        xs.len() == sort(xs.as_slice()).len()
+        xs.len() == sort(&*xs).len()
     }
     quickcheck(keeps_length as fn(Vec<isize>) -> bool);
 

@@ -255,7 +255,7 @@ impl<A> Testable for Result<A, String> where A: Testable {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         match *self {
             Ok(ref r) => r.result(g),
-            Err(ref err) => TestResult::error(err.as_slice()),
+            Err(ref err) => TestResult::error(&**err),
         }
     }
 }
@@ -447,7 +447,7 @@ mod trap {
             Ok(v) => Ok(v),
             Err(_) => {
                 let s = reader.read_to_string().unwrap();
-                Err(s.as_slice().trim().to_string())
+                Err(s.trim().to_string())
             }
         }
     }

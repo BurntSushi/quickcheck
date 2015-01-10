@@ -15,7 +15,7 @@ fn main() {
         if xs.len() != 1 {
             return TestResult::discard()
         }
-        TestResult::from_bool(xs == reverse(xs.as_slice()))
+        TestResult::from_bool(xs == reverse(&*xs))
     }
     quickcheck(prop as fn(Vec<isize>) -> TestResult);
 }

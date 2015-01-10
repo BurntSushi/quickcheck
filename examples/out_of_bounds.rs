@@ -1,3 +1,5 @@
+#![allow(unstable)]
+
 extern crate quickcheck;
 
 use std::iter::range;

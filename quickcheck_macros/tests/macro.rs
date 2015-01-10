@@ -1,4 +1,4 @@
-#![allow(non_upper_case_globals)]
+#![allow(non_upper_case_globals, unstable)]
 #![feature(plugin)]
 
 #[plugin]
