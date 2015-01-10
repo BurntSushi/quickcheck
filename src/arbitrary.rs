@@ -5,7 +5,7 @@ use std::mem;
 use std::num::{self, Int, SignedInt, UnsignedInt};
 use std::rand::Rng;
 
-#[cfg(feature = "collect")]
+#[cfg(feature = "collect_impls")]
 use collect::TrieMap;
 
 /// `Gen` wraps a `rand::Rng` with parameters to control the distribution of
@@ -267,7 +267,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
     }
 }
 
-#[cfg(feature = "collect")]
+#[cfg(feature = "collect_impls")]
 impl<A: Arbitrary> Arbitrary for TrieMap<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> TrieMap<A> {
         let vec: Vec<(usize, A)> = Arbitrary::arbitrary(g);
@@ -481,7 +481,7 @@ mod test {
     use std::rand;
     use super::Arbitrary;
 
-    #[cfg(feature = "collect")]
+    #[cfg(feature = "collect_impls")]
     use collect::TrieMap;
 
     // Arbitrary testing. (Not much here. What else can I reasonably test?)
@@ -644,7 +644,7 @@ mod test {
         );
     }
 
-    #[cfg(feature = "collect")]
+    #[cfg(feature = "collect_impls")]
     #[test]
     fn triemaps() {
         eq({let it: TrieMap<isize> = TrieMap::new(); it}, vec![]);

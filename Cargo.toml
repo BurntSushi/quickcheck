@@ -10,12 +10,16 @@ readme = "README.md"
 keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
 license = "Unlicense"
 
+[features]
+# Includes impls for `Arbitrary` for some data structures in `collect`.
+collect_impls = ["collect"]
+
 [lib]
 name = "quickcheck"
+
+[dependencies]
+log = "*"
 
 [dependencies.collect]
 optional = true
 version = "*"
-
-[dependencies]
-log = "*"

@@ -9,7 +9,7 @@
 #![experimental]
 #![allow(unstable)]
 
-#[cfg(feature = "collect")]
+#[cfg(feature = "collect_impls")]
 extern crate collect;
 #[macro_use] extern crate log;
 
