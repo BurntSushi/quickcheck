@@ -1,10 +1,8 @@
 #![allow(non_upper_case_globals, unstable)]
 #![feature(plugin)]
 
-#[plugin]
-#[no_link]
-extern crate quickcheck_macros;
 extern crate quickcheck;
+#[plugin] #[no_link] extern crate quickcheck_macros;
 
 use quickcheck::TestResult;
 
