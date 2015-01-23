@@ -381,8 +381,8 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: usize) -> Vec<Vec<A>> {
         if k > n {
             return vec![];
         }
-        let xs1: Vec<A> = xs.slice_to(k).iter().map(|x| x.clone()).collect();
-        let xs2: Vec<A> = xs.slice_from(k).iter().map(|x| x.clone()).collect();
+        let xs1: Vec<A> = xs[..k].iter().map(|x| x.clone()).collect();
+        let xs2: Vec<A> = xs[k..].iter().map(|x| x.clone()).collect();
         if xs2.len() == 0 {
             return vec![vec![]];
         }
