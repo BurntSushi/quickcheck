@@ -381,8 +381,8 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: usize) -> Vec<Vec<A>> {
         if k > n {
             return vec![];
         }
-        let xs1: Vec<A> = xs.slice_to(k).iter().map(|x| x.clone()).collect();
-        let xs2: Vec<A> = xs.slice_from(k).iter().map(|x| x.clone()).collect();
+        let xs1: Vec<A> = xs[..k].iter().map(|x| x.clone()).collect();
+        let xs2: Vec<A> = xs[k..].iter().map(|x| x.clone()).collect();
         if xs2.len() == 0 {
             return vec![vec![]];
         }
@@ -475,7 +475,7 @@ impl<A: UnsignedInt> Iterator for UnsignedShrinker<A> {
 mod test {
     use std::collections::hash_map;
     use std::collections::{HashMap, HashSet};
-    use std::fmt::Show;
+    use std::fmt::Debug;
     use std::hash::Hash;
     use std::iter;
     use std::rand;
@@ -697,7 +697,7 @@ mod test {
     }
 
     // All this jazz is for testing set equality on the results of a shrinker.
-    fn eq<A: Arbitrary + Eq + Show + Hash<hash_map::Hasher>>(s: A, v: Vec<A>) {
+    fn eq<A: Arbitrary + Eq + Debug + Hash<hash_map::Hasher>>(s: A, v: Vec<A>) {
         let (left, right) = (shrunk(s), set(v));
         assert_eq!(left, right);
     }
@@ -708,7 +708,7 @@ mod test {
         xs.into_iter().collect()
     }
 
-    fn ordered_eq<A: Arbitrary + Eq + Show>(s: A, v: Vec<A>) {
+    fn ordered_eq<A: Arbitrary + Eq + Debug>(s: A, v: Vec<A>) {
         let (left, right) = (s.shrink().collect::<Vec<A>>(), v);
         assert_eq!(left, right);
     }

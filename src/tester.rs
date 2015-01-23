@@ -1,5 +1,5 @@
 use std::sync::mpsc::channel;
-use std::fmt::Show;
+use std::fmt::Debug;
 use std::io::ChanWriter;
 use std::iter;
 use std::rand;
@@ -128,7 +128,7 @@ pub fn quickcheck<A: Testable>(f: A) { QuickCheck::new().quickcheck(f) }
 /// Describes the status of a single instance of a test.
 ///
 /// All testable things must be capable of producing a `TestResult`.
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 pub struct TestResult {
     status: Status,
     arguments: Vec<String>,
@@ -136,7 +136,7 @@ pub struct TestResult {
 }
 
 /// Whether a test has passed, failed or been discarded.
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 enum Status { Pass, Fail, Discard }
 
 impl TestResult {
@@ -454,6 +454,6 @@ mod trap {
 }
 
 /// Convenient aliases.
-trait AShow : Arbitrary + Show {}
-impl<A: Arbitrary + Show> AShow for A {}
+trait AShow : Arbitrary + Debug {}
+impl<A: Arbitrary + Debug> AShow for A {}
 fn arby<A: Arbitrary, G: Gen>(g: &mut G) -> A { Arbitrary::arbitrary(g) }

@@ -161,7 +161,7 @@ But in the example, we gave a *function* to `quickcheck`. Yes, functions can
 satisfy `Testable` too!
 
 ```rust
-impl<A: Arbitrary + Show, B: Testable> Testable for fn(A) -> B {
+impl<A: Arbitrary + Debug, B: Testable> Testable for fn(A) -> B {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         // elided
     }
