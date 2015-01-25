@@ -11,8 +11,10 @@
 extern crate syntax;
 extern crate rustc;
 
+use syntax::abi;
 use syntax::ast;
 use syntax::ast::Ty_::TyBareFn;
+use syntax::ast_util;
 use syntax::codemap;
 use syntax::parse::token;
 use syntax::ext::base::{ExtCtxt, Modifier};
@@ -62,12 +64,10 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
                 decl: decl.clone(),
             })));
             let inner_ident = cx.expr_cast(span, prop_ident, prop_ty);
-
             return wrap_item(cx, span, &*item, inner_ident);
         },
         ast::ItemStatic(..) => {
             let inner_ident = cx.expr_ident(span, item.ident);
-
             return wrap_item(cx, span, &*item, inner_ident);
         },
         _ => {
@@ -75,7 +75,6 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
                 span, "#[quickcheck] only supported on statics and functions");
         }
     }
-
     item
 }
 
@@ -90,27 +89,33 @@ fn wrap_item(cx: &mut ExtCtxt,
     let check_path = vec!(check_ident, check_ident);
     // Wrap original function in new outer function,
     // calling ::quickcheck::quickcheck()
-    let fn_decl =
-        P(codemap::respan(span, ast::DeclItem(prop.clone())));
+    let fn_decl = P(codemap::respan(span, ast::DeclItem(prop.clone())));
     let inner_fn =
-        P(codemap::respan(
-            span, ast::StmtDecl(fn_decl, ast::DUMMY_NODE_ID)));
-    let check_call =
-        cx.expr_call_global(span, check_path, vec![inner_ident]);
+        P(codemap::respan(span, ast::StmtDecl(fn_decl, ast::DUMMY_NODE_ID)));
+    let check_call = cx.expr_call_global(span, check_path, vec![inner_ident]);
     let body = cx.block(span, vec![inner_fn], Some(check_call));
-    let nil = P(ast::Ty {
-        id: ast::DUMMY_NODE_ID,
-        node: ast::TyTup(vec![]),
-        span: codemap::DUMMY_SP,
-    });
-    let test = cx.item_fn(span, item.ident, Vec::new(), nil, body);
+    let test = item_fn(cx, span, item, body);
 
     // Copy attributes from original function
     let mut attrs = item.attrs.clone();
     // Add #[test] attribute
     attrs.push(cx.attribute(
-        span, cx.meta_word(
-            span, token::intern_and_get_ident("test"))));
+        span, cx.meta_word(span, token::intern_and_get_ident("test"))));
     // Attach the attributes to the outer function
     P(ast::Item {attrs: attrs, ..(*test).clone()})
+}
+
+fn item_fn(cx: &mut ExtCtxt, span: codemap::Span,
+           towrap_item: &ast::Item, body: P<ast::Block>) -> P<ast::Item> {
+    let decl = P(ast::FnDecl {
+        inputs: vec![],
+        output: ast::FunctionRetTy::DefaultReturn(span),
+        variadic: false,
+    });
+    let item = ast::ItemFn(decl,
+                           ast::Unsafety::Normal,
+                           abi::Rust,
+                           ast_util::empty_generics(),
+                           body);
+    cx.item(span, towrap_item.ident, vec![], item)
 }
