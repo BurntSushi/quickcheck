@@ -1,1 +1,8 @@
 language: rust
+
+script:
+ - cargo build --verbose
+ - cargo test --verbose
+ - cd docopt_macros
+ - cargo build --verbose
+ - cargo test --verbose
