@@ -1,6 +1,6 @@
 use std::sync::mpsc::channel;
 use std::fmt::Debug;
-use std::io::ChanWriter;
+use std::old_io::ChanWriter;
 use std::iter;
 use std::rand;
 use std::thread;
@@ -416,7 +416,7 @@ mod trap {
 #[cfg(not(quickfail))]
 mod trap {
     use std::sync::mpsc::channel;
-    use std::io::{ChanReader, ChanWriter};
+    use std::old_io::{ChanReader, ChanWriter};
     use std::thread;
 
     // This is my bright idea for capturing runtime errors caused by a
