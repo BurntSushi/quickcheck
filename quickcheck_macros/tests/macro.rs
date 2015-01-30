@@ -1,5 +1,6 @@
-#![allow(non_upper_case_globals, unstable)]
 #![feature(plugin)]
+
+#![allow(non_upper_case_globals)]
 
 extern crate quickcheck;
 #[plugin] #[no_link] extern crate quickcheck_macros;
