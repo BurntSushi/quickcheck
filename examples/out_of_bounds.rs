@@ -1,4 +1,4 @@
-#![allow(unstable)]
+#![feature(core)]
 
 extern crate quickcheck;
 

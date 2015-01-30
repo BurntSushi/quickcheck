@@ -1,7 +1,7 @@
 // This is a buggy quick sort implementation, QuickCheck will find the bug for
 // you.
 
-#![allow(unstable)]
+#![feature(collections)]
 
 extern crate quickcheck;
 
