@@ -47,7 +47,7 @@ fn main() {
     fn prop(xs: Vec<int>) -> bool {
         xs == reverse(reverse(xs.as_slice()).as_slice())
     }
-    quickcheck(prop);
+    quickcheck(prop as fn(Vec<int> -> bool));
 }
 ```
 
@@ -196,7 +196,7 @@ fn prop(xs: Vec<int>) -> TestResult {
     }
     TestResult::from_bool(xs == reverse(xs.as_slice()))
 }
-quickcheck(prop);
+quickcheck(prop as fn(Vec<int>) -> bool);
 ```
 
 (A full working program for this example is in
@@ -243,7 +243,7 @@ And a property to test that `xs == reverse(reverse(xs))`:
 fn prop(xs: Vec<int>) -> bool {
     xs == reverse(reverse(xs.as_slice()).as_slice())
 }
-quickcheck(prop);
+quickcheck(prop as fn(Vec<int>) -> bool);
 ```
 
 Then without shrinking, you might get a counter-example like:
@@ -352,7 +352,7 @@ And finally, we need to invoke `quickcheck` with our property:
 
 ```rust
 fn main() {
-    quickcheck(prop_all_prime);
+    quickcheck(prop_all_prime as fn(uint) -> bool);
 }
 ```
 
