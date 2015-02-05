@@ -7,7 +7,8 @@
 #![crate_name = "quickcheck"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
 
-#![feature(core, io, std_misc)]
+#![allow(unused_features)]
+#![feature(collections, core, io, std_misc)]
 
 #[cfg(feature = "collect_impls")]
 extern crate collect;
