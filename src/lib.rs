@@ -7,11 +7,12 @@
 #![crate_name = "quickcheck"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
 
-#![feature(core, io, rand, std_misc)]
+#![feature(core, io, std_misc)]
 
 #[cfg(feature = "collect_impls")]
 extern crate collect;
 #[macro_use] extern crate log;
+extern crate rand;
 
 pub use arbitrary::{
     Arbitrary, Gen, StdGen, Shrinker,

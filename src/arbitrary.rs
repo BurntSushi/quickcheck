@@ -1,9 +1,9 @@
+use rand::Rng;
 use std::collections::hash_map::{HashMap, self};
 use std::hash::{Hash, Hasher};
 use std::iter::range;
 use std::mem;
 use std::num::{self, Int, SignedInt, UnsignedInt};
-use std::rand::Rng;
 
 #[cfg(feature = "collect_impls")]
 use collect::TrieMap;
@@ -473,12 +473,12 @@ impl<A: UnsignedInt> Iterator for UnsignedShrinker<A> {
 
 #[cfg(test)]
 mod test {
+    use rand;
     use std::collections::hash_map;
     use std::collections::{HashMap, HashSet};
     use std::fmt::Debug;
     use std::hash::Hash;
     use std::iter;
-    use std::rand;
     use super::Arbitrary;
 
     #[cfg(feature = "collect_impls")]
