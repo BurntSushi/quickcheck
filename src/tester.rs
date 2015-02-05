@@ -1,8 +1,8 @@
+use rand;
 use std::sync::mpsc::channel;
 use std::fmt::Debug;
 use std::old_io::ChanWriter;
 use std::iter;
-use std::rand;
 use std::thread;
 use super::{Arbitrary, Gen, Shrinker, StdGen};
 use tester::trap::safe;

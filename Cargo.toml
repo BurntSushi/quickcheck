@@ -19,6 +19,7 @@ name = "quickcheck"
 
 [dependencies]
 log = "*"
+rand = "*"
 
 [dependencies.collect]
 optional = true
