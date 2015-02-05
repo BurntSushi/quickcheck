@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(core, plugin)]
 #![allow(dead_code)]
 
 extern crate quickcheck;
@@ -6,7 +6,7 @@ extern crate quickcheck;
 
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
     let mut rev = vec!();
-    for x in xs.iter() {
+    for x in xs {
         rev.insert(0, x.clone())
     }
     rev
