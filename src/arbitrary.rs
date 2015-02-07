@@ -387,7 +387,7 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: usize) -> Vec<Vec<A>> {
             return vec![vec![]];
         }
 
-        let cat = |&mut: x: &Vec<A>| {
+        let cat = |x: &Vec<A>| {
             let mut pre = xs1.clone();
             pre.extend(x.clone().into_iter());
             pre
