@@ -56,15 +56,15 @@ fn main() {
 To make it easier to write QuickCheck tests, the `#[quickcheck]` attribute
 will convert a property function into a `#[test]` function.
 
-To use the `#[quickcheck]` attribute, you must enable the `phase` feature and
+To use the `#[quickcheck]` attribute, you must enable the `plugin` feature and
 import the `quickcheck_macros` crate as a syntax extension:
 
 ```rust
 #![feature(plugin)]
 #![allow(dead_code)]
+#![plugin(quickcheck_macros)]
 
 extern crate quickcheck;
-#[plugin] #[no_link] extern crate quickcheck_macros;
 
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
     let mut rev = vec!();

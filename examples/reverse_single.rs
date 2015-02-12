@@ -1,5 +1,3 @@
-#![feature(core)]
-
 extern crate quickcheck;
 
 use quickcheck::{TestResult, quickcheck};
