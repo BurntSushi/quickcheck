@@ -177,18 +177,18 @@ impl TestResult {
         }
     }
 
-    /// Tests if a "procedure" fails when executed. The test passes only if
-    /// `f` generates a task failure during its execution.
-    pub fn must_fail<T: Send, F: FnOnce() -> T + Send>(f: F) -> TestResult {
-        let (tx, _) = channel();
-        TestResult::from_bool(
-            thread::Builder::new()
-                            .stdout(Box::new(ChanWriter::new(tx.clone())))
-                            .stderr(Box::new(ChanWriter::new(tx)))
-                            .scoped(f)
-                            .join()
-                            .is_err())
-    }
+    // /// Tests if a "procedure" fails when executed. The test passes only if
+    // /// `f` generates a task failure during its execution.
+    // pub fn must_fail<T: Send, F: FnOnce() -> T + Send>(f: F) -> TestResult {
+        // let (tx, _) = channel();
+        // TestResult::from_bool(
+            // thread::Builder::new()
+                            // .stdout(Box::new(ChanWriter::new(tx.clone())))
+                            // .stderr(Box::new(ChanWriter::new(tx)))
+                            // .scoped(f)
+                            // .unwrap()
+                            // .join())
+    // }
 
     /// Returns `true` if and only if this test result describes a failing
     /// test.
@@ -293,7 +293,7 @@ impl<A, B, C, D, T,> Testable for fn(A, B, C, D) -> T
     }
 }
 
-trait Fun<A, B, C, D, T> {
+trait Fun<A, B, C, D, T> : ::std::marker::PhantomFn<T> {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, b: Option<&B>,
                c: Option<&C>, d: Option<&D>)
@@ -443,7 +443,7 @@ mod trap {
                                 .name("safefn".to_string())
                                 .stdout(Box::new(stdout))
                                 .stderr(Box::new(stderr));
-        match t.scoped(fun).join() {
+        match t.spawn(fun).unwrap().join() {
             Ok(v) => Ok(v),
             Err(_) => {
                 let s = reader.read_to_string().unwrap();

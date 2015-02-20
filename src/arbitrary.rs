@@ -1,5 +1,5 @@
 use rand::Rng;
-use std::collections::hash_map::{HashMap, self};
+use std::collections::hash_map::HashMap;
 use std::hash::{Hash, Hasher};
 use std::iter::range;
 use std::mem;
@@ -74,7 +74,9 @@ impl<T, A: Iterator<Item=T>> Shrinker<T> for A {
     fn next_shrink(&mut self) -> Option<T> { self.next() }
 }
 
-struct EmptyShrinker<A>;
+struct EmptyShrinker<A> {
+    _phantom: ::std::marker::PhantomData<A>,
+}
 
 impl<A> Iterator for EmptyShrinker<A> {
     type Item = A;
@@ -82,8 +84,8 @@ impl<A> Iterator for EmptyShrinker<A> {
 }
 
 /// Creates a shrinker with zero elements.
-pub fn empty_shrinker<A>() -> Box<Shrinker<A>+'static> {
-    Box::new(EmptyShrinker)
+pub fn empty_shrinker<A: 'static>() -> Box<Shrinker<A>+'static> {
+    Box::new(EmptyShrinker { _phantom: ::std::marker::PhantomData })
 }
 
 struct SingleShrinker<A> {
@@ -111,7 +113,7 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<Shrinker<A>+'static> {
 ///
 /// They must also be sendable since every test is run inside its own task.
 /// (This permits failures to include task failures.)
-pub trait Arbitrary : Clone + Send {
+pub trait Arbitrary : Clone + Send + 'static {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
     fn shrink(&self) -> Box<Shrinker<Self>+'static> {
         empty_shrinker()
@@ -282,7 +284,7 @@ impl<A: Arbitrary> Arbitrary for TrieMap<A> {
     }
 }
 
-impl<K: Arbitrary + Eq + Hash<hash_map::Hasher>, V: Arbitrary> Arbitrary for HashMap<K, V> {
+impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
     fn arbitrary<G: Gen>(g: &mut G) -> HashMap<K, V> {
         let vec: Vec<(K, V)> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
@@ -400,14 +402,14 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: usize) -> Vec<Vec<A>> {
     shuffle(xs, k, xs.len())
 }
 
-fn half<A: Int>(x: A) -> A { x / num::cast(2is).unwrap() }
+fn half<A: Int>(x: A) -> A { x / num::cast(2isize).unwrap() }
 
 struct SignedShrinker<A> {
     x: A,
     i: A,
 }
 
-impl<A: SignedInt + Send> SignedShrinker<A> {
+impl<A: SignedInt + Send + 'static> SignedShrinker<A> {
     fn new(x: A) -> Box<Shrinker<A>+'static> {
         if x == Int::zero() {
             empty_shrinker()
@@ -443,7 +445,7 @@ struct UnsignedShrinker<A> {
     i: A,
 }
 
-impl<A: UnsignedInt + Send> UnsignedShrinker<A> {
+impl<A: UnsignedInt + Send + 'static> UnsignedShrinker<A> {
     fn new(x: A) -> Box<Shrinker<A>+'static> {
         if x == Int::zero() {
             empty_shrinker::<A>()
@@ -474,7 +476,6 @@ impl<A: UnsignedInt> Iterator for UnsignedShrinker<A> {
 #[cfg(test)]
 mod test {
     use rand;
-    use std::collections::hash_map;
     use std::collections::{HashMap, HashSet};
     use std::fmt::Debug;
     use std::hash::Hash;
@@ -697,14 +698,14 @@ mod test {
     }
 
     // All this jazz is for testing set equality on the results of a shrinker.
-    fn eq<A: Arbitrary + Eq + Debug + Hash<hash_map::Hasher>>(s: A, v: Vec<A>) {
+    fn eq<A: Arbitrary + Eq + Debug + Hash>(s: A, v: Vec<A>) {
         let (left, right) = (shrunk(s), set(v));
         assert_eq!(left, right);
     }
-    fn shrunk<A: Arbitrary + Eq + Hash<hash_map::Hasher>>(s: A) -> HashSet<A> {
+    fn shrunk<A: Arbitrary + Eq + Hash>(s: A) -> HashSet<A> {
         set(s.shrink().collect())
     }
-    fn set<A: Eq + Hash<hash_map::Hasher>>(xs: Vec<A>) -> HashSet<A> {
+    fn set<A: Eq + Hash>(xs: Vec<A>) -> HashSet<A> {
         xs.into_iter().collect()
     }
 
