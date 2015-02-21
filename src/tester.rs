@@ -177,18 +177,20 @@ impl TestResult {
         }
     }
 
-    // /// Tests if a "procedure" fails when executed. The test passes only if
-    // /// `f` generates a task failure during its execution.
-    // pub fn must_fail<T: Send, F: FnOnce() -> T + Send>(f: F) -> TestResult {
-        // let (tx, _) = channel();
-        // TestResult::from_bool(
-            // thread::Builder::new()
-                            // .stdout(Box::new(ChanWriter::new(tx.clone())))
-                            // .stderr(Box::new(ChanWriter::new(tx)))
-                            // .scoped(f)
-                            // .unwrap()
-                            // .join())
-    // }
+    /// Tests if a "procedure" fails when executed. The test passes only if
+    /// `f` generates a task failure during its execution.
+    pub fn must_fail<T, F>(f: F) -> TestResult
+            where T: Send, F: FnOnce() -> T + Send + 'static {
+        let (tx, _) = channel();
+        TestResult::from_bool(
+            thread::Builder::new()
+                            .stdout(Box::new(ChanWriter::new(tx.clone())))
+                            .stderr(Box::new(ChanWriter::new(tx)))
+                            .spawn(move || { let _ = f(); })
+                            .unwrap()
+                            .join()
+                            .is_err())
+    }
 
     /// Returns `true` if and only if this test result describes a failing
     /// test.
@@ -260,34 +262,34 @@ impl<A> Testable for Result<A, String> where A: Testable {
     }
 }
 
-impl<T> Testable for fn() -> T where T: Testable {
+impl<T> Testable for fn() -> T where T: Testable + 'static {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, (), (), (), (), fn() -> T>(g, self)
     }
 }
 
-impl<A, T> Testable for fn(A) -> T where A: AShow, T: Testable {
+impl<A, T> Testable for fn(A) -> T where A: AShow, T: Testable + 'static {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, (), (), (), fn(A) -> T>(g, self)
     }
 }
 
 impl<A, B, T> Testable for fn(A, B) -> T
-    where A: AShow, B: AShow, T: Testable {
+        where A: AShow, B: AShow, T: Testable + 'static {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, B, (), (), fn(A, B) -> T>(g, self)
     }
 }
 
 impl<A, B, C, T> Testable for fn(A, B, C) -> T
-    where A: AShow, B: AShow, C: AShow, T: Testable {
+        where A: AShow, B: AShow, C: AShow, T: Testable + 'static {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, B, C, (), fn(A, B, C) -> T>(g, self)
     }
 }
 
 impl<A, B, C, D, T,> Testable for fn(A, B, C, D) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+        where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, B, C, D, fn(A, B, C, D) -> T>(g, self)
     }
@@ -317,7 +319,7 @@ macro_rules! impl_fun_call {
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn() -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
     fn call<G>(&self, g: &mut G,
                _: Option<&A>, _: Option<&B>,
                _: Option<&C>, _: Option<&D>)
@@ -328,7 +330,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn() -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, _: Option<&B>,
                _: Option<&C>, _: Option<&D>)
@@ -338,7 +340,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A) -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, b: Option<&B>,
                _: Option<&C>, _: Option<&D>)
@@ -348,7 +350,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B) -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, b: Option<&B>,
                c: Option<&C>, _: Option<&D>)
@@ -358,7 +360,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C) -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C, D) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
+    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, b: Option<&B>,
                c: Option<&C>, d: Option<&D>)
@@ -433,7 +435,7 @@ mod trap {
     // Moreover, this feature seems to prevent an implementation of
     // Testable for a stack closure type. *sigh*
     pub fn safe<T, F>(fun: F) -> Result<T, String>
-            where T: Send, F: FnOnce() -> T + Send {
+            where T: Send + 'static, F: FnOnce() -> T + Send + 'static {
         let (send, recv) = channel();
         let stdout = ChanWriter::new(send.clone());
         let stderr = ChanWriter::new(send);
@@ -443,8 +445,10 @@ mod trap {
                                 .name("safefn".to_string())
                                 .stdout(Box::new(stdout))
                                 .stderr(Box::new(stderr));
-        match t.spawn(fun).unwrap().join() {
-            Ok(v) => Ok(v),
+        let (send_ret, recv_ret) = channel();
+        let run = move || send_ret.send(fun()).unwrap();
+        match t.spawn(run).unwrap().join() {
+            Ok(()) => Ok(recv_ret.recv().unwrap()),
             Err(_) => {
                 let s = reader.read_to_string().unwrap();
                 Err(s.trim().to_string())

@@ -1,6 +1,6 @@
 use rand::Rng;
 use std::collections::hash_map::HashMap;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::iter::range;
 use std::mem;
 use std::num::{self, Int, SignedInt, UnsignedInt};
@@ -510,7 +510,7 @@ mod test {
     }
 
     fn rep<F>(f: &mut F) where F : FnMut() -> () {
-        for _ in iter::range(0us, 100) {
+        for _ in iter::range(0, 100) {
             f()
         }
     }
@@ -569,9 +569,9 @@ mod test {
     #[test]
     fn ints() {
         // TODO: Test overflow?
-        eq(5is, vec![0, 3, 4]);
-        eq(-5is, vec![5, 0, -3, -4]);
-        eq(0is, vec![]);
+        eq(5isize, vec![0, 3, 4]);
+        eq(-5isize, vec![5, 0, -3, -4]);
+        eq(0isize, vec![]);
     }
 
     #[test]
@@ -604,8 +604,8 @@ mod test {
 
     #[test]
     fn uints() {
-        eq(5us, vec![0, 3, 4]);
-        eq(0us, vec![]);
+        eq(5usize, vec![0, 3, 4]);
+        eq(0usize, vec![]);
     }
 
     #[test]
@@ -636,10 +636,10 @@ mod test {
     fn vecs() {
         eq({let it: Vec<isize> = vec![]; it}, vec![]);
         eq({let it: Vec<Vec<isize>> = vec![vec![]]; it}, vec![vec![]]);
-        eq(vec![1is], vec![vec![], vec![0]]);
-        eq(vec![11is], vec![vec![], vec![0], vec![6], vec![9], vec![10]]);
+        eq(vec![1isize], vec![vec![], vec![0]]);
+        eq(vec![11isize], vec![vec![], vec![0], vec![6], vec![9], vec![10]]);
         eq(
-            vec![3is, 5],
+            vec![3isize, 5],
             vec![vec![], vec![5], vec![3], vec![0,5], vec![2,5],
                  vec![3,0], vec![3,3], vec![3,4]]
         );
@@ -670,7 +670,7 @@ mod test {
 
         {
             let mut map = HashMap::new();
-            map.insert(1us, 1is);
+            map.insert(1usize, 1isize);
 
             let shrinks = vec![
                 HashMap::new(),
