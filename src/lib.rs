@@ -16,7 +16,7 @@ extern crate collect;
 extern crate rand;
 
 pub use arbitrary::{
-    Arbitrary, Gen, StdGen, Shrinker,
+    Arbitrary, Gen, StdGen,
     empty_shrinker, single_shrinker,
 };
 pub use tester::{QuickCheck, Testable, TestResult, quickcheck};
