@@ -127,7 +127,7 @@ impl<A: Arbitrary> Arbitrary for Option<A> {
             }
             Some(ref x) => {
                 let chain = single_shrinker(None).chain(x.shrink().map(Some));
-                Box::new(chain) as Box<Iterator<Item=Option<A>>+'static>
+                Box::new(chain)
             }
         }
     }
@@ -145,14 +145,14 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
     fn shrink(&self) -> Box<Iterator<Item=Result<A, B>>+'static> {
         match *self {
             Ok(ref x) => {
-                let xs: Box<Iterator<Item=A>+'static> = x.shrink();
+                let xs = x.shrink();
                 let tagged = xs.map(Ok);
-                Box::new(tagged) as Box<Iterator<Item=Result<A, B>>+'static>
+                Box::new(tagged)
             }
             Err(ref x) => {
-                let xs: Box<Iterator<Item=B>+'static> = x.shrink();
+                let xs = x.shrink();
                 let tagged = xs.map(Err);
-                Box::new(tagged) as Box<Iterator<Item=Result<A, B>>+'static>
+                Box::new(tagged)
             }
         }
     }
