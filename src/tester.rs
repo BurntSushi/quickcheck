@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use std::old_io::ChanWriter;
 use std::iter;
 use std::thread;
-use super::{Arbitrary, Gen, Shrinker, StdGen};
+use super::{Arbitrary, Gen, StdGen};
 use tester::trap::safe;
 use tester::Status::{Discard, Fail, Pass};
 
@@ -382,7 +382,7 @@ fn shrink<G, T, A, B, C, D, F>(g: &mut G, fun: &F) -> TestResult
 
 fn shrink_failure<G, T, A, B, C, D, F>
                  (g: &mut G,
-                  shrinker: Box<Shrinker<(A, B, C, D)>+'static>,
+                  shrinker: Box<Iterator<Item=(A, B, C, D)>+'static>,
                   fun: &F)
                  -> Option<TestResult>
     where G: Gen, T: Testable, A: AShow, B: AShow, C: AShow, D: AShow,

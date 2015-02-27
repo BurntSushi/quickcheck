@@ -51,29 +51,6 @@ impl<R: Rng> Gen for StdGen<R> {
     fn size(&self) -> usize { self.size }
 }
 
-/// `Box<Shrinker>` is an existential type that represents an arbitrary
-/// iterator.
-///
-/// This makes writing shrinkers easier.
-/// You should not have to implement this trait directly. By default, all
-/// types which implement the `Iterator` trait also implement the `Shrinker`
-/// trait.
-///
-/// The `A` type variable corresponds to the elements yielded by the iterator.
-pub trait Shrinker<A> {
-    /// Wraps `<A: Iterator>.next()`.
-    fn next_shrink(&mut self) -> Option<A>;
-}
-
-impl<A> Iterator for Box<Shrinker<A>+'static> {
-    type Item = A;
-    fn next(&mut self) -> Option<A> { (**self).next_shrink() }
-}
-
-impl<T, A: Iterator<Item=T>> Shrinker<T> for A {
-    fn next_shrink(&mut self) -> Option<T> { self.next() }
-}
-
 struct EmptyShrinker<A> {
     _phantom: ::std::marker::PhantomData<A>,
 }
@@ -84,7 +61,7 @@ impl<A> Iterator for EmptyShrinker<A> {
 }
 
 /// Creates a shrinker with zero elements.
-pub fn empty_shrinker<A: 'static>() -> Box<Shrinker<A>+'static> {
+pub fn empty_shrinker<A: 'static>() -> Box<Iterator<Item=A>+'static> {
     Box::new(EmptyShrinker { _phantom: ::std::marker::PhantomData })
 }
 
@@ -98,7 +75,7 @@ impl<A> Iterator for SingleShrinker<A> {
 }
 
 /// Creates a shrinker with a single element.
-pub fn single_shrinker<A: 'static>(value: A) -> Box<Shrinker<A>+'static> {
+pub fn single_shrinker<A: 'static>(value: A) -> Box<Iterator<Item=A>+'static> {
     Box::new(SingleShrinker { value: Some(value) })
 }
 
@@ -115,7 +92,7 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<Shrinker<A>+'static> {
 /// (This permits failures to include task failures.)
 pub trait Arbitrary : Clone + Send + 'static {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
-    fn shrink(&self) -> Box<Shrinker<Self>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=Self>+'static> {
         empty_shrinker()
     }
 }
@@ -126,7 +103,7 @@ impl Arbitrary for () {
 
 impl Arbitrary for bool {
     fn arbitrary<G: Gen>(g: &mut G) -> bool { g.gen() }
-    fn shrink(&self) -> Box<Shrinker<bool>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=bool>+'static> {
         match *self {
             true => single_shrinker(false),
             false => empty_shrinker(),
@@ -143,14 +120,14 @@ impl<A: Arbitrary> Arbitrary for Option<A> {
         }
     }
 
-    fn shrink(&self)  -> Box<Shrinker<Option<A>>+'static> {
+    fn shrink(&self)  -> Box<Iterator<Item=Option<A>>+'static> {
         match *self {
             None => {
                 empty_shrinker()
             }
             Some(ref x) => {
                 let chain = single_shrinker(None).chain(x.shrink().map(Some));
-                Box::new(chain) as Box<Shrinker<Option<A>>+'static>
+                Box::new(chain)
             }
         }
     }
@@ -165,17 +142,17 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
         }
     }
 
-    fn shrink(&self) -> Box<Shrinker<Result<A, B>>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=Result<A, B>>+'static> {
         match *self {
             Ok(ref x) => {
-                let xs: Box<Shrinker<A>+'static> = x.shrink();
+                let xs = x.shrink();
                 let tagged = xs.map(Ok);
-                Box::new(tagged) as Box<Shrinker<Result<A, B>>+'static>
+                Box::new(tagged)
             }
             Err(ref x) => {
-                let xs: Box<Shrinker<B>+'static> = x.shrink();
+                let xs = x.shrink();
                 let tagged = xs.map(Err);
-                Box::new(tagged) as Box<Shrinker<Result<A, B>>+'static>
+                Box::new(tagged)
             }
         }
     }
@@ -197,7 +174,7 @@ macro_rules! impl_arb_for_tuple {
             }
 
             fn shrink(&self)
-                     -> Box<Shrinker<($type_a, $($type_n),*)> + 'static> {
+                     -> Box<Iterator<Item=($type_a, $($type_n),*)> + 'static> {
                 let (ref $var_a, $(ref $var_n),*) = *self;
                 let sa = $var_a.shrink().scan(
                     ($($var_n.clone(),)*),
@@ -239,7 +216,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
         range(0, size).map(|_| Arbitrary::arbitrary(g)).collect()
     }
 
-    fn shrink(&self) -> Box<Shrinker<Vec<A>>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=Vec<A>>+'static> {
         if self.len() == 0 {
             return empty_shrinker();
         }
@@ -276,7 +253,7 @@ impl<A: Arbitrary> Arbitrary for TrieMap<A> {
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Shrinker<TrieMap<A>>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=TrieMap<A>>+'static> {
         let vec: Vec<(usize, A)> = self.iter()
                                       .map(|(a, b)| (a, b.clone()))
                                       .collect();
@@ -290,7 +267,7 @@ impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Shrinker<HashMap<K, V>>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=HashMap<K, V>>+'static> {
         let vec: Vec<(K, V)> = self.clone().into_iter().collect();
         Box::new(vec.shrink().map(|v| v.into_iter().collect::<HashMap<K, V>>()))
     }
@@ -302,7 +279,7 @@ impl Arbitrary for String {
         g.gen_ascii_chars().take(size).collect()
     }
 
-    fn shrink(&self) -> Box<Shrinker<String>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=String>+'static> {
         // Shrink a string by shrinking a vector of its characters.
         let chars: Vec<char> = self.chars().collect();
         Box::new(chars.shrink().map(|x| x.into_iter().collect::<String>()))
@@ -312,7 +289,7 @@ impl Arbitrary for String {
 impl Arbitrary for char {
     fn arbitrary<G: Gen>(g: &mut G) -> char { g.gen() }
 
-    fn shrink(&self) -> Box<Shrinker<char>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=char>+'static> {
         // No char shrinking for now.
         empty_shrinker()
     }
@@ -325,7 +302,7 @@ macro_rules! signed_arbitrary {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
                     let s = g.size(); g.gen_range(-(s as $ty), s as $ty)
                 }
-                fn shrink(&self) -> Box<Shrinker<$ty>+'static> {
+                fn shrink(&self) -> Box<Iterator<Item=$ty>+'static> {
                     SignedShrinker::new(*self)
                 }
             }
@@ -344,7 +321,7 @@ macro_rules! unsigned_arbitrary {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
                     let s = g.size(); g.gen_range(0, s as $ty)
                 }
-                fn shrink(&self) -> Box<Shrinker<$ty>+'static> {
+                fn shrink(&self) -> Box<Iterator<Item=$ty>+'static> {
                     UnsignedShrinker::new(*self)
                 }
             }
@@ -360,7 +337,7 @@ impl Arbitrary for f32 {
     fn arbitrary<G: Gen>(g: &mut G) -> f32 {
         let s = g.size(); g.gen_range(-(s as f32), s as f32)
     }
-    fn shrink(&self) -> Box<Shrinker<f32>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=f32>+'static> {
         let it = SignedShrinker::new(*self as i32);
         Box::new(it.map(|x| x as f32))
     }
@@ -370,7 +347,7 @@ impl Arbitrary for f64 {
     fn arbitrary<G: Gen>(g: &mut G) -> f64 {
         let s = g.size(); g.gen_range(-(s as f64), s as f64)
     }
-    fn shrink(&self) -> Box<Shrinker<f64>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=f64>+'static> {
         let it = SignedShrinker::new(*self as i64);
         Box::new(it.map(|x| x as f64))
     }
@@ -410,7 +387,7 @@ struct SignedShrinker<A> {
 }
 
 impl<A: SignedInt + Send + 'static> SignedShrinker<A> {
-    fn new(x: A) -> Box<Shrinker<A>+'static> {
+    fn new(x: A) -> Box<Iterator<Item=A>+'static> {
         if x == Int::zero() {
             empty_shrinker()
         } else {
@@ -446,7 +423,7 @@ struct UnsignedShrinker<A> {
 }
 
 impl<A: UnsignedInt + Send + 'static> UnsignedShrinker<A> {
-    fn new(x: A) -> Box<Shrinker<A>+'static> {
+    fn new(x: A) -> Box<Iterator<Item=A>+'static> {
         if x == Int::zero() {
             empty_shrinker::<A>()
         } else {
