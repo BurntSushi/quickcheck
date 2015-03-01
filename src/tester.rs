@@ -2,7 +2,6 @@ use rand;
 use std::sync::mpsc::channel;
 use std::fmt::Debug;
 use std::old_io::ChanWriter;
-use std::iter;
 use std::thread;
 use super::{Arbitrary, Gen, StdGen};
 use tester::trap::safe;
@@ -72,7 +71,7 @@ impl<G: Gen> QuickCheck<G> {
     pub fn quicktest<A>(&mut self, f: A) -> Result<usize, TestResult>
                     where A: Testable {
         let mut ntests: usize = 0;
-        for _ in iter::range(0, self.max_tests) {
+        for _ in 0..self.max_tests {
             if ntests >= self.tests {
                 break
             }

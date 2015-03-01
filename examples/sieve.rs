@@ -12,11 +12,11 @@ fn sieve(n: usize) -> Vec<usize> {
         return vec!()
     }
 
-    let mut marked: Vec<_> = iter::range(0, n+1).map(|_| false).collect();
+    let mut marked: Vec<_> = (0..n+1).map(|_| false).collect();
     marked[0] = true;
     marked[1] = true;
     marked[2] = false;
-    for p in iter::range(2, n) {
+    for p in 2..n {
         for i in iter::range_step(2 * p, n, p) { // whoops!
             marked[i] = true;
         }
@@ -45,8 +45,7 @@ fn is_prime(n: usize) -> bool {
 }
 
 fn prop_all_prime(n: usize) -> bool {
-    let primes = sieve(n);
-    primes.iter().all(|&i| is_prime(i))
+    sieve(n).iter().all(|&i| is_prime(i))
 }
 
 fn main() {

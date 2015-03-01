@@ -43,7 +43,7 @@ fn reverse_single() {
 fn reverse_app() {
     fn prop(xs: Vec<usize>, ys: Vec<usize>) -> bool {
         let mut app = xs.clone();
-        app.push_all(ys.as_slice());
+        app.extend(ys.iter().cloned());
         let app_rev: Vec<usize> = app.into_iter().rev().collect();
 
         let rxs: Vec<usize> = xs.into_iter().rev().collect();
@@ -59,9 +59,9 @@ fn reverse_app() {
 fn max() {
     fn prop(x: isize, y: isize) -> TestResult {
         if x > y {
-            return TestResult::discard()
+            TestResult::discard()
         } else {
-            return TestResult::from_bool(::std::cmp::max(x, y) == y)
+            TestResult::from_bool(::std::cmp::max(x, y) == y)
         }
     }
     quickcheck(prop as fn(isize, isize) -> TestResult);
@@ -72,7 +72,7 @@ fn sort() {
     fn prop(mut xs: Vec<isize>) -> bool {
         xs.sort_by(|x, y| x.cmp(y));
         let upto = if xs.len() == 0 { 0 } else { xs.len()-1 };
-        for i in iter::range(0, upto) {
+        for i in 0..upto {
             if xs[i] > xs[i+1] {
                 return false
             }
@@ -90,11 +90,11 @@ fn sieve_of_eratosthenes() {
             return vec![];
         }
 
-        let mut marked: Vec<_> = iter::range(0, n+1).map(|_| false).collect();
+        let mut marked: Vec<_> = (0..n+1).map(|_| false).collect();
         marked[0] = true;
         marked[1] = true;
         marked[2] = false;
-        for p in iter::range(2, n) {
+        for p in 2..n {
             for i in iter::range_step(2 * p, n, p) { // whoops!
                 marked[i] = true;
             }

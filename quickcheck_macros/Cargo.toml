@@ -15,6 +15,10 @@ name = "quickcheck_macros"
 path = "src/lib.rs"
 plugin = true
 
+[[test]]
+name = "attribute"
+path = "examples/attribute.rs"
+
 [dependencies.quickcheck]
 path = ".."
 version = "*"

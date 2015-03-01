@@ -44,10 +44,10 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
 }
 
 fn main() {
-    fn prop(xs: Vec<int>) -> bool {
-        xs == reverse(reverse(xs.as_slice()).as_slice())
+    fn prop(xs: Vec<isize>) -> bool {
+        xs == reverse(&reverse(&xs))
     }
-    quickcheck(prop as fn(Vec<int> -> bool));
+    quickcheck(prop as fn(Vec<isize>) -> bool);
 }
 ```
 
@@ -68,7 +68,7 @@ extern crate quickcheck;
 
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
     let mut rev = vec!();
-    for x in xs.iter() {
+    for x in xs {
         rev.insert(0, x.clone())
     }
     rev
@@ -76,7 +76,7 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
 
 #[quickcheck]
 fn double_reversal_is_identity(xs: Vec<isize>) -> bool {
-    xs == reverse(reverse(xs.as_slice()).as_slice())
+    xs == reverse(&reverse(&xs))
 }
 
 fn main() {}
@@ -194,7 +194,7 @@ fn prop(xs: Vec<int>) -> TestResult {
     if xs.len() != 1 {
         return TestResult::discard()
     }
-    TestResult::from_bool(xs == reverse(xs.as_slice()))
+    TestResult::from_bool(xs == reverse(&xs))
 }
 quickcheck(prop as fn(Vec<int>) -> bool);
 ```
@@ -229,8 +229,8 @@ function for reversing vectors as: (my apologies for the contrived example)
 
 ```rust
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
-    let mut rev = vec!();
-    for i in iter::range(1, xs.len()) {
+    let mut rev = vec![];
+    for i in 1..xs.len() {
         rev.insert(0, xs[i].clone())
     }
     rev
@@ -241,7 +241,7 @@ And a property to test that `xs == reverse(reverse(xs))`:
 
 ```rust
 fn prop(xs: Vec<int>) -> bool {
-    xs == reverse(reverse(xs.as_slice()).as_slice())
+    xs == reverse(&reverse(&xs))
 }
 quickcheck(prop as fn(Vec<int>) -> bool);
 ```
@@ -279,17 +279,17 @@ makes it ideal for randomized testing. So let's take a look at my
 implementation and see if we can spot the bug:
 
 ```rust
-fn sieve(n: uint) -> Vec<uint> {
+fn sieve(n: usize) -> Vec<usize> {
     if n <= 1 {
         return vec!()
     }
 
-    let mut marked = Vec::from_fn(n+1, |_| false);
+    let mut marked: Vec<_> = (0..n+1).map(|_| false).collect();
     marked[0] = true;
     marked[1] = true;
     marked[2] = false;
-    for p in iter::range(2, n) {
-        for i in iter::range_step(2 * p, n, p) {
+    for p in 2..n {
+        for i in iter::range_step(2 * p, n, p) { // whoops!
             marked[i] = true;
         }
     }
@@ -319,20 +319,20 @@ obvious one for the prime number sieve is to check if all numbers returned are
 prime. For that, we'll need an `is_prime` function:
 
 ```rust
-fn is_prime(n: uint) -> bool {
+fn is_prime(n: usize) -> bool {
     if n == 0 || n == 1 {
-        return false;
+        return false
     } else if n == 2 {
-        return true;
+        return true
     }
 
-    let max_possible = (n as f64).sqrt().ceil() as uint;
+    let max_possible = (n as f64).sqrt().ceil() as usize;
     for i in iter::range_inclusive(2, max_possible) {
         if n % i == 0 {
-            return false;
+            return false
         }
     }
-    true
+    return true
 }
 ```
 
@@ -342,9 +342,8 @@ All this is doing is checking to see if any number in `[2, sqrt(n)]` divides
 Now we can write our QuickCheck property:
 
 ```rust
-fn prop_all_prime(n: uint) -> bool {
-    let primes = sieve(n);
-    primes.iter().all(|&i| is_prime(i))
+fn prop_all_prime(n: usize) -> bool {
+    sieve(n).iter().all(|&i| is_prime(i))
 }
 ```
 
@@ -429,20 +428,4 @@ existential type, which I think I'm willing to live with.
 Note though that the shrinkers for lists and integers are not lazy. Their
 algorithms are more complex, so it will take a bit more work to get them to
 use iterators like the rest of the shrinking strategies.
-
-
-### Related work
-
-There have been other attempts at QuickCheck for Rust, but they are missing
-critical features. (I don't think any of them build either.)
-
-* [dbp/rust-quickcheck](https://github.com/dbp/rust-quickcheck) - No shrinking.
-* [mcandre/rustcheck](https://github.com/mcandre/rustcheck) - Properties are
-  not polymorphic. No shrinking. In general, very incomplete.
-* [blake2-ppc/qc.rs](https://github.com/blake2-ppc/qc.rs) - Has shrinking, but
-  properties are not polymorphic. Also, I *think* its approach to laziness is
-  no longer possible with the changes in closures, but I could be wrong.
-* [lilac/quick-check](https://github.com/lilac/quick-check) - This is a fork of
-  `blake2-ppc/qc.rs`. I can't see any substantial changes, although it is using
-  `proc` in the laziness code, so perhaps they've gotten it to work.
 
