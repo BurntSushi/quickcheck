@@ -11,7 +11,7 @@ fn prop_oob() {
     }
     match QuickCheck::new().quicktest(prop as fn() -> bool) {
         Ok(n) => panic!("prop_oob should fail with a runtime error \
-                        but instead it passed {} tests.", n),
+                         but instead it passed {} tests.", n),
         _ => return,
     }
 }

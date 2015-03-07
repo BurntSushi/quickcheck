@@ -1,7 +1,5 @@
 use rand;
-use std::sync::mpsc::channel;
 use std::fmt::Debug;
-use std::old_io::ChanWriter;
 use std::thread;
 use super::{Arbitrary, Gen, StdGen};
 use tester::trap::safe;
@@ -180,11 +178,8 @@ impl TestResult {
     /// `f` generates a task failure during its execution.
     pub fn must_fail<T, F>(f: F) -> TestResult
             where T: Send, F: FnOnce() -> T + Send + 'static {
-        let (tx, _) = channel();
         TestResult::from_bool(
             thread::Builder::new()
-                            .stdout(Box::new(ChanWriter::new(tx.clone())))
-                            .stderr(Box::new(ChanWriter::new(tx)))
                             .spawn(move || { let _ = f(); })
                             .unwrap()
                             .join()
@@ -416,41 +411,22 @@ mod trap {
 
 #[cfg(not(quickfail))]
 mod trap {
+    use std::borrow::ToOwned;
     use std::sync::mpsc::channel;
-    use std::old_io::{ChanReader, ChanWriter};
     use std::thread;
 
-    // This is my bright idea for capturing runtime errors caused by a
-    // test. Actually, it looks like rustc uses a similar approach.
-    // The problem is, this is used for *each* test case passed to a
-    // property, whereas rustc does it once for each test.
-    //
-    // I'm not entirely sure there's much of an alternative either.
-    // We could launch a single task and pass arguments over a channel,
-    // but the task would need to be restarted if it failed due to a
-    // runtime error. Since these are rare, it'd probably be more efficient
-    // then this approach, but it would also be more complex.
-    //
-    // Moreover, this feature seems to prevent an implementation of
-    // Testable for a stack closure type. *sigh*
     pub fn safe<T, F>(fun: F) -> Result<T, String>
             where T: Send + 'static, F: FnOnce() -> T + Send + 'static {
-        let (send, recv) = channel();
-        let stdout = ChanWriter::new(send.clone());
-        let stderr = ChanWriter::new(send);
-        let mut reader = ChanReader::new(recv);
-
-        let t = thread::Builder::new()
-                                .name("safefn".to_string())
-                                .stdout(Box::new(stdout))
-                                .stderr(Box::new(stderr));
+        let t = thread::Builder::new().name("safefn".to_owned());
         let (send_ret, recv_ret) = channel();
         let run = move || send_ret.send(fun()).unwrap();
         match t.spawn(run).unwrap().join() {
             Ok(()) => Ok(recv_ret.recv().unwrap()),
-            Err(_) => {
-                let s = reader.read_to_string().unwrap();
-                Err(s.trim().to_string())
+            Err(any_err) => {
+                match any_err.downcast_ref::<String>() {
+                    Some(ref s) => Err(s.trim().to_owned()),
+                    None => Err("UNABLE TO SHOW RESULT OF PANIC.".to_owned()),
+                }
             }
         }
     }
