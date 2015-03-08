@@ -1,3 +1,4 @@
+#![feature(custom_attribute)]
 #![feature(plugin)]
 #![allow(dead_code)]
 #![plugin(quickcheck_macros)]

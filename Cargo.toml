@@ -17,9 +17,6 @@ collect_impls = ["collect"]
 [lib]
 name = "quickcheck"
 
-[profile.test]
-debug = false
-
 [dependencies]
 log = "*"
 rand = "*"
