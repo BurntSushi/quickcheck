@@ -83,7 +83,7 @@ fn sort() {
 }
 
 #[test]
-#[should_fail]
+#[should_panic]
 fn sieve_of_eratosthenes() {
     fn sieve(n: usize) -> Vec<usize> {
         if n <= 1 {
