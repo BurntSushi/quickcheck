@@ -17,14 +17,14 @@ fn min(x: isize, y: isize) -> TestResult {
 }
 
 #[quickcheck]
-#[should_fail]
+#[should_panic]
 fn fail_fn() -> bool { false }
 
 #[quickcheck]
 static static_bool: bool = true;
 
 #[quickcheck]
-#[should_fail]
+#[should_panic]
 static fail_static_bool: bool = false;
 
 // If static_bool wasn't turned into a test function, then this should
