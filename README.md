@@ -287,7 +287,7 @@ fn sieve(n: usize) -> Vec<usize> {
     let mut marked: Vec<_> = (0..n+1).map(|_| false).collect();
     marked[0] = true;
     marked[1] = true;
-    marked[2] = false;
+    marked[2] = true;
     for p in 2..n {
         for i in iter::range_step(2 * p, n, p) { // whoops!
             marked[i] = true;
@@ -320,24 +320,12 @@ prime. For that, we'll need an `is_prime` function:
 
 ```rust
 fn is_prime(n: usize) -> bool {
-    if n == 0 || n == 1 {
-        return false
-    } else if n == 2 {
-        return true
-    }
-
-    let max_possible = (n as f64).sqrt().ceil() as usize;
-    for i in iter::range_inclusive(2, max_possible) {
-        if n % i == 0 {
-            return false
-        }
-    }
-    return true
+    n != 0 && n != 1 && (2..).take_while(|i| i * i <= n).all(|i| n % i != 0)
 }
 ```
 
 All this is doing is checking to see if any number in `[2, sqrt(n)]` divides
-`n` with a few base cases for `0`, `1` and `2`.
+`n` with base cases for `0` and `1`.
 
 Now we can write our QuickCheck property:
 
@@ -396,6 +384,38 @@ In addition, if our bug happened to result in an index out-of-bounds error,
 then `quickcheck` can handle it just like any other failure—including
 shrinking on failures caused by runtime errors.
 
+But hold on... we're not done yet. Right now, our property tests that all the
+numbers returned by `sieve` are prime but it doesn't test if the list is complete.
+It does not ensure that all the primes between 0 and n are found.
+
+Here's a property that is more comprehensive:
+
+```rust
+fn prop_prime_iff_in_the_sieve(n: usize) -> bool {
+    (0..(n + 1)).filter(|&i| is_prime(i)).collect() == sieve(n)
+}
+```
+
+It tests that for each number between 0 and n, inclusive, the naive primality test
+yields the same result as the sieve.
+
+Now, if we run it:
+
+```rust
+fn main() {
+    quickcheck(prop_all_prime as fn(uint) -> bool);
+    quickcheck(prop_prime_iff_in_the_sieve as fn(uint) -> bool);
+}
+```
+
+we see that it fails immediately for value n = 2.
+
+```
+[quickcheck] TEST FAILED. Arguments: (2)
+```
+
+If we inspect `sieve()` once again, we see that we mistakenly mark `2` as non-prime.
+Removing the line `marked[2] = true;` results in both properties passing.
 
 ### What's not in this port of QuickCheck?
 

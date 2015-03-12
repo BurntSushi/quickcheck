@@ -3,8 +3,6 @@
 extern crate quickcheck;
 
 use std::iter;
-use std::num::Float;
-
 use quickcheck::quickcheck;
 
 fn sieve(n: usize) -> Vec<usize> {
@@ -15,7 +13,6 @@ fn sieve(n: usize) -> Vec<usize> {
     let mut marked: Vec<_> = (0..n+1).map(|_| false).collect();
     marked[0] = true;
     marked[1] = true;
-    marked[2] = false;
     for p in 2..n {
         for i in iter::range_step(2 * p, n, p) { // whoops!
             marked[i] = true;
@@ -29,25 +26,18 @@ fn sieve(n: usize) -> Vec<usize> {
 }
 
 fn is_prime(n: usize) -> bool {
-    if n == 0 || n == 1 {
-        return false
-    } else if n == 2 {
-        return true
-    }
-
-    let max_possible = (n as f64).sqrt().ceil() as usize;
-    for i in iter::range_inclusive(2, max_possible) {
-        if n % i == 0 {
-            return false
-        }
-    }
-    return true
+    n != 0 && n != 1 && (2..).take_while(|i| i * i <= n).all(|i| n % i != 0)
 }
 
 fn prop_all_prime(n: usize) -> bool {
     sieve(n).iter().all(|&i| is_prime(i))
 }
 
+fn prop_prime_iff_in_the_sieve(n: usize) -> bool {
+    (0..(n + 1)).filter(|&i| is_prime(i)).collect() == sieve(n)
+}
+
 fn main() {
     quickcheck(prop_all_prime as fn(usize) -> bool);
+    quickcheck(prop_prime_iff_in_the_sieve as fn(usize) -> bool);
 }
