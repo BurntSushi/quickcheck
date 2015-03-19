@@ -2,7 +2,7 @@ use rand::Rng;
 use std::collections::hash_map::HashMap;
 use std::hash::Hash;
 use std::mem;
-use std::num::{self, Int, SignedInt, UnsignedInt};
+use std::num::{self, Int, SignedInt};
 
 #[cfg(feature = "collect_impls")]
 use collect::TrieMap;
@@ -421,7 +421,7 @@ struct UnsignedShrinker<A> {
     i: A,
 }
 
-impl<A: UnsignedInt + Send + 'static> UnsignedShrinker<A> {
+impl<A: Int + Send + 'static> UnsignedShrinker<A> {
     fn new(x: A) -> Box<Iterator<Item=A>+'static> {
         if x == Int::zero() {
             empty_shrinker::<A>()
@@ -436,7 +436,7 @@ impl<A: UnsignedInt + Send + 'static> UnsignedShrinker<A> {
     }
 }
 
-impl<A: UnsignedInt> Iterator for UnsignedShrinker<A> {
+impl<A: Int> Iterator for UnsignedShrinker<A> {
     type Item = A;
     fn next(&mut self) -> Option<A> {
         if self.x - self.i < self.x {
