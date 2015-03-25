@@ -95,7 +95,7 @@ fn sieve_of_eratosthenes() {
         marked[1] = true;
         marked[2] = false;
         for p in 2..n {
-            for i in iter::range_step(2 * p, n, p) { // whoops!
+            for i in (2*p..n).step_by(p) { // whoops!
                 marked[i] = true;
             }
         }

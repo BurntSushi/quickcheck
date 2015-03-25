@@ -1,8 +1,7 @@
-#![feature(core)]
+#![feature(step_by)]
 
 extern crate quickcheck;
 
-use std::iter;
 use quickcheck::quickcheck;
 
 fn sieve(n: usize) -> Vec<usize> {
@@ -14,7 +13,7 @@ fn sieve(n: usize) -> Vec<usize> {
     marked[0] = true;
     marked[1] = true;
     for p in 2..n {
-        for i in iter::range_step(2 * p, n, p) { // whoops!
+        for i in (2*p..n).step_by(p) { // whoops!
             marked[i] = true;
         }
     }
