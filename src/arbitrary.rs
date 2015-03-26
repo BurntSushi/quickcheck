@@ -318,6 +318,7 @@ macro_rules! unsigned_arbitrary {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
+                    #![allow(trivial_numeric_casts)]
                     let s = g.size(); g.gen_range(0, s as $ty)
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>+'static> {
