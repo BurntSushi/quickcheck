@@ -628,11 +628,11 @@ mod test {
 
         {
             let mut map = TrieMap::new();
-            map.insert(1, 1i);
+            map.insert(1, 1);
 
             let shrinks = vec![
-                {let mut m = TrieMap::new(); m.insert(1, 0is); m},
-                {let mut m = TrieMap::new(); m.insert(0, 1is); m},
+                {let mut m = TrieMap::new(); m.insert(1, 0); m},
+                {let mut m = TrieMap::new(); m.insert(0, 1); m},
                 TrieMap::new()
             ];
 
