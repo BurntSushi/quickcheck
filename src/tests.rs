@@ -1,6 +1,5 @@
 use std::cmp::Ord;
 use std::iter;
-use std::num::Float;
 use super::{QuickCheck, TestResult, quickcheck};
 
 #[test]

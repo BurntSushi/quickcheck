@@ -1,8 +1,9 @@
-use rand::Rng;
 use std::collections::hash_map::HashMap;
 use std::hash::Hash;
 use std::mem;
-use std::num::{self, Int, SignedInt};
+
+use num::{Signed, Unsigned, One, Zero, Num};
+use rand::Rng;
 
 #[cfg(feature = "collect_impls")]
 use collect::TrieMap;
@@ -379,16 +380,16 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: usize) -> Vec<Vec<A>> {
     shuffle(xs, k, xs.len())
 }
 
-fn half<A: Int>(x: A) -> A { x / num::cast(2isize).unwrap() }
+fn half<A: Num + Copy>(x: A) -> A { let one: A = One::one(); x / (one + one) }
 
-struct SignedShrinker<A> {
+struct SignedShrinker<A: Copy> {
     x: A,
     i: A,
 }
 
-impl<A: SignedInt + Send + 'static> SignedShrinker<A> {
+impl<A: Signed + PartialOrd + Copy + Send + 'static> SignedShrinker<A> {
     fn new(x: A) -> Box<Iterator<Item=A>+'static> {
-        if x == Int::zero() {
+        if x == Zero::zero() {
             empty_shrinker()
         } else {
             let shrinker = SignedShrinker {
@@ -396,15 +397,17 @@ impl<A: SignedInt + Send + 'static> SignedShrinker<A> {
                 i: half(x),
             };
             if shrinker.i.is_negative() {
-                Box::new(vec![Int::zero(), shrinker.x.abs()].into_iter().chain(shrinker))
+                Box::new(vec![Zero::zero(), shrinker.x.abs()]
+                             .into_iter()
+                             .chain(shrinker))
             } else {
-                Box::new(vec![Int::zero()].into_iter().chain(shrinker))
+                Box::new(vec![Zero::zero()].into_iter().chain(shrinker))
             }
         }
     }
 }
 
-impl<A: SignedInt> Iterator for SignedShrinker<A> {
+impl<A: Signed + PartialOrd + Copy> Iterator for SignedShrinker<A> {
     type Item = A;
     fn next(&mut self) -> Option<A> {
         if (self.x - self.i).abs() < self.x.abs() {
@@ -417,17 +420,17 @@ impl<A: SignedInt> Iterator for SignedShrinker<A> {
     }
 }
 
-struct UnsignedShrinker<A> {
+struct UnsignedShrinker<A: Copy> {
     x: A,
     i: A,
 }
 
-impl<A: Int + Send + 'static> UnsignedShrinker<A> {
+impl<A: Unsigned + PartialOrd + Copy + Send + 'static> UnsignedShrinker<A> {
     fn new(x: A) -> Box<Iterator<Item=A>+'static> {
-        if x == Int::zero() {
+        if x == Zero::zero() {
             empty_shrinker::<A>()
         } else {
-            Box::new(vec![Int::zero()].into_iter().chain(
+            Box::new(vec![Zero::zero()].into_iter().chain(
                 UnsignedShrinker {
                     x: x,
                     i: half(x),
@@ -437,7 +440,7 @@ impl<A: Int + Send + 'static> UnsignedShrinker<A> {
     }
 }
 
-impl<A: Int> Iterator for UnsignedShrinker<A> {
+impl<A: Unsigned + PartialOrd + Copy> Iterator for UnsignedShrinker<A> {
     type Item = A;
     fn next(&mut self) -> Option<A> {
         if self.x - self.i < self.x {
