@@ -12,7 +12,6 @@
 #[cfg(feature = "collect_impls")]
 extern crate collect;
 #[macro_use] extern crate log;
-extern crate num;
 extern crate rand;
 
 pub use arbitrary::{

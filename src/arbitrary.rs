@@ -2,7 +2,6 @@ use std::collections::hash_map::HashMap;
 use std::hash::Hash;
 use std::mem;
 
-use num::{Signed, Unsigned, One, Zero, Num};
 use rand::Rng;
 
 #[cfg(feature = "collect_impls")]
@@ -295,65 +294,6 @@ impl Arbitrary for char {
     }
 }
 
-macro_rules! signed_arbitrary {
-    ($($ty:ty),*) => {
-        $(
-            impl Arbitrary for $ty {
-                fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    let s = g.size(); g.gen_range(-(s as $ty), s as $ty)
-                }
-                fn shrink(&self) -> Box<Iterator<Item=$ty>+'static> {
-                    SignedShrinker::new(*self)
-                }
-            }
-        )*
-    }
-}
-
-signed_arbitrary! {
-    isize, i8, i16, i32, i64
-}
-
-macro_rules! unsigned_arbitrary {
-    ($($ty:ty),*) => {
-        $(
-            impl Arbitrary for $ty {
-                fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    #![allow(trivial_numeric_casts)]
-                    let s = g.size(); g.gen_range(0, s as $ty)
-                }
-                fn shrink(&self) -> Box<Iterator<Item=$ty>+'static> {
-                    UnsignedShrinker::new(*self)
-                }
-            }
-        )*
-    }
-}
-
-unsigned_arbitrary! {
-    usize, u8, u16, u32, u64
-}
-
-impl Arbitrary for f32 {
-    fn arbitrary<G: Gen>(g: &mut G) -> f32 {
-        let s = g.size(); g.gen_range(-(s as f32), s as f32)
-    }
-    fn shrink(&self) -> Box<Iterator<Item=f32>+'static> {
-        let it = SignedShrinker::new(*self as i32);
-        Box::new(it.map(|x| x as f32))
-    }
-}
-
-impl Arbitrary for f64 {
-    fn arbitrary<G: Gen>(g: &mut G) -> f64 {
-        let s = g.size(); g.gen_range(-(s as f64), s as f64)
-    }
-    fn shrink(&self) -> Box<Iterator<Item=f64>+'static> {
-        let it = SignedShrinker::new(*self as i64);
-        Box::new(it.map(|x| x as f64))
-    }
-}
-
 /// Returns a sequence of vectors with each contiguous run of elements of
 /// length `k` removed.
 fn shuffle_vec<A: Clone>(xs: &[A], k: usize) -> Vec<Vec<A>> {
@@ -380,76 +320,147 @@ fn shuffle_vec<A: Clone>(xs: &[A], k: usize) -> Vec<Vec<A>> {
     shuffle(xs, k, xs.len())
 }
 
-fn half<A: Num + Copy>(x: A) -> A { let one: A = One::one(); x / (one + one) }
+macro_rules! unsigned_shrinker {
+    ($ty:ty) => {
+        mod shrinker {
+            pub struct UnsignedShrinker {
+                x: $ty,
+                i: $ty,
+            }
 
-struct SignedShrinker<A: Copy> {
-    x: A,
-    i: A,
-}
+            impl UnsignedShrinker {
+                pub fn new(x: $ty) -> Box<Iterator<Item=$ty>+'static> {
+                    if x == 0 {
+                        super::empty_shrinker()
+                    } else {
+                        Box::new(vec![0].into_iter().chain(
+                            UnsignedShrinker {
+                                x: x,
+                                i: x / 2,
+                            }
+                        ))
+                    }
+                }
+            }
 
-impl<A: Signed + PartialOrd + Copy + Send + 'static> SignedShrinker<A> {
-    fn new(x: A) -> Box<Iterator<Item=A>+'static> {
-        if x == Zero::zero() {
-            empty_shrinker()
-        } else {
-            let shrinker = SignedShrinker {
-                x: x,
-                i: half(x),
-            };
-            if shrinker.i.is_negative() {
-                Box::new(vec![Zero::zero(), shrinker.x.abs()]
-                             .into_iter()
-                             .chain(shrinker))
-            } else {
-                Box::new(vec![Zero::zero()].into_iter().chain(shrinker))
+            impl Iterator for UnsignedShrinker {
+                type Item = $ty;
+                fn next(&mut self) -> Option<$ty> {
+                    if self.x - self.i < self.x {
+                        let result = Some(self.x - self.i);
+                        self.i = self.i / 2;
+                        result
+                    } else {
+                        None
+                    }
+                }
             }
         }
     }
 }
 
-impl<A: Signed + PartialOrd + Copy> Iterator for SignedShrinker<A> {
-    type Item = A;
-    fn next(&mut self) -> Option<A> {
-        if (self.x - self.i).abs() < self.x.abs() {
-            let result = Some(self.x - self.i);
-            self.i = half(self.i);
-            result
-        } else {
-            None
-        }
-    }
-}
-
-struct UnsignedShrinker<A: Copy> {
-    x: A,
-    i: A,
-}
-
-impl<A: Unsigned + PartialOrd + Copy + Send + 'static> UnsignedShrinker<A> {
-    fn new(x: A) -> Box<Iterator<Item=A>+'static> {
-        if x == Zero::zero() {
-            empty_shrinker::<A>()
-        } else {
-            Box::new(vec![Zero::zero()].into_iter().chain(
-                UnsignedShrinker {
-                    x: x,
-                    i: half(x),
+macro_rules! unsigned_arbitrary {
+    ($($ty:ty),*) => {
+        $(
+            impl Arbitrary for $ty {
+                fn arbitrary<G: Gen>(g: &mut G) -> $ty {
+                    #![allow(trivial_numeric_casts)]
+                    let s = g.size(); g.gen_range(0, s as $ty)
                 }
-            ))
+                fn shrink(&self) -> Box<Iterator<Item=$ty>+'static> {
+                    unsigned_shrinker!($ty);
+                    shrinker::UnsignedShrinker::new(*self)
+                }
+            }
+        )*
+    }
+}
+
+unsigned_arbitrary! {
+    usize, u8, u16, u32, u64
+}
+
+macro_rules! signed_shrinker {
+    ($ty:ty) => {
+        mod shrinker {
+            pub struct SignedShrinker {
+                x: $ty,
+                i: $ty,
+            }
+
+            impl SignedShrinker {
+                pub fn new(x: $ty) -> Box<Iterator<Item=$ty>+'static> {
+                    if x == 0 {
+                        super::empty_shrinker()
+                    } else {
+                        let shrinker = SignedShrinker {
+                            x: x,
+                            i: x / 2,
+                        };
+                        let mut items = vec![0];
+                        if shrinker.i < 0 {
+                            items.push(shrinker.x.abs());
+                        }
+                        Box::new(items.into_iter().chain(shrinker))
+                    }
+                }
+            }
+
+            impl Iterator for SignedShrinker {
+                type Item = $ty;
+                fn next(&mut self) -> Option<$ty> {
+                    if (self.x - self.i).abs() < self.x.abs() {
+                        let result = Some(self.x - self.i);
+                        self.i = self.i / 2;
+                        result
+                    } else {
+                        None
+                    }
+                }
+            }
         }
     }
 }
 
-impl<A: Unsigned + PartialOrd + Copy> Iterator for UnsignedShrinker<A> {
-    type Item = A;
-    fn next(&mut self) -> Option<A> {
-        if self.x - self.i < self.x {
-            let result = Some(self.x - self.i);
-            self.i = half(self.i);
-            result
-        } else {
-            None
-        }
+macro_rules! signed_arbitrary {
+    ($($ty:ty),*) => {
+        $(
+            impl Arbitrary for $ty {
+                fn arbitrary<G: Gen>(g: &mut G) -> $ty {
+                    let s = g.size(); g.gen_range(-(s as $ty), s as $ty)
+                }
+                fn shrink(&self) -> Box<Iterator<Item=$ty>+'static> {
+                    signed_shrinker!($ty);
+                    shrinker::SignedShrinker::new(*self)
+                }
+            }
+        )*
+    }
+}
+
+signed_arbitrary! {
+    isize, i8, i16, i32, i64
+}
+
+impl Arbitrary for f32 {
+    fn arbitrary<G: Gen>(g: &mut G) -> f32 {
+        let s = g.size(); g.gen_range(-(s as f32), s as f32)
+    }
+    fn shrink(&self) -> Box<Iterator<Item=f32>+'static> {
+        signed_shrinker!(i32);
+        let it = shrinker::SignedShrinker::new(*self as i32);
+        Box::new(it.map(|x| x as f32))
+    }
+}
+
+impl Arbitrary for f64 {
+    fn arbitrary<G: Gen>(g: &mut G) -> f64 {
+        let s = g.size(); g.gen_range(-(s as f64), s as f64)
+    }
+    fn shrink(&self) -> Box<Iterator<Item=f64>+'static> {
+        signed_shrinker!(i64);
+        let it = shrinker::SignedShrinker::new(*self as i64);
+        Box::new(it.map(|x| x as f64))
     }
 }
 
