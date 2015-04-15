@@ -8,7 +8,7 @@ homepage = "https://github.com/BurntSushi/quickcheck"
 repository = "https://github.com/BurntSushi/quickcheck"
 readme = "README.md"
 keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
-license = "Unlicense"
+license = "Unlicense/MIT"
 
 [features]
 # Includes impls for `Arbitrary` for some data structures in `collect`.
