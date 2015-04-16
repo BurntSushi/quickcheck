@@ -13,6 +13,7 @@ the input space quickly. (It should be the same strategy used in
 Haskell](http://hackage.haskell.org/package/QuickCheck).)
 
 [![Build status](https://api.travis-ci.org/BurntSushi/quickcheck.png)](https://travis-ci.org/BurntSushi/quickcheck)
+[![](http://meritbadge.herokuapp.com/quickcheck)](https://crates.io/crates/quickcheck)
 
 Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
