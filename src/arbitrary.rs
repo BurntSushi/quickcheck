@@ -216,32 +216,92 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
     }
 
     fn shrink(&self) -> Box<Iterator<Item=Vec<A>>+'static> {
-        if self.len() == 0 {
-            return empty_shrinker();
-        }
+        VecShrinker::new(self.clone())
+    }
+}
 
-        // Start the shrunk values with an empty vector.
-        let mut xs: Vec<Vec<A>> = vec![vec![]];
+///Iterator which returns successive attempts to shrink the vector `seed`
+struct VecShrinker<A> {
+    seed: Vec<A>,
+    ///How much which is removed when trying with smaller vectors
+    size: usize,
+    ///The end of the removed elements
+    offset: usize,
+    ///The shrinker for the element at `offset` once shrinking of individual elements are attempted
+    element_shrinker: Box<Iterator<Item=A>>
+}
 
-        // Explore the space of different sized vectors without shrinking
-        // any of the elements.
-        let mut k = self.len() / 2;
-        while k > 0 {
-            xs.extend(shuffle_vec(&**self, k).into_iter());
-            k = k / 2;
-        }
+impl <A: Arbitrary> VecShrinker<A> {
 
-        // Now explore the space of vectors where each element is shrunk
-        // in turn. A new vector is generated for each shrunk value of each
-        // element.
-        for (i, x) in self.iter().enumerate() {
-            for sx in x.shrink() {
-                let mut change_one = self.clone();
-                change_one[i] = sx;
-                xs.push(change_one);
+    fn new(seed: Vec<A>) -> Box<Iterator<Item=Vec<A>>> {
+        let es = match seed.get(0) {
+            Some(e) => e.shrink(),
+            None => return empty_shrinker()
+        };
+        let size = seed.len();
+        Box::new(VecShrinker { seed: seed, size: size, offset: size, element_shrinker: es })
+    }
+
+    ///Returns the next shrunk element if any, `offset` points to the index after the returned
+    ///element after the function returns
+    fn next_element(&mut self) -> Option<A> {
+        loop {
+            match self.element_shrinker.next() {
+                Some(e) => return Some(e),
+                None => {
+                    match self.seed.get(self.offset) {
+                        Some(e) => {
+                            self.element_shrinker = e.shrink();
+                            self.offset += 1;
+                        }
+                        None => return None
+                    }
+                }
             }
         }
-        Box::new(xs.into_iter())
+    }
+}
+
+impl <A> Iterator for VecShrinker<A>
+    where A: Arbitrary {
+    type Item = Vec<A>;
+    fn next(&mut self) -> Option<Vec<A>> {
+        //Try with an empty vector first
+        if self.size == self.seed.len() {
+            self.size /= 2;
+            self.offset = self.size;
+            return Some(vec![])
+        }
+        if self.size != 0 {
+            //Generate a smaller vector by removing the elements between (offset - size) and offset
+            let xs1 = self.seed[..(self.offset - self.size)].iter()
+                .chain(&self.seed[self.offset..])
+                .cloned()
+                .collect();
+            self.offset += self.size;
+            //Try to reduce the amount removed from the vector once all previous sizes tried
+            if self.offset > self.seed.len() {
+                self.size /= 2;
+                self.offset = self.size;
+            }
+            Some(xs1)
+        }
+        else {
+            //A smaller vector did not work so try to shrink each element of the vector instead
+            //Reuse `offset` as the index determining which element to shrink
+
+            //The first element shrinker is already created so skip the first offset
+            //(self.offset == 0 only on first entry to this part of the iterator)
+            if self.offset == 0 { self.offset = 1 }
+
+            match self.next_element() {
+                Some(e) => Some(self.seed[..self.offset-1].iter().cloned()
+                    .chain(Some(e).into_iter())
+                    .chain(self.seed[self.offset..].iter().cloned())
+                    .collect()),
+                None => None
+            }
+        }
     }
 }
 
@@ -292,32 +352,6 @@ impl Arbitrary for char {
         // No char shrinking for now.
         empty_shrinker()
     }
-}
-
-/// Returns a sequence of vectors with each contiguous run of elements of
-/// length `k` removed.
-fn shuffle_vec<A: Clone>(xs: &[A], k: usize) -> Vec<Vec<A>> {
-    fn shuffle<A: Clone>(xs: &[A], k: usize, n: usize) -> Vec<Vec<A>> {
-        if k > n {
-            return vec![];
-        }
-        let xs1: Vec<A> = xs[..k].iter().map(|x| x.clone()).collect();
-        let xs2: Vec<A> = xs[k..].iter().map(|x| x.clone()).collect();
-        if xs2.len() == 0 {
-            return vec![vec![]];
-        }
-
-        let cat = |x: &Vec<A>| {
-            let mut pre = xs1.clone();
-            pre.extend(x.clone().into_iter());
-            pre
-        };
-        let shuffled = shuffle(&*xs2, k, n-k);
-        let mut more: Vec<Vec<A>> = shuffled.iter().map(cat).collect();
-        more.insert(0, xs2);
-        more
-    }
-    shuffle(xs, k, xs.len())
 }
 
 macro_rules! unsigned_shrinker {
