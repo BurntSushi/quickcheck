@@ -289,9 +289,7 @@ impl<A, B, C, D, T,> Testable for fn(A, B, C, D) -> T
     }
 }
 
-// `PhantomFn` is deprecated on nightly, but stable on beta.
-#[allow(deprecated)]
-trait Fun<A, B, C, D, T> : ::std::marker::PhantomFn<T> {
+trait Fun<A, B, C, D, T> {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, b: Option<&B>,
                c: Option<&C>, d: Option<&D>)
