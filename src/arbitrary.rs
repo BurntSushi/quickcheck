@@ -708,17 +708,7 @@ mod test {
 
     #[test]
     fn chars() {
-        eq('a', vec![]);
-    }
-
-    #[test]
-    fn strs() {
-        eq("".to_string(), vec![]);
-        eq("A".to_string(), vec!["".to_string()]);
-        eq("ABC".to_string(), vec!["".to_string(),
-                                   "AB".to_string(),
-                                   "BC".to_string(),
-                                   "AC".to_string()]);
+        eq('\x00', vec![]);
     }
 
     // All this jazz is for testing set equality on the results of a shrinker.
