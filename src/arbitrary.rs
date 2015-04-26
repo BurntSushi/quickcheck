@@ -1,3 +1,4 @@
+use std::char;
 use std::collections::hash_map::HashMap;
 use std::hash::Hash;
 use std::mem;
@@ -349,8 +350,7 @@ impl Arbitrary for char {
     fn arbitrary<G: Gen>(g: &mut G) -> char { g.gen() }
 
     fn shrink(&self) -> Box<Iterator<Item=char>+'static> {
-        // No char shrinking for now.
-        empty_shrinker()
+        Box::new((*self as u32).shrink().filter_map(char::from_u32))
     }
 }
 
