@@ -5,9 +5,6 @@ use std::mem;
 
 use rand::Rng;
 
-#[cfg(feature = "collect_impls")]
-use collect::TrieMap;
-
 /// `Gen` wraps a `rand::Rng` with parameters to control the distribution of
 /// random values.
 ///
@@ -306,21 +303,6 @@ impl <A> Iterator for VecShrinker<A>
     }
 }
 
-#[cfg(feature = "collect_impls")]
-impl<A: Arbitrary> Arbitrary for TrieMap<A> {
-    fn arbitrary<G: Gen>(g: &mut G) -> TrieMap<A> {
-        let vec: Vec<(usize, A)> = Arbitrary::arbitrary(g);
-        vec.into_iter().collect()
-    }
-
-    fn shrink(&self) -> Box<Iterator<Item=TrieMap<A>>+'static> {
-        let vec: Vec<(usize, A)> = self.iter()
-                                      .map(|(a, b)| (a, b.clone()))
-                                      .collect();
-        Box::new(vec.shrink().map(|v| v.into_iter().collect::<TrieMap<A>>()))
-    }
-}
-
 impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
     fn arbitrary<G: Gen>(g: &mut G) -> HashMap<K, V> {
         let vec: Vec<(K, V)> = Arbitrary::arbitrary(g);
@@ -506,10 +488,6 @@ mod test {
     use std::hash::Hash;
     use super::Arbitrary;
 
-    #[cfg(feature = "collect_impls")]
-    use collect::TrieMap;
-
-    // Arbitrary testing. (Not much here. What else can I reasonably test?)
     #[test]
     fn arby_unit() {
         assert_eq!(arby::<()>(), ());
@@ -667,25 +645,6 @@ mod test {
             vec![vec![], vec![5], vec![3], vec![0,5], vec![2,5],
                  vec![3,0], vec![3,3], vec![3,4]]
         );
-    }
-
-    #[cfg(feature = "collect_impls")]
-    #[test]
-    fn triemaps() {
-        eq({let it: TrieMap<isize> = TrieMap::new(); it}, vec![]);
-
-        {
-            let mut map = TrieMap::new();
-            map.insert(1, 1);
-
-            let shrinks = vec![
-                {let mut m = TrieMap::new(); m.insert(1, 0); m},
-                {let mut m = TrieMap::new(); m.insert(0, 1); m},
-                TrieMap::new()
-            ];
-
-            eq(map, shrinks);
-        }
     }
 
     #[test]
