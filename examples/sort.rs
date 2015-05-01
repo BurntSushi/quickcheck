@@ -1,8 +1,6 @@
 // This is a buggy quick sort implementation, QuickCheck will find the bug for
 // you.
 
-#![feature(collections)]
-
 extern crate quickcheck;
 
 use quickcheck::quickcheck;
@@ -27,7 +25,7 @@ fn sort<T: Clone + Ord>(list: &[T]) -> Vec<T> {
     if list.is_empty() {
         vec![]
     } else {
-        sortk(&list[0], list.tail())
+        sortk(&list[0], &list[1..])
     }
 }
 

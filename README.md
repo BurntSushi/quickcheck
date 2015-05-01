@@ -281,23 +281,22 @@ implementation and see if we can spot the bug:
 ```rust
 fn sieve(n: usize) -> Vec<usize> {
     if n <= 1 {
-        return vec!()
+        return vec![];
     }
 
-    let mut marked: Vec<_> = (0..n+1).map(|_| false).collect();
+    let mut marked = vec![false; n+1];
     marked[0] = true;
     marked[1] = true;
     marked[2] = true;
     for p in 2..n {
-        for i in iter::range_step(2 * p, n, p) { // whoops!
+        for i in (2*p..n).filter(|&n| n % p == 0) {
             marked[i] = true;
         }
     }
-    let mut primes = vec!();
-    for (i, &m) in marked.iter().enumerate() {
-        if !m { primes.push(i) }
-    }
-    primes
+    marked.iter()
+          .enumerate()
+          .filter_map(|(i, &m)| if m { None } else { Some(i) })
+          .collect()
 }
 ```
 
@@ -320,7 +319,7 @@ prime. For that, we'll need an `is_prime` function:
 
 ```rust
 fn is_prime(n: usize) -> bool {
-    n != 0 && n != 1 && (2..).take_while(|i| i * i <= n).all(|i| n % i != 0)
+    n != 0 && n != 1 && (2..).take_while(|i| i*i <= n).all(|i| n % i != 0)
 }
 ```
 
@@ -331,7 +330,7 @@ Now we can write our QuickCheck property:
 
 ```rust
 fn prop_all_prime(n: usize) -> bool {
-    sieve(n).iter().all(|&i| is_prime(i))
+    sieve(n).into_iter().all(is_prime)
 }
 ```
 
@@ -339,7 +338,7 @@ And finally, we need to invoke `quickcheck` with our property:
 
 ```rust
 fn main() {
-    quickcheck(prop_all_prime as fn(uint) -> bool);
+    quickcheck(prop_all_prime as fn(usize) -> bool);
 }
 ```
 
@@ -362,37 +361,30 @@ prime. Since `4` is a multiple of `2`, its slot should be marked as `true` when
 `p = 2` on these lines:
 
 ```rust
-for i in iter::range_step(2 * p, n, p) {
+for i in (2*p..n).filter(|&n| n % p == 0) {
     marked[i] = true;
 }
 ```
 
-Ah! But does the `range_step` function include `n`? Its documentation says
+Ah! But does the `..` (range) operator include `n`? Nope! This particular
+operator is a half-open interval.
 
-> Return an iterator over the range [start, stop) by step. It handles overflow
-> by stopping.
-
-Shucks. The `range_step` function will never yield `4` when `n = 4`. We could
-use `n + 1`, but the `std::iter` crate also has a
-[`range_step_inclusive`](http://static.rust-lang.org/doc/master/std/iter/fn.range_step_inclusive.html)
-which seems clearer.
-
-Changing the call to `range_step_inclusive` results in `sieve` passing all
-tests for the `prop_all_prime` property.
+A `2*p..n` range will never yield `4` when `n = 4`. When we change this to
+`2*p..n+1`, all tests pass.
 
 In addition, if our bug happened to result in an index out-of-bounds error,
 then `quickcheck` can handle it just like any other failure—including
 shrinking on failures caused by runtime errors.
 
-But hold on... we're not done yet. Right now, our property tests that all the
-numbers returned by `sieve` are prime but it doesn't test if the list is complete.
-It does not ensure that all the primes between 0 and n are found.
+But hold on... we're not done yet. Right now, our property tests that all
+the numbers returned by `sieve` are prime but it doesn't test if the list is
+complete. It does not ensure that all the primes between `0` and `n` are found.
 
 Here's a property that is more comprehensive:
 
 ```rust
 fn prop_prime_iff_in_the_sieve(n: usize) -> bool {
-    (0..(n + 1)).filter(|&i| is_prime(i)).collect() == sieve(n)
+    sieve(n) == (0..(n + 1)).filter(|&i| is_prime(i)).collect::<Vec<_>>()
 }
 ```
 
@@ -403,8 +395,8 @@ Now, if we run it:
 
 ```rust
 fn main() {
-    quickcheck(prop_all_prime as fn(uint) -> bool);
-    quickcheck(prop_prime_iff_in_the_sieve as fn(uint) -> bool);
+    quickcheck(prop_all_prime as fn(usize) -> bool);
+    quickcheck(prop_prime_iff_in_the_sieve as fn(usize) -> bool);
 }
 ```
 
@@ -414,8 +406,9 @@ we see that it fails immediately for value n = 2.
 [quickcheck] TEST FAILED. Arguments: (2)
 ```
 
-If we inspect `sieve()` once again, we see that we mistakenly mark `2` as non-prime.
-Removing the line `marked[2] = true;` results in both properties passing.
+If we inspect `sieve()` once again, we see that we mistakenly mark `2` as
+non-prime. Removing the line `marked[2] = true;` results in both properties
+passing.
 
 ### What's not in this port of QuickCheck?
 
@@ -429,23 +422,3 @@ Therefore, such failures will not have a witness attached
 to them. (I'd like to fix this, but I don't know how.)
 * `Coarbitrary` does not exist in any form in this package. I think it's
 possible; I just haven't gotten around to it yet.
-* The output of `quickcheck` does not include the name of the function it's
-testing. I'm not sure if this is possible or not using reflection (and this is
-complicated by the fact that everything is generic anyway). If not, it might be
-worth providing something in the public API with the ability to name functions.
-However, this may be moot since using `#[test]` will show the name of the test
-function.
-
-Please let me know if I've missed anything else.
-
-
-### Laziness
-
-A key aspect for writing good shrinkers is a good lazy abstraction. For this,
-I chose iterators. My insistence on this point has resulted in the use of an
-existential type, which I think I'm willing to live with.
-
-Note though that the shrinkers for lists and integers are not lazy. Their
-algorithms are more complex, so it will take a bit more work to get them to
-use iterators like the rest of the shrinking strategies.
-

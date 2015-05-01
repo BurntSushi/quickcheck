@@ -1,5 +1,4 @@
 use std::cmp::Ord;
-use std::iter;
 use super::{QuickCheck, TestResult, quickcheck};
 
 #[test]
@@ -81,48 +80,44 @@ fn sort() {
     quickcheck(prop as fn(Vec<isize>) -> bool);
 }
 
+fn sieve(n: usize) -> Vec<usize> {
+    if n <= 1 {
+        return vec![];
+    }
+
+    let mut marked = vec![false; n+1];
+    marked[0] = true;
+    marked[1] = true;
+    marked[2] = true;
+    for p in 2..n {
+        for i in (2*p..n).filter(|&n| n % p == 0) {
+            marked[i] = true;
+        }
+    }
+    marked.iter()
+          .enumerate()
+          .filter_map(|(i, &m)| if m { None } else { Some(i) })
+          .collect()
+}
+
+fn is_prime(n: usize) -> bool {
+    n != 0 && n != 1 && (2..).take_while(|i| i*i <= n).all(|i| n % i != 0)
+}
+
 #[test]
 #[should_panic]
-fn sieve_of_eratosthenes() {
-    fn sieve(n: usize) -> Vec<usize> {
-        if n <= 1 {
-            return vec![];
-        }
-
-        let mut marked: Vec<_> = (0..n+1).map(|_| false).collect();
-        marked[0] = true;
-        marked[1] = true;
-        marked[2] = false;
-        for p in 2..n {
-            for i in (2*p..n).step_by(p) { // whoops!
-                marked[i] = true;
-            }
-        }
-        let mut primes = vec![];
-        for (i, &m) in marked.iter().enumerate() {
-            if !m { primes.push(i) }
-        }
-        primes
+fn sieve_not_prime() {
+    fn prop_all_prime(n: usize) -> bool {
+        sieve(n).into_iter().all(is_prime)
     }
+    quickcheck(prop_all_prime as fn(usize) -> bool);
+}
 
-    fn prop(n: usize) -> bool {
-        let primes = sieve(n);
-        primes.iter().all(|&i| is_prime(i))
+#[test]
+#[should_panic]
+fn sieve_not_all_primes() {
+    fn prop_prime_iff_in_the_sieve(n: usize) -> bool {
+        sieve(n) == (0..(n + 1)).filter(|&i| is_prime(i)).collect::<Vec<_>>()
     }
-    fn is_prime(n: usize) -> bool {
-        if n == 0 || n == 1 {
-            return false;
-        } else if n == 2 {
-            return true;
-        }
-
-        let max_possible = (n as f64).sqrt().ceil() as usize;
-        for i in iter::range_inclusive(2, max_possible) {
-            if n % i == 0 {
-                return false;
-            }
-        }
-        true
-    }
-    quickcheck(prop as fn(usize) -> bool);
+    quickcheck(prop_prime_iff_in_the_sieve as fn(usize) -> bool);
 }
