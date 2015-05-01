@@ -61,25 +61,26 @@ import the `quickcheck_macros` crate as a syntax extension:
 
 ```rust
 #![feature(plugin)]
-#![allow(dead_code)]
 #![plugin(quickcheck_macros)]
 
+#[cfg(test)]
 extern crate quickcheck;
 
-fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
-    let mut rev = vec!();
-    for x in xs {
-        rev.insert(0, x.clone())
-    }
-    rev
-}
+#[cfg(test)]
+mod tests {
+  fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
+      let mut rev = vec!();
+      for x in xs {
+          rev.insert(0, x.clone())
+      }
+      rev
+  }
 
-#[quickcheck]
-fn double_reversal_is_identity(xs: Vec<isize>) -> bool {
-    xs == reverse(&reverse(&xs))
+  #[quickcheck]
+  fn double_reversal_is_identity(xs: Vec<isize>) -> bool {
+      xs == reverse(&reverse(&xs))
+  }
 }
-
-fn main() {}
 ```
 
 
@@ -100,11 +101,11 @@ development dependency instead:
 quickcheck = "*"
 ```
 
-If you want to use the `#[quickcheck]` attribute, then depend on
-`quickcheck_macros` instead:
+If you want to use the `#[quickcheck]` attribute, then add `quickcheck_macros`:
 
 ```toml
 [dev-dependencies]
+quickcheck = "*"
 quickcheck_macros = "*"
 ```
 
