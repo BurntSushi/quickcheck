@@ -176,7 +176,7 @@ impl TestResult {
     /// Tests if a "procedure" fails when executed. The test passes only if
     /// `f` generates a task failure during its execution.
     pub fn must_fail<T, F>(f: F) -> TestResult
-            where T: Send, F: FnOnce() -> T + Send + 'static {
+            where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
         TestResult::from_bool(
             thread::Builder::new()
                             .spawn(move || { let _ = f(); })
@@ -232,7 +232,7 @@ impl TestResult {
 /// I'll hopefully add it. (As of now, it would be very difficult to
 /// add your own implementation outside of `quickcheck`, since the
 /// functions that do shrinking are not public.)
-pub trait Testable : Send {
+pub trait Testable : Send + 'static {
     fn result<G: Gen>(&self, &mut G) -> TestResult;
 }
 
@@ -255,34 +255,34 @@ impl<A> Testable for Result<A, String> where A: Testable {
     }
 }
 
-impl<T> Testable for fn() -> T where T: Testable + 'static {
+impl<T> Testable for fn() -> T where T: Testable {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, (), (), (), (), fn() -> T>(g, self)
     }
 }
 
-impl<A, T> Testable for fn(A) -> T where A: AShow, T: Testable + 'static {
+impl<A, T> Testable for fn(A) -> T where A: AShow, T: Testable {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, (), (), (), fn(A) -> T>(g, self)
     }
 }
 
 impl<A, B, T> Testable for fn(A, B) -> T
-        where A: AShow, B: AShow, T: Testable + 'static {
+        where A: AShow, B: AShow, T: Testable {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, B, (), (), fn(A, B) -> T>(g, self)
     }
 }
 
 impl<A, B, C, T> Testable for fn(A, B, C) -> T
-        where A: AShow, B: AShow, C: AShow, T: Testable + 'static {
+        where A: AShow, B: AShow, C: AShow, T: Testable {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, B, C, (), fn(A, B, C) -> T>(g, self)
     }
 }
 
 impl<A, B, C, D, T,> Testable for fn(A, B, C, D) -> T
-        where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
+        where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         shrink::<G, T, A, B, C, D, fn(A, B, C, D) -> T>(g, self)
     }
@@ -312,7 +312,7 @@ macro_rules! impl_fun_call {
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn() -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
+    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
     fn call<G>(&self, g: &mut G,
                _: Option<&A>, _: Option<&B>,
                _: Option<&C>, _: Option<&D>)
@@ -323,7 +323,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn() -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
+    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, _: Option<&B>,
                _: Option<&C>, _: Option<&D>)
@@ -333,7 +333,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A) -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
+    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, b: Option<&B>,
                _: Option<&C>, _: Option<&D>)
@@ -343,7 +343,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B) -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
+    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, b: Option<&B>,
                c: Option<&C>, _: Option<&D>)
@@ -353,7 +353,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C) -> T
 }
 
 impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C, D) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable + 'static {
+    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
     fn call<G>(&self, g: &mut G,
                a: Option<&A>, b: Option<&B>,
                c: Option<&C>, d: Option<&D>)
@@ -375,7 +375,7 @@ fn shrink<G, T, A, B, C, D, F>(g: &mut G, fun: &F) -> TestResult
 
 fn shrink_failure<G, T, A, B, C, D, F>
                  (g: &mut G,
-                  shrinker: Box<Iterator<Item=(A, B, C, D)>+'static>,
+                  shrinker: Box<Iterator<Item=(A, B, C, D)>>,
                   fun: &F)
                  -> Option<TestResult>
     where G: Gen, T: Testable, A: AShow, B: AShow, C: AShow, D: AShow,
