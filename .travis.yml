@@ -11,6 +11,6 @@ script:
   - cargo build --verbose
   - cargo test --verbose
   - if [ "$TEST_SUITE" = "suite_nightly" ]; then
-      cargo build --verbose --manifest-path quickcheck_macros/Cargo.toml
-      cargo test --verbose --manifest-path quickcheck_macros/Cargo.toml
+      cargo build --verbose --manifest-path quickcheck_macros/Cargo.toml;
+      cargo test --verbose --manifest-path quickcheck_macros/Cargo.toml;
     fi
