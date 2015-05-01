@@ -2,7 +2,6 @@ use rand;
 use std::fmt::Debug;
 use std::thread;
 use super::{Arbitrary, Gen, StdGen};
-use tester::trap::safe;
 use tester::Status::{Discard, Fail, Pass};
 
 /// The main QuickCheck type for setting configuration and running QuickCheck.
@@ -402,34 +401,16 @@ fn shrink_failure<G, T, A, B, C, D, F>
     None
 }
 
-#[cfg(quickfail)]
-mod trap {
-    pub fn safe<T: Send, F: FnOnce() -> T>(fun: F) -> Result<T, String> {
-        Ok(fun())
-    }
-}
-
-#[cfg(not(quickfail))]
-mod trap {
-    use std::borrow::ToOwned;
-    use std::sync::mpsc::channel;
-    use std::thread;
-
-    pub fn safe<T, F>(fun: F) -> Result<T, String>
-            where T: Send + 'static, F: FnOnce() -> T + Send + 'static {
-        let t = thread::Builder::new().name("safefn".to_owned());
-        let (send_ret, recv_ret) = channel();
-        let run = move || send_ret.send(fun()).unwrap();
-        match t.spawn(run).unwrap().join() {
-            Ok(()) => Ok(recv_ret.recv().unwrap()),
-            Err(any_err) => {
-                match any_err.downcast_ref::<String>() {
-                    Some(ref s) => Err(s.trim().to_owned()),
-                    None => Err("UNABLE TO SHOW RESULT OF PANIC.".to_owned()),
-                }
-            }
+// TODO(burntsushi): Use `std::thread::catch_panic` once it stabilizes.
+fn safe<T, F>(fun: F) -> Result<T, String>
+        where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
+    let t = ::std::thread::Builder::new().name("safe".into());
+    t.spawn(fun).unwrap().join().map_err(|any_err| {
+        match any_err.downcast_ref::<&Debug>() {
+            Some(ref s) => format!("{:?}", s),
+            None => "UNABLE TO SHOW RESULT OF PANIC.".into(),
         }
-    }
+    })
 }
 
 /// Convenient aliases.

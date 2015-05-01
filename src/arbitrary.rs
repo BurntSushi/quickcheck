@@ -1,7 +1,6 @@
 use std::char;
 use std::collections::hash_map::HashMap;
 use std::hash::Hash;
-use std::mem;
 
 use rand::Rng;
 
@@ -48,32 +47,14 @@ impl<R: Rng> Gen for StdGen<R> {
     fn size(&self) -> usize { self.size }
 }
 
-struct EmptyShrinker<A> {
-    _phantom: ::std::marker::PhantomData<A>,
-}
-
-impl<A> Iterator for EmptyShrinker<A> {
-    type Item = A;
-    fn next(&mut self) -> Option<A> { None }
-}
-
 /// Creates a shrinker with zero elements.
-pub fn empty_shrinker<A: 'static>() -> Box<Iterator<Item=A>+'static> {
-    Box::new(EmptyShrinker { _phantom: ::std::marker::PhantomData })
-}
-
-struct SingleShrinker<A> {
-    value: Option<A>
-}
-
-impl<A> Iterator for SingleShrinker<A> {
-    type Item = A;
-    fn next(&mut self) -> Option<A> { mem::replace(&mut self.value, None) }
+pub fn empty_shrinker<A: 'static>() -> Box<Iterator<Item=A>> {
+    Box::new(None.into_iter())
 }
 
 /// Creates a shrinker with a single element.
-pub fn single_shrinker<A: 'static>(value: A) -> Box<Iterator<Item=A>+'static> {
-    Box::new(SingleShrinker { value: Some(value) })
+pub fn single_shrinker<A: 'static>(value: A) -> Box<Iterator<Item=A>> {
+    Box::new(Some(value).into_iter())
 }
 
 /// `Arbitrary` describes types whose values can be randomly generated and
@@ -85,11 +66,13 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<Iterator<Item=A>+'static> {
 /// As of now, all types that implement `Arbitrary` must also implement
 /// `Clone`. (I'm not sure if this is a permanent restriction.)
 ///
-/// They must also be sendable since every test is run inside its own task.
-/// (This permits failures to include task failures.)
+/// They must also be sendable and static since every test is run in its own
+/// thread using `thread::Builder::spawn`, which requires the `Send + 'static`
+/// bounds.
 pub trait Arbitrary : Clone + Send + 'static {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
-    fn shrink(&self) -> Box<Iterator<Item=Self>+'static> {
+
+    fn shrink(&self) -> Box<Iterator<Item=Self>> {
         empty_shrinker()
     }
 }
@@ -100,7 +83,8 @@ impl Arbitrary for () {
 
 impl Arbitrary for bool {
     fn arbitrary<G: Gen>(g: &mut G) -> bool { g.gen() }
-    fn shrink(&self) -> Box<Iterator<Item=bool>+'static> {
+
+    fn shrink(&self) -> Box<Iterator<Item=bool>> {
         match *self {
             true => single_shrinker(false),
             false => empty_shrinker(),
@@ -117,7 +101,7 @@ impl<A: Arbitrary> Arbitrary for Option<A> {
         }
     }
 
-    fn shrink(&self)  -> Box<Iterator<Item=Option<A>>+'static> {
+    fn shrink(&self)  -> Box<Iterator<Item=Option<A>>> {
         match *self {
             None => {
                 empty_shrinker()
@@ -139,7 +123,7 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=Result<A, B>>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=Result<A, B>>> {
         match *self {
             Ok(ref x) => {
                 let xs = x.shrink();
@@ -171,7 +155,7 @@ macro_rules! impl_arb_for_tuple {
             }
 
             fn shrink(&self)
-                     -> Box<Iterator<Item=($type_a, $($type_n),*)> + 'static> {
+                     -> Box<Iterator<Item=($type_a, $($type_n),*)>> {
                 let (ref $var_a, $(ref $var_n),*) = *self;
                 let sa = $var_a.shrink().scan(
                     ($($var_n.clone(),)*),
@@ -213,7 +197,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
         (0..size).map(|_| Arbitrary::arbitrary(g)).collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=Vec<A>>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=Vec<A>>> {
         VecShrinker::new(self.clone())
     }
 }
@@ -309,7 +293,7 @@ impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=HashMap<K, V>>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=HashMap<K, V>>> {
         let vec: Vec<(K, V)> = self.clone().into_iter().collect();
         Box::new(vec.shrink().map(|v| v.into_iter().collect::<HashMap<K, V>>()))
     }
@@ -321,7 +305,7 @@ impl Arbitrary for String {
         g.gen_ascii_chars().take(size).collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=String>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=String>> {
         // Shrink a string by shrinking a vector of its characters.
         let chars: Vec<char> = self.chars().collect();
         Box::new(chars.shrink().map(|x| x.into_iter().collect::<String>()))
@@ -331,7 +315,7 @@ impl Arbitrary for String {
 impl Arbitrary for char {
     fn arbitrary<G: Gen>(g: &mut G) -> char { g.gen() }
 
-    fn shrink(&self) -> Box<Iterator<Item=char>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=char>> {
         Box::new((*self as u32).shrink().filter_map(char::from_u32))
     }
 }
@@ -345,7 +329,7 @@ macro_rules! unsigned_shrinker {
             }
 
             impl UnsignedShrinker {
-                pub fn new(x: $ty) -> Box<Iterator<Item=$ty>+'static> {
+                pub fn new(x: $ty) -> Box<Iterator<Item=$ty>> {
                     if x == 0 {
                         super::empty_shrinker()
                     } else {
@@ -383,7 +367,7 @@ macro_rules! unsigned_arbitrary {
                     #![allow(trivial_numeric_casts)]
                     let s = g.size(); g.gen_range(0, s as $ty)
                 }
-                fn shrink(&self) -> Box<Iterator<Item=$ty>+'static> {
+                fn shrink(&self) -> Box<Iterator<Item=$ty>> {
                     unsigned_shrinker!($ty);
                     shrinker::UnsignedShrinker::new(*self)
                 }
@@ -405,7 +389,7 @@ macro_rules! signed_shrinker {
             }
 
             impl SignedShrinker {
-                pub fn new(x: $ty) -> Box<Iterator<Item=$ty>+'static> {
+                pub fn new(x: $ty) -> Box<Iterator<Item=$ty>> {
                     if x == 0 {
                         super::empty_shrinker()
                     } else {
@@ -445,7 +429,7 @@ macro_rules! signed_arbitrary {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
                     let s = g.size(); g.gen_range(-(s as $ty), s as $ty)
                 }
-                fn shrink(&self) -> Box<Iterator<Item=$ty>+'static> {
+                fn shrink(&self) -> Box<Iterator<Item=$ty>> {
                     signed_shrinker!($ty);
                     shrinker::SignedShrinker::new(*self)
                 }
@@ -462,7 +446,7 @@ impl Arbitrary for f32 {
     fn arbitrary<G: Gen>(g: &mut G) -> f32 {
         let s = g.size(); g.gen_range(-(s as f32), s as f32)
     }
-    fn shrink(&self) -> Box<Iterator<Item=f32>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=f32>> {
         signed_shrinker!(i32);
         let it = shrinker::SignedShrinker::new(*self as i32);
         Box::new(it.map(|x| x as f32))
@@ -473,7 +457,7 @@ impl Arbitrary for f64 {
     fn arbitrary<G: Gen>(g: &mut G) -> f64 {
         let s = g.size(); g.gen_range(-(s as f64), s as f64)
     }
-    fn shrink(&self) -> Box<Iterator<Item=f64>+'static> {
+    fn shrink(&self) -> Box<Iterator<Item=f64>> {
         signed_shrinker!(i64);
         let it = shrinker::SignedShrinker::new(*self as i64);
         Box::new(it.map(|x| x as f64))
