@@ -170,9 +170,9 @@ impl<A: Arbitrary + Debug, B: Testable> Testable for fn(A) -> B {
 
 Which says that a function satisfies `Testable` if and only if it has a single
 parameter type (whose values can be randomly generated and shrunk) and returns
-any type (that also satisfies `Testable`). So a function with type
-`fn(uint) -> bool` satisfies `Testable` since `uint` satisfies `Arbitrary` and
-`bool` satisfies `Testable`.
+any type (that also satisfies `Testable`). So a function with type `fn(usize)
+-> bool` satisfies `Testable` since `usize` satisfies `Arbitrary` and `bool`
+satisfies `Testable`.
 
 So to discard a test, we need to return something other than `bool`. What if we
 just returned a `TestResult` directly? That should work, but we'll need to
