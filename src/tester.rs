@@ -72,11 +72,10 @@ impl<G: Gen> QuickCheck<G> {
             if ntests >= self.tests {
                 break
             }
-            let r = f.result(&mut self.gen);
-            match r.status {
-                Pass => ntests += 1,
-                Discard => continue,
-                Fail => return Err(r),
+            match f.result(&mut self.gen) {
+                TestResult { status: Pass, .. } => ntests += 1,
+                TestResult { status: Discard, .. } => continue,
+                r @ TestResult { status: Fail, .. } => return Err(r),
             }
         }
         Ok(ntests)
@@ -128,7 +127,7 @@ pub fn quickcheck<A: Testable>(f: A) { QuickCheck::new().quickcheck(f) }
 pub struct TestResult {
     status: Status,
     arguments: Vec<String>,
-    err: String,
+    err: Option<String>,
 }
 
 /// Whether a test has passed, failed or been discarded.
@@ -142,11 +141,10 @@ impl TestResult {
     /// Produces a test result that indicates the current test has failed.
     pub fn failed() -> TestResult { TestResult::from_bool(false) }
 
-    /// Produces a test result that indicates failure from a runtime
-    /// error.
-    pub fn error(msg: &str) -> TestResult {
+    /// Produces a test result that indicates failure from a runtime error.
+    pub fn error<S: Into<String>>(msg: S) -> TestResult {
         let mut r = TestResult::from_bool(false);
-        r.err = msg.to_string();
+        r.err = Some(msg.into());
         r
     }
 
@@ -158,7 +156,7 @@ impl TestResult {
         TestResult {
             status: Discard,
             arguments: vec![],
-            err: "".to_string(),
+            err: None,
         }
     }
 
@@ -169,7 +167,7 @@ impl TestResult {
         TestResult {
             status: if b { Pass } else { Fail },
             arguments: vec![],
-            err: "".to_string(),
+            err: None,
         }
     }
 
@@ -197,19 +195,20 @@ impl TestResult {
     /// Returns `true` if and only if this test result describes a failing
     /// test as a result of a run time error.
     pub fn is_error(&self) -> bool {
-        self.is_failure() && self.err.len() > 0
+        self.is_failure() && self.err.is_some()
     }
 
     fn failed_msg(&self) -> String {
-        if self.err.len() == 0 {
-            format!(
-                "[quickcheck] TEST FAILED. Arguments: ({})",
-                self.arguments.connect(", "))
-        } else {
-            format!(
-                "[quickcheck] TEST FAILED (runtime error). \
-                Arguments: ({})\nError: {}",
-                self.arguments.connect(", "), self.err)
+        match self.err {
+            None => {
+                format!("[quickcheck] TEST FAILED. Arguments: ({})",
+                        self.arguments.connect(", "))
+            }
+            Some(ref err) => {
+                format!("[quickcheck] TEST FAILED (runtime error). \
+                         Arguments: ({})\nError: {}",
+                        self.arguments.connect(", "), err)
+            }
         }
     }
 }
@@ -365,7 +364,7 @@ impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C, D) -> T
 fn shrink<G, T, A, B, C, D, F>(g: &mut G, fun: &F) -> TestResult
     where G: Gen, T: Testable, A: AShow, B: AShow, C: AShow, D: AShow,
           F: Fun<A, B, C, D, T> {
-    let (a, b, c, d): (A, B, C, D) = arby(g);
+    let (a, b, c, d): (A, B, C, D) = Arbitrary::arbitrary(g);
     let r = fun.call(g, Some(&a), Some(&b), Some(&c), Some(&d));
     match r.status {
         Pass|Discard => r,
@@ -416,4 +415,3 @@ fn safe<T, F>(fun: F) -> Result<T, String>
 /// Convenient aliases.
 trait AShow : Arbitrary + Debug {}
 impl<A: Arbitrary + Debug> AShow for A {}
-fn arby<A: Arbitrary, G: Gen>(g: &mut G) -> A { Arbitrary::arbitrary(g) }
