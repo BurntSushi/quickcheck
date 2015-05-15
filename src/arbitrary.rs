@@ -103,9 +103,7 @@ impl<A: Arbitrary> Arbitrary for Option<A> {
 
     fn shrink(&self)  -> Box<Iterator<Item=Option<A>>> {
         match *self {
-            None => {
-                empty_shrinker()
-            }
+            None => empty_shrinker(),
             Some(ref x) => {
                 let chain = single_shrinker(None).chain(x.shrink().map(Some));
                 Box::new(chain)
