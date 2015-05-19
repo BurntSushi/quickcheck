@@ -121,3 +121,15 @@ fn sieve_not_all_primes() {
     }
     quickcheck(prop_prime_iff_in_the_sieve as fn(usize) -> bool);
 }
+
+#[test]
+fn testable_result() {
+    fn result() -> Result<bool, String> { Ok(true) }
+    quickcheck(result as fn() -> Result<bool, String>);
+}
+
+#[test]
+#[should_panic]
+fn testable_result_err() {
+    quickcheck(Err::<bool, i32> as fn(i32) -> Result<bool, i32>);
+}
