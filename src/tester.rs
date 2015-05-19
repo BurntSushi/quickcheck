@@ -245,11 +245,11 @@ impl Testable for TestResult {
     fn result<G: Gen>(&self, _: &mut G) -> TestResult { self.clone() }
 }
 
-impl<A> Testable for Result<A, String> where A: Testable {
+impl<A, E> Testable for Result<A, E> where A: Testable, E: Debug + Send + 'static {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         match *self {
             Ok(ref r) => r.result(g),
-            Err(ref err) => TestResult::error(&**err),
+            Err(ref err) => TestResult::error(format!("{:?}", err)),
         }
     }
 }
