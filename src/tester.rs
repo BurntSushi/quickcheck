@@ -241,6 +241,12 @@ impl Testable for bool {
     }
 }
 
+impl Testable for () {
+    fn result<G: Gen>(&self, _: &mut G) -> TestResult {
+        TestResult::passed()
+    }
+}
+
 impl Testable for TestResult {
     fn result<G: Gen>(&self, _: &mut G) -> TestResult { self.clone() }
 }
