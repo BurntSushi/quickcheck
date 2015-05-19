@@ -133,3 +133,15 @@ fn testable_result() {
 fn testable_result_err() {
     quickcheck(Err::<bool, i32> as fn(i32) -> Result<bool, i32>);
 }
+
+#[test]
+fn testable_unit() {
+    fn do_nothing() {}
+    quickcheck(do_nothing as fn());
+}
+
+#[test]
+fn testable_unit_panic() {
+    fn panic() { panic!() }
+    assert!(QuickCheck::new().quicktest(panic as fn()).is_err());
+}
