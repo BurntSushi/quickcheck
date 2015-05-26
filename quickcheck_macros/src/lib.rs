@@ -16,7 +16,7 @@ use syntax::ast::Ty_::TyBareFn;
 use syntax::ast_util;
 use syntax::codemap;
 use syntax::parse::token;
-use syntax::ext::base::{ExtCtxt, Modifier};
+use syntax::ext::base::{ExtCtxt, MultiModifier, Annotatable};
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
 
@@ -27,7 +27,7 @@ use rustc::plugin::Registry;
 #[doc(hidden)]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(token::intern("quickcheck"),
-                                  Modifier(Box::new(expand_meta_quickcheck)));
+                                  MultiModifier(Box::new(expand_meta_quickcheck)));
 }
 
 /// Expands the `#[quickcheck]` attribute.
@@ -52,7 +52,8 @@ pub fn plugin_registrar(reg: &mut Registry) {
 fn expand_meta_quickcheck(cx: &mut ExtCtxt,
                           span: codemap::Span,
                           _: &ast::MetaItem,
-                          item: P<ast::Item>) -> P<ast::Item> {
+                          annot_item: Annotatable) -> Annotatable {
+    let item = annot_item.expect_item();
     match item.node {
         ast::ItemFn(ref decl, unsafety, _constness, abi, _, _) => {
             let prop_ident = cx.expr_ident(span, item.ident);
@@ -74,13 +75,13 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
                 span, "#[quickcheck] only supported on statics and functions");
         }
     }
-    item
+    Annotatable::Item(item)
 }
 
 fn wrap_item(cx: &mut ExtCtxt,
              span: codemap::Span,
              item: &ast::Item,
-             inner_ident: P<ast::Expr>) -> P<ast::Item> {
+             inner_ident: P<ast::Expr>) -> Annotatable {
     // Copy original function without attributes
     let prop = P(ast::Item {attrs: Vec::new(), ..item.clone()});
     // ::quickcheck::quickcheck
@@ -101,7 +102,7 @@ fn wrap_item(cx: &mut ExtCtxt,
     attrs.push(cx.attribute(
         span, cx.meta_word(span, token::intern_and_get_ident("test"))));
     // Attach the attributes to the outer function
-    P(ast::Item {attrs: attrs, ..(*test).clone()})
+    Annotatable::Item(P(ast::Item {attrs: attrs, ..(*test).clone()}))
 }
 
 fn item_fn(cx: &mut ExtCtxt, span: codemap::Span,
