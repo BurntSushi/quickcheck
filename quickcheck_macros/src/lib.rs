@@ -54,7 +54,7 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
                           _: &ast::MetaItem,
                           item: P<ast::Item>) -> P<ast::Item> {
     match item.node {
-        ast::ItemFn(ref decl, unsafety, abi, _, _) => {
+        ast::ItemFn(ref decl, unsafety, _constness, abi, _, _) => {
             let prop_ident = cx.expr_ident(span, item.ident);
             let prop_ty = cx.ty(span, TyBareFn(P(ast::BareFnTy {
                 unsafety: unsafety,
@@ -113,6 +113,7 @@ fn item_fn(cx: &mut ExtCtxt, span: codemap::Span,
     });
     let item = ast::ItemFn(decl,
                            ast::Unsafety::Normal,
+                           ast::Constness::NotConst,
                            abi::Rust,
                            ast_util::empty_generics(),
                            body);
