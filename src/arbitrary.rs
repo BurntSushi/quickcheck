@@ -300,7 +300,11 @@ impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
 impl Arbitrary for String {
     fn arbitrary<G: Gen>(g: &mut G) -> String {
         let size = { let s = g.size(); g.gen_range(0, s) };
-        g.gen_ascii_chars().take(size).collect()
+        let mut s = String::with_capacity(size);
+        for _ in 0..size {
+            s.push(char::arbitrary(g));
+        }
+        s
     }
 
     fn shrink(&self) -> Box<Iterator<Item=String>> {
