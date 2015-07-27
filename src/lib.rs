@@ -4,8 +4,7 @@
 //! For detailed examples, please see the
 //! [README](https://github.com/BurntSushi/quickcheck).
 
-#![crate_name = "quickcheck"]
-#![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
+#![allow(deprecated)] // for connect -> join in 1.3
 
 #[macro_use] extern crate log;
 extern crate rand;

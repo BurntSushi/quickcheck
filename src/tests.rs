@@ -1,5 +1,6 @@
 use std::cmp::Ord;
-use super::{QuickCheck, TestResult, quickcheck};
+use rand;
+use super::{QuickCheck, StdGen, TestResult, quickcheck};
 
 #[test]
 fn prop_oob() {
@@ -144,4 +145,20 @@ fn testable_unit() {
 fn testable_unit_panic() {
     fn panic() { panic!() }
     assert!(QuickCheck::new().quicktest(panic as fn()).is_err());
+}
+
+#[test]
+fn regression_issue_83() {
+    fn prop(_: u8) -> bool { true }
+    QuickCheck::new()
+        .gen(StdGen::new(rand::thread_rng(), 1024))
+        .quickcheck(prop as fn(u8) -> bool)
+}
+
+#[test]
+fn regression_issue_83_signed() {
+    fn prop(_: i8) -> bool { true }
+    QuickCheck::new()
+        .gen(StdGen::new(rand::thread_rng(), 1024))
+        .quickcheck(prop as fn(i8) -> bool)
 }

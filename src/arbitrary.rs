@@ -367,7 +367,11 @@ macro_rules! unsigned_arbitrary {
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
                     #![allow(trivial_numeric_casts)]
-                    let s = g.size(); g.gen_range(0, s as $ty)
+                    let mut s = g.size() as $ty;
+                    if s == 0 {
+                        s = s + 1;
+                    }
+                    g.gen_range(0, s)
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>> {
                     unsigned_shrinker!($ty);
@@ -429,7 +433,8 @@ macro_rules! signed_arbitrary {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    let s = g.size(); g.gen_range(-(s as $ty), s as $ty)
+                    let s = g.size() as $ty;
+                    g.gen_range(-s, if s == 0 { 1 } else { s })
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>> {
                     signed_shrinker!($ty);
