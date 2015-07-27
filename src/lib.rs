@@ -13,6 +13,7 @@ pub use arbitrary::{
     Arbitrary, Gen, StdGen,
     empty_shrinker, single_shrinker,
 };
+pub use rand::Rng;
 pub use tester::{QuickCheck, Testable, TestResult, quickcheck};
 
 mod arbitrary;
