@@ -101,12 +101,18 @@ development dependency instead:
 quickcheck = "*"
 ```
 
-If you want to use the `#[quickcheck]` attribute, then add `quickcheck_macros`:
+If you want to use the `#[quickcheck]` attribute, then add `quickcheck_macros`
 
 ```toml
 [dev-dependencies]
 quickcheck = "*"
 quickcheck_macros = "*"
+```
+
+and only enable the `quickcheck_macros` plugin for the test build
+```rust
+#![cfg_attr(test, feature(plugin))]
+#![cfg_attr(test, plugin(quickcheck_macros))]
 ```
 
 Note that the `#[quickcheck]` macro will not work when Rust 1.0 stable is
