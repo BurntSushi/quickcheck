@@ -14,5 +14,5 @@ license = "Unlicense/MIT"
 name = "quickcheck"
 
 [dependencies]
-log = "*"
-rand = "*"
+log = "0.3"
+rand = "0.3"

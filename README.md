@@ -90,7 +90,7 @@ mod tests {
 
 ```toml
 [dependencies]
-quickcheck = "*"
+quickcheck = "0.2"
 ```
 
 If you're only using `quickcheck` in your test code, then you can add it as a
@@ -98,15 +98,15 @@ development dependency instead:
 
 ```toml
 [dev-dependencies]
-quickcheck = "*"
+quickcheck = "0.2"
 ```
 
 If you want to use the `#[quickcheck]` attribute, then add `quickcheck_macros`
 
 ```toml
 [dev-dependencies]
-quickcheck = "*"
-quickcheck_macros = "*"
+quickcheck = "0.2"
+quickcheck_macros = "0.2"
 ```
 
 and only enable the `quickcheck_macros` plugin for the test build
