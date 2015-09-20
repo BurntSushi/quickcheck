@@ -1,5 +1,13 @@
 use std::char;
-use std::collections::hash_map::HashMap;
+use std::collections::{
+    BTreeMap,
+    BTreeSet,
+    BinaryHeap,
+    HashMap,
+    HashSet,
+    LinkedList,
+    VecDeque,
+};
 use std::hash::Hash;
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 
@@ -286,6 +294,18 @@ impl <A> Iterator for VecShrinker<A>
     }
 }
 
+impl<K: Arbitrary + Ord, V: Arbitrary> Arbitrary for BTreeMap<K, V> {
+    fn arbitrary<G: Gen>(g: &mut G) -> BTreeMap<K, V> {
+        let vec: Vec<(K, V)> = Arbitrary::arbitrary(g);
+        vec.into_iter().collect()
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=BTreeMap<K, V>>> {
+        let vec: Vec<(K, V)> = self.clone().into_iter().collect();
+        Box::new(vec.shrink().map(|v| v.into_iter().collect::<BTreeMap<K, V>>()))
+    }
+}
+
 impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
     fn arbitrary<G: Gen>(g: &mut G) -> HashMap<K, V> {
         let vec: Vec<(K, V)> = Arbitrary::arbitrary(g);
@@ -295,6 +315,66 @@ impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
     fn shrink(&self) -> Box<Iterator<Item=HashMap<K, V>>> {
         let vec: Vec<(K, V)> = self.clone().into_iter().collect();
         Box::new(vec.shrink().map(|v| v.into_iter().collect::<HashMap<K, V>>()))
+    }
+}
+
+impl<T: Arbitrary + Ord> Arbitrary for BTreeSet<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> BTreeSet<T> {
+        let vec: Vec<T> = Arbitrary::arbitrary(g);
+        vec.into_iter().collect()
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=BTreeSet<T>>> {
+        let vec: Vec<T> = self.clone().into_iter().collect();
+        Box::new(vec.shrink().map(|v| v.into_iter().collect::<BTreeSet<T>>()))
+    }
+}
+
+impl<T: Arbitrary + Ord> Arbitrary for BinaryHeap<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> BinaryHeap<T> {
+        let vec: Vec<T> = Arbitrary::arbitrary(g);
+        vec.into_iter().collect()
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=BinaryHeap<T>>> {
+        let vec: Vec<T> = self.clone().into_iter().collect();
+        Box::new(vec.shrink().map(|v| v.into_iter().collect::<BinaryHeap<T>>()))
+    }
+}
+
+impl<T: Arbitrary + Eq + Hash> Arbitrary for HashSet<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> HashSet<T> {
+        let vec: Vec<T> = Arbitrary::arbitrary(g);
+        vec.into_iter().collect()
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=HashSet<T>>> {
+        let vec: Vec<T> = self.clone().into_iter().collect();
+        Box::new(vec.shrink().map(|v| v.into_iter().collect::<HashSet<T>>()))
+    }
+}
+
+impl<T: Arbitrary> Arbitrary for LinkedList<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> LinkedList<T> {
+        let vec: Vec<T> = Arbitrary::arbitrary(g);
+        vec.into_iter().collect()
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=LinkedList<T>>> {
+        let vec: Vec<T> = self.clone().into_iter().collect();
+        Box::new(vec.shrink().map(|v| v.into_iter().collect::<LinkedList<T>>()))
+    }
+}
+
+impl<T: Arbitrary> Arbitrary for VecDeque<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> VecDeque<T> {
+        let vec: Vec<T> = Arbitrary::arbitrary(g);
+        vec.into_iter().collect()
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=VecDeque<T>>> {
+        let vec: Vec<T> = self.clone().into_iter().collect();
+        Box::new(vec.shrink().map(|v| v.into_iter().collect::<VecDeque<T>>()))
     }
 }
 
@@ -506,7 +586,15 @@ impl Arbitrary for RangeFull {
 #[cfg(test)]
 mod test {
     use rand;
-    use std::collections::{HashMap, HashSet};
+    use std::collections::{
+        BTreeMap,
+        BTreeSet,
+        BinaryHeap,
+        HashMap,
+        HashSet,
+        LinkedList,
+        VecDeque,
+    };
     use std::fmt::Debug;
     use std::hash::Hash;
     use super::Arbitrary;
@@ -670,21 +758,73 @@ mod test {
         );
     }
 
+    macro_rules! map_tests {
+        ($name:ident, $ctor:expr) => {
+            #[test]
+            fn $name() {
+                ordered_eq($ctor, vec![]);
+
+                {
+                    let mut map = $ctor;
+                    map.insert(1usize, 1isize);
+
+                    let shrinks = vec![
+                        $ctor,
+                        {let mut m = $ctor; m.insert(0, 1); m},
+                        {let mut m = $ctor; m.insert(1, 0); m},
+                    ];
+
+                    ordered_eq(map, shrinks);
+                }
+            }
+        }
+    }
+
+    map_tests!(btreemap, BTreeMap::<usize, isize>::new());
+    map_tests!(hashmap, HashMap::<usize, isize>::new());
+
+    macro_rules! list_tests {
+        ($name:ident, $ctor:expr, $push:ident) => {
+            #[test]
+            fn $name() {
+                ordered_eq($ctor, vec![]);
+
+                {
+                    let mut list = $ctor;
+                    list.$push(2usize);
+
+                    let shrinks = vec![
+                        $ctor,
+                        {let mut m = $ctor; m.$push(0); m},
+                        {let mut m = $ctor; m.$push(1); m},
+                    ];
+
+                    ordered_eq(list, shrinks);
+                }
+            }
+        }
+    }
+
+    list_tests!(btreesets, BTreeSet::<usize>::new(), insert);
+    list_tests!(hashsets, HashSet::<usize>::new(), insert);
+    list_tests!(linkedlists, LinkedList::<usize>::new(), push_back);
+    list_tests!(vecdeques, VecDeque::<usize>::new(), push_back);
+
     #[test]
-    fn hashmaps() {
-        ordered_eq({let it: HashMap<usize, isize> = HashMap::new(); it}, vec![]);
+    fn binaryheaps() {
+        ordered_eq(BinaryHeap::<usize>::new().into_iter().collect::<Vec<_>>(), vec![]);
 
         {
-            let mut map = HashMap::new();
-            map.insert(1usize, 1isize);
+            let mut heap = BinaryHeap::<usize>::new();
+            heap.push(2usize);
 
             let shrinks = vec![
-                HashMap::new(),
-                {let mut m = HashMap::new(); m.insert(0, 1); m},
-                {let mut m = HashMap::new(); m.insert(1, 0); m},
+                vec![],
+                vec![0],
+                vec![1],
             ];
 
-            ordered_eq(map, shrinks);
+            ordered_eq(heap.into_iter().collect::<Vec<_>>(), shrinks);
         }
     }
 
