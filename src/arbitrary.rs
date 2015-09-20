@@ -1,6 +1,7 @@
 use std::char;
 use std::collections::hash_map::HashMap;
 use std::hash::Hash;
+use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 
 use rand::Rng;
 
@@ -471,6 +472,37 @@ impl Arbitrary for f64 {
     }
 }
 
+impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for Range<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> Range<T> {
+        Arbitrary::arbitrary(g) .. Arbitrary::arbitrary(g)
+    }
+    fn shrink(&self) -> Box<Iterator<Item=Range<T>>> {
+        Box::new((self.start.clone(), self.end.clone()).shrink().map(|(s, e)| s .. e))
+    }
+}
+
+impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeFrom<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> RangeFrom<T> {
+        Arbitrary::arbitrary(g) ..
+    }
+    fn shrink(&self) -> Box<Iterator<Item=RangeFrom<T>>> {
+        Box::new(self.start.clone().shrink().map(|start| start ..))
+    }
+}
+
+impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeTo<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> RangeTo<T> {
+        .. Arbitrary::arbitrary(g)
+    }
+    fn shrink(&self) -> Box<Iterator<Item=RangeTo<T>>> {
+        Box::new(self.end.clone().shrink().map(|end| ..end))
+    }
+}
+
+impl Arbitrary for RangeFull {
+    fn arbitrary<G: Gen>(_: &mut G) -> RangeFull { .. }
+}
+
 #[cfg(test)]
 mod test {
     use rand;
@@ -676,5 +708,16 @@ mod test {
     fn ordered_eq<A: Arbitrary + Eq + Debug>(s: A, v: Vec<A>) {
         let (left, right) = (s.shrink().collect::<Vec<A>>(), v);
         assert_eq!(left, right);
+    }
+
+    #[test]
+    fn ranges() {
+        ordered_eq(0..0, vec![]);
+        ordered_eq(1..1, vec![0..1, 1..0]);
+        ordered_eq(3..5, vec![0..5, 2..5, 3..0, 3..3, 3..4]);
+        ordered_eq(5..3, vec![0..3, 3..3, 4..3, 5..0, 5..2]);
+        ordered_eq(3.., vec![0.., 2..]);
+        ordered_eq(..3, vec![..0, ..2]);
+        ordered_eq(.., vec![]);
     }
 }
