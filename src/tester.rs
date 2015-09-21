@@ -108,6 +108,9 @@ impl<G: Gen> QuickCheck<G> {
     /// }
     /// ```
     pub fn quickcheck<A>(&mut self, f: A) where A: Testable {
+        // Ignore log init failures, implying it has already been done.
+        let _ = ::env_logger::init();
+
         match self.quicktest(f) {
             Ok(ntests) => info!("(Passed {} QuickCheck tests.)", ntests),
             Err(result) => panic!(result.failed_msg()),

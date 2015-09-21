@@ -6,6 +6,7 @@
 
 #![allow(deprecated)] // for connect -> join in 1.3
 
+extern crate env_logger;
 #[macro_use] extern crate log;
 extern crate rand;
 
