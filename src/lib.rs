@@ -4,7 +4,6 @@
 //! For detailed examples, please see the
 //! [README](https://github.com/BurntSushi/quickcheck).
 
-#![feature(slice_bytes)]
 #![allow(deprecated)] // for connect -> join in 1.3
 
 extern crate env_logger;

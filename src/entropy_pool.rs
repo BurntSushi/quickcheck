@@ -1,6 +1,5 @@
 extern crate rand;
 
-use std::slice::bytes::copy_memory;
 use std::iter;
 use std::mem;
 use std::ptr;
@@ -50,7 +49,7 @@ impl<R: Rng> Rng for EntropyPool<R> {
         self.i += width;
         let mut result = 0;
         unsafe {
-            ptr::copy_nonoverlapping(ptr as *const u8,
+            ptr::copy_nonoverlapping(ptr,
                                      &mut result as *mut u32 as *mut u8,
                                      width);
         }
@@ -65,7 +64,7 @@ impl<R: Rng> Rng for EntropyPool<R> {
         self.i += width;
         let mut result = 0;
         unsafe {
-            ptr::copy_nonoverlapping(ptr as *const u8,
+            ptr::copy_nonoverlapping(ptr,
                                      &mut result as *mut u64 as *mut u8,
                                      width);
         }
@@ -77,7 +76,13 @@ impl<R: Rng> Rng for EntropyPool<R> {
         let i = self.i;
         let l = dest.len();
         self.reserve(l);
-        copy_memory(&self.v[i..i + l], dest);
-        self.i += dest.len();
+        let src_ptr = self.v[i..].as_ptr();
+        let dest_ptr = dest.as_mut_ptr();
+        unsafe {
+            ptr::copy_nonoverlapping(src_ptr,
+                                     dest_ptr,
+                                     l);
+        }
+        self.i += l;
     }
 }
