@@ -11,11 +11,11 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
 }
 
 fn main() {
-    fn prop(xs: Vec<isize>) -> TestResult {
+    fn prop(xs: Vec<isize>) -> TestResult<()> {
         if xs.len() != 1 {
-            return TestResult::discard()
+            return TestResult::<()>::discard()
         }
-        TestResult::from_bool(xs == reverse(&*xs))
+        TestResult::<()>::from_bool(xs == reverse(&*xs))
     }
-    quickcheck(prop as fn(Vec<isize>) -> TestResult);
+    quickcheck(prop as fn(Vec<isize>) -> TestResult<()>);
 }
