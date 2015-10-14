@@ -8,18 +8,16 @@
 
 extern crate env_logger;
 #[macro_use] extern crate log;
-extern crate num;
 extern crate rand;
 
 pub use arbitrary::{
-    Arbitrary, Gen, StdGen, TestResult
+    Arbitrary, Gen, StdGen,
+    empty_shrinker, single_shrinker,
 };
 pub use rand::Rng;
-pub use tester::{QuickCheck, quickcheck};
+pub use tester::{QuickCheck, Testable, TestResult, quickcheck};
 
-mod shrink;
 mod arbitrary;
-mod entropy_pool;
 mod tester;
 
 #[cfg(test)]

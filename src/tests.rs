@@ -1,6 +1,5 @@
 use std::cmp::Ord;
 use rand;
-use rand::{Rand};
 use super::{QuickCheck, StdGen, TestResult, quickcheck};
 
 #[test]
@@ -28,15 +27,15 @@ fn prop_reverse_reverse() {
 
 #[test]
 fn reverse_single() {
-    fn prop(xs: Vec<usize>) -> TestResult<()> {
+    fn prop(xs: Vec<usize>) -> TestResult {
         if xs.len() != 1 {
-            return TestResult::<()>::discard()
+            return TestResult::discard()
         }
-        return TestResult::<()>::from_bool(
+        return TestResult::from_bool(
             xs == xs.clone().into_iter().rev().collect::<Vec<_>>()
         )
     }
-    quickcheck(prop as fn(Vec<usize>) -> TestResult<()>);
+    quickcheck(prop as fn(Vec<usize>) -> TestResult);
 }
 
 #[test]
@@ -57,14 +56,14 @@ fn reverse_app() {
 
 #[test]
 fn max() {
-    fn prop(x: isize, y: isize) -> TestResult<()> {
+    fn prop(x: isize, y: isize) -> TestResult {
         if x > y {
-            TestResult::<()>::discard()
+            TestResult::discard()
         } else {
-            TestResult::<()>::from_bool(::std::cmp::max(x, y) == y)
+            TestResult::from_bool(::std::cmp::max(x, y) == y)
         }
     }
-    quickcheck(prop as fn(isize, isize) -> TestResult<()>);
+    quickcheck(prop as fn(isize, isize) -> TestResult);
 }
 
 #[test]
@@ -86,6 +85,7 @@ fn sieve(n: usize) -> Vec<usize> {
     if n <= 1 {
         return vec![];
     }
+
     let mut marked = vec![false; n+1];
     marked[0] = true;
     marked[1] = true;
@@ -151,7 +151,7 @@ fn testable_unit_panic() {
 fn regression_issue_83() {
     fn prop(_: u8) -> bool { true }
     QuickCheck::new()
-        .gen(StdGen::new(Rand::rand(&mut rand::thread_rng()), 1024))
+        .gen(StdGen::new(rand::thread_rng(), 1024))
         .quickcheck(prop as fn(u8) -> bool)
 }
 
@@ -159,6 +159,6 @@ fn regression_issue_83() {
 fn regression_issue_83_signed() {
     fn prop(_: i8) -> bool { true }
     QuickCheck::new()
-        .gen(StdGen::new(Rand::rand(&mut rand::thread_rng()), 1024))
+        .gen(StdGen::new(rand::thread_rng(), 1024))
         .quickcheck(prop as fn(i8) -> bool)
 }
