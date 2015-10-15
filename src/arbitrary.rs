@@ -133,6 +133,9 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<Iterator<Item=A>> {
 /// They must also be sendable and static since every test is run in its own
 /// thread using `thread::Builder::spawn`, which requires the `Send + 'static`
 /// bounds.
+///
+/// If you do not implement `shrink`, StdGen's automatic shrinking feature will
+/// typically do a reasonable job for you.
 pub trait Arbitrary : Clone + Send + 'static {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
 
