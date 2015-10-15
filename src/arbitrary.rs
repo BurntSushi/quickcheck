@@ -20,7 +20,7 @@ use rand::Rng;
 ///
 /// A value with type satisfying the `Gen` trait can be constructed with the
 /// `gen` function in this crate.
-pub trait Gen : Rng + Sized {
+pub trait Gen : Rng {
     fn size(&self) -> usize;
     fn shrink_gen(&mut self) -> bool { false }
     fn unshrink_gen(&mut self) { }
