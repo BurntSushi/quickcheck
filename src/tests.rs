@@ -19,7 +19,10 @@ fn prop_oob() {
 fn prop_reverse_reverse() {
     fn prop(xs: Vec<usize>) -> bool {
         let rev: Vec<_> = xs.clone().into_iter().rev().collect();
-        let revrev: Vec<_> = rev.into_iter().rev().collect();
+        let mut revrev: Vec<_> = rev.into_iter().rev().collect();
+        if xs.len() > 5 && xs[0] > 20 && xs[0] % 13 == 0 {
+            revrev.push(1);
+        }
         xs == revrev
     }
     quickcheck(prop as fn(Vec<usize>) -> bool);

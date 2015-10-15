@@ -1,18 +1,18 @@
 use num::traits::NumCast;
 use std::cmp;
+use std::default::Default;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Div, Rem, Sub};
 use std::ptr;
 
-pub trait Shrinker {
-    fn new(&[u8]) -> Self;
-    fn shrink(&mut self, usize, &mut [u8]) -> bool;
+pub trait Shrinker: Default {
+    fn use_shrinker(&mut self, usize, &mut [u8]) -> bool;
 }
 
 #[derive(Debug)]
 pub struct BlockShrinker<S> {
-    block_size: usize,
+    recip_size: usize,
     block_index: usize,
     i: usize,
     shrinker: S,
@@ -26,30 +26,31 @@ fn shrink_usize(n: usize, k: usize) -> usize {
     }
 }
 
-impl <S: Shrinker>Shrinker for BlockShrinker<S> {
-
-    fn new(pool: &[u8]) -> BlockShrinker<S> {
-        let l = pool.len();
+impl <S: Shrinker>Default for BlockShrinker<S> {
+    fn default() -> BlockShrinker<S> {
         BlockShrinker {
-            block_size: l,
+            recip_size: 1,
             block_index: 0,
             i: 0,
-            shrinker: S::new(pool),
+            shrinker: S::default(),
         }
     }
+}
 
-    fn shrink(&mut self, size: usize, pool: &mut [u8]) -> bool {
+impl <S: Shrinker>Shrinker for BlockShrinker<S> {
+    fn use_shrinker(&mut self, size: usize, pool: &mut [u8]) -> bool {
         let mut i;
         let mut i_max;
         loop {
-            if self.block_size == 0 {
+            let block_size = pool.len() / self.recip_size;
+            if block_size == 0 {
                 return false;
             }
             loop {
-                i = self.block_size * self.block_index;
-                i_max = cmp::min(pool.len(), i + self.block_size);
+                i = block_size * self.block_index;
+                i_max = cmp::min(pool.len(), i + block_size);
                 if i >= pool.len() ||
-                    self.shrinker.shrink(size, &mut pool[i..i_max]) {
+                    self.shrinker.use_shrinker(size, &mut pool[i..i_max]) {
                     break;
                 }
                 self.block_index += 1
@@ -58,7 +59,7 @@ impl <S: Shrinker>Shrinker for BlockShrinker<S> {
                 break;
             }
             self.block_index = 0;
-            self.block_size  = shrink_usize(self.block_size, 0);
+            self.recip_size = self.recip_size * 2 + 1;
         }
         self.i = i;
         self.block_index += 1;
@@ -69,13 +70,12 @@ impl <S: Shrinker>Shrinker for BlockShrinker<S> {
 #[derive(Debug)]
 pub struct ZeroOut;
 
+impl Default for ZeroOut {
+    fn default() -> ZeroOut { ZeroOut }
+}
+
 impl Shrinker for ZeroOut {
-
-    fn new(_: &[u8]) -> ZeroOut {
-        ZeroOut
-    }
-
-    fn shrink(&mut self, _size: usize, pool: &mut [u8]) -> bool {
+    fn use_shrinker(&mut self, _size: usize, pool: &mut [u8]) -> bool {
         if pool.iter().all(|&w| w == 0) {
             return false;
         }
@@ -113,9 +113,11 @@ macro_rules! impl_as_bytes {
                 }
                 let mut _self = self;
                 unsafe {
-                    ptr::copy_nonoverlapping(&mut _self as *const Self as *const u8,
-                                             buf[i..].as_mut_ptr(),
-                                             mem::size_of::<Self>());
+                    ptr::copy_nonoverlapping(
+                        &mut _self as *const Self as *const u8,
+                        buf[i..].as_mut_ptr(),
+                        mem::size_of::<Self>()
+                    );
                 }
             }
         }
@@ -131,18 +133,14 @@ pub struct ModuloSize<T> {
     phantom: PhantomData<T>,
 }
 
-impl <T: AsBytes + Eq + Rem<Output = T> + NumCast>Shrinker for ModuloSize<T> {
-    fn new(_: &[u8]) -> ModuloSize<T> {
-        let width = mem::size_of::<T>();
-        if width > mem::size_of::<u64>() {
-            panic!("ModuloSize<T>: mem::size_of::<T> too large");
-        }
-        ModuloSize {
-            phantom: PhantomData,
-        }
+impl <T>Default for ModuloSize<T> {
+    fn default() -> ModuloSize<T> {
+        ModuloSize { phantom: PhantomData }
     }
+}
 
-    fn shrink(&mut self, size: usize, pool: &mut [u8]) -> bool {
+impl <T: AsBytes + Eq + Rem<Output = T> + NumCast>Shrinker for ModuloSize<T> {
+    fn use_shrinker(&mut self, size: usize, pool: &mut [u8]) -> bool {
         let mut changed = false;
         let mut i = 0;
         let cast = |x| {NumCast::from(x).unwrap()};
@@ -165,21 +163,18 @@ pub struct DivShrinker<T> {
     phantom: PhantomData<T>,
 }
 
-
-impl <T: AsBytes + Eq + NumCast + Ord + Div<Output = T>>Shrinker for DivShrinker<T> {
-    fn new(_pool: &[u8]) -> DivShrinker<T> {
-        let width = mem::size_of::<T>();
-        if width > mem::size_of::<u64>() {
-            panic!("SubShrinker<T>: mem::size_of::<T> too large");
-        }
+impl <T>Default for DivShrinker<T> {
+    fn default() -> DivShrinker<T> {
         DivShrinker {
             i: 0,
             div: 255,
             phantom: PhantomData,
         }
     }
+}
 
-    fn shrink(&mut self, size: usize, pool: &mut [u8]) -> bool {
+impl <T: AsBytes + Eq + NumCast + Ord + Div<Output = T>>Shrinker for DivShrinker<T> {
+    fn use_shrinker(&mut self, size: usize, pool: &mut [u8]) -> bool {
 
         let cast = |x| {NumCast::from(x).unwrap()};
 
@@ -202,7 +197,7 @@ impl <T: AsBytes + Eq + NumCast + Ord + Div<Output = T>>Shrinker for DivShrinker
         if self.div == 0 {
             false
         } else {
-            self.shrink(size, pool)
+            self.use_shrinker(size, pool)
         }
     }
 }
@@ -214,20 +209,18 @@ pub struct SubShrinker<T> {
     phantom: PhantomData<T>,
 }
 
-impl <T: AsBytes + Eq + NumCast + Ord + Sub<Output = T>>Shrinker for SubShrinker<T> {
-    fn new(_pool: &[u8]) -> SubShrinker<T> {
-        let width = mem::size_of::<T>();
-        if width > mem::size_of::<u64>() {
-            panic!("SubShrinker<T>: mem::size_of::<T> too large");
-        }
+impl <T>Default for SubShrinker<T> {
+    fn default() -> SubShrinker<T> {
         SubShrinker {
             i: 0,
             sub: 255,
             phantom: PhantomData,
         }
     }
+}
 
-    fn shrink(&mut self, size: usize, pool: &mut [u8]) -> bool {
+impl <T: AsBytes + Eq + NumCast + Ord + Sub<Output = T>>Shrinker for SubShrinker<T> {
+    fn use_shrinker(&mut self, size: usize, pool: &mut [u8]) -> bool {
 
         let cast = |x| {NumCast::from(x).unwrap()};
 
@@ -250,7 +243,7 @@ impl <T: AsBytes + Eq + NumCast + Ord + Sub<Output = T>>Shrinker for SubShrinker
         if self.sub == 0 {
             false
         } else {
-            self.shrink(size, pool)
+            self.use_shrinker(size, pool)
         }
     }
 }
@@ -289,15 +282,17 @@ pub struct StdShrinker {
     pass: u8,
 }
 
-impl Shrinker for StdShrinker {
-    fn new(pool: &[u8]) -> StdShrinker {
+impl Default for StdShrinker {
+    fn default() -> StdShrinker {
         StdShrinker {
-            body: StdShrinkerBody::Zero(BlockShrinker::new(pool)),
+            body: StdShrinkerBody::Zero(BlockShrinker::default()),
             pass: 0,
         }
     }
+}
 
-    fn shrink(&mut self, size: usize, pool: &mut [u8]) -> bool {
+impl Shrinker for StdShrinker {
+    fn use_shrinker(&mut self, size: usize, pool: &mut [u8]) -> bool {
 
         macro_rules! match_strategy {
             ($strategy: ident) => {
@@ -309,7 +304,7 @@ impl Shrinker for StdShrinker {
 
         macro_rules! apply_strategy {
             ($shrinker: ident, $strategy: ident) => {{
-                if $shrinker.shrink(size, pool) {
+                if $shrinker.use_shrinker(size, pool) {
                     return true;
                 }
                 strategy = StdStrategy::$strategy;
@@ -336,7 +331,7 @@ impl Shrinker for StdShrinker {
             &mut StdShrinkerBody::Div8(ref mut shrinker) =>
                 apply_strategy!(shrinker, Div8),
             &mut StdShrinkerBody::Sub8(ref mut shrinker) if self.pass >= 4 => {
-                    return shrinker.shrink(size, pool);
+                    return shrinker.use_shrinker(size, pool);
             }
             &mut StdShrinkerBody::Sub8(ref mut shrinker) =>
                 apply_strategy!(shrinker, Sub8),
@@ -344,7 +339,7 @@ impl Shrinker for StdShrinker {
 
         macro_rules! switch_strategy {
             ($next: ident, $next_shrinker: ident) => {
-                self.body = StdShrinkerBody::$next($next_shrinker::new(pool));
+                self.body = StdShrinkerBody::$next($next_shrinker::default());
             }
         }
 
@@ -363,6 +358,6 @@ impl Shrinker for StdShrinker {
                 switch_strategy!(Zero,  BlockShrinker)
             }
         }
-        self.shrink(size, pool)
+        self.use_shrinker(size, pool)
     }
 }
