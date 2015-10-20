@@ -227,13 +227,6 @@ impl TestResult {
 /// and potentially shrink those arguments if they produce a failure.
 ///
 /// It's unlikely that you'll have to implement this trait yourself.
-/// This comes with a caveat: currently, only functions with 4 parameters
-/// or fewer (both `fn` and `||` types) satisfy `Testable`. If you have
-/// functions to test with more than 4 parameters, please
-/// [file a bug](https://github.com/BurntSushi/quickcheck/issues) and
-/// I'll hopefully add it. (As of now, it would be very difficult to
-/// add your own implementation outside of `quickcheck`, since the
-/// functions that do shrinking are not public.)
 pub trait Testable : Send + 'static {
     fn result<G: Gen>(&self, &mut G) -> TestResult;
 }
@@ -263,164 +256,63 @@ impl<A, E> Testable for Result<A, E> where A: Testable, E: Debug + Send + 'stati
     }
 }
 
-impl<T> Testable for fn() -> T where T: Testable {
-    fn result<G: Gen>(&self, g: &mut G) -> TestResult {
-        shrink::<G, T, (), (), (), (), fn() -> T>(g, self)
-    }
-}
+macro_rules! testable_fn {
+    ($($name: ident),*) => {
 
-impl<A, T> Testable for fn(A) -> T where A: AShow, T: Testable {
-    fn result<G: Gen>(&self, g: &mut G) -> TestResult {
-        shrink::<G, T, A, (), (), (), fn(A) -> T>(g, self)
-    }
-}
+impl<T: Testable,
+     $($name: Arbitrary + Debug),*> Testable for fn($($name),*) -> T {
+    #[allow(non_snake_case)]
+    fn result<G_: Gen>(&self, g: &mut G_) -> TestResult {
 
-impl<A, B, T> Testable for fn(A, B) -> T
-        where A: AShow, B: AShow, T: Testable {
-    fn result<G: Gen>(&self, g: &mut G) -> TestResult {
-        shrink::<G, T, A, B, (), (), fn(A, B) -> T>(g, self)
-    }
-}
-
-impl<A, B, C, T> Testable for fn(A, B, C) -> T
-        where A: AShow, B: AShow, C: AShow, T: Testable {
-    fn result<G: Gen>(&self, g: &mut G) -> TestResult {
-        shrink::<G, T, A, B, C, (), fn(A, B, C) -> T>(g, self)
-    }
-}
-
-impl<A, B, C, D, T,> Testable for fn(A, B, C, D) -> T
-        where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
-    fn result<G: Gen>(&self, g: &mut G) -> TestResult {
-        shrink::<G, T, A, B, C, D, fn(A, B, C, D) -> T>(g, self)
-    }
-}
-
-trait Fun<A, B, C, D, T> {
-    fn call<G>(&self, g: &mut G,
-               a: Option<&A>, b: Option<&B>,
-               c: Option<&C>, d: Option<&D>)
-              -> TestResult
-              where G: Gen;
-}
-
-macro_rules! impl_fun_call {
-    ($f:expr, $g:expr, $($name:ident,)+) => ({
-        let ($($name,)*) = ($($name.unwrap(),)*);
-        let f = $f;
-        let mut r = {
-            let ($($name,)*) = ($(Box::new($name.clone()),)*);
-            safe(move || { f($(*$name,)*) }).result($g)
-        };
-        if r.is_failure() {
-            r.arguments = vec![$(format!("{:?}", $name),)*];
+        // TODO(burntsushi): Use `std::thread::catch_panic` once it stabilizes.
+        fn safe<T, F>(fun: F) -> Result<T, String>
+                where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
+            let t = ::std::thread::Builder::new().name("safe".into());
+            t.spawn(fun).unwrap().join().map_err(|any_err| {
+                match any_err.downcast_ref::<&Debug>() {
+                    Some(ref s) => format!("{:?}", s),
+                    None => "UNABLE TO SHOW RESULT OF PANIC.".into(),
+                }
+            })
         }
-        r
-    });
-}
 
-impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn() -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
-    fn call<G>(&self, g: &mut G,
-               _: Option<&A>, _: Option<&B>,
-               _: Option<&C>, _: Option<&D>)
-              -> TestResult where G: Gen {
-        let f = *self;
-        safe(move || { f() }).result(g)
-    }
-}
-
-impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
-    fn call<G>(&self, g: &mut G,
-               a: Option<&A>, _: Option<&B>,
-               _: Option<&C>, _: Option<&D>)
-              -> TestResult where G: Gen {
-        impl_fun_call!(*self, g, a,)
-    }
-}
-
-impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
-    fn call<G>(&self, g: &mut G,
-               a: Option<&A>, b: Option<&B>,
-               _: Option<&C>, _: Option<&D>)
-              -> TestResult where G: Gen {
-        impl_fun_call!(*self, g, a, b,)
-    }
-}
-
-impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
-    fn call<G>(&self, g: &mut G,
-               a: Option<&A>, b: Option<&B>,
-               c: Option<&C>, _: Option<&D>)
-              -> TestResult where G: Gen {
-        impl_fun_call!(*self, g, a, b, c,)
-    }
-}
-
-impl<A, B, C, D, T> Fun<A, B, C, D, T> for fn(A, B, C, D) -> T
-    where A: AShow, B: AShow, C: AShow, D: AShow, T: Testable {
-    fn call<G>(&self, g: &mut G,
-               a: Option<&A>, b: Option<&B>,
-               c: Option<&C>, d: Option<&D>)
-              -> TestResult where G: Gen {
-        impl_fun_call!(*self, g, a, b, c, d,)
-    }
-}
-
-fn shrink<G, T, A, B, C, D, F>(g: &mut G, fun: &F) -> TestResult
-    where G: Gen, T: Testable, A: AShow, B: AShow, C: AShow, D: AShow,
-          F: Fun<A, B, C, D, T> {
-    let (a, b, c, d): (A, B, C, D) = Arbitrary::arbitrary(g);
-    let r = fun.call(g, Some(&a), Some(&b), Some(&c), Some(&d));
-    match r.status {
-        Pass|Discard => r,
-        Fail => shrink_failure(g, (a, b, c, d).shrink(), fun).unwrap_or(r),
-    }
-}
-
-fn shrink_failure<G, T, A, B, C, D, F>
-                 (g: &mut G,
-                  shrinker: Box<Iterator<Item=(A, B, C, D)>>,
-                  fun: &F)
-                 -> Option<TestResult>
-    where G: Gen, T: Testable, A: AShow, B: AShow, C: AShow, D: AShow,
-          F: Fun<A, B, C, D, T> {
-    for (a, b, c, d) in shrinker {
-        let r = fun.call(g, Some(&a), Some(&b), Some(&c), Some(&d));
+        let self_ = *self;
+        let a: ($($name,)*) = Arbitrary::arbitrary(g);
+        let ( $($name,)* ) = a.clone();
+        g.reset();
+        let mut r = safe(move || {self_($($name),*)}).result(g);
         match r.status {
-            // The shrunk value does not witness a failure, so
-            // throw it away.
-            Pass|Discard => continue,
-
-            // The shrunk value *does* witness a failure, so keep trying
-            // to shrink it.
+            Pass|Discard => return r,
             Fail => {
-                let shrunk = shrink_failure(g, (a, b, c, d).shrink(), fun);
-
-                // If we couldn't witness a failure on any shrunk value,
-                // then return the failure we already have.
-                return Some(shrunk.unwrap_or(r))
-            },
+                let ( $($name,)* ) = a.clone();
+                r.arguments = vec![$(format!("{:?}", $name),)*];
+                let mut r_new;
+                for t in a.shrink() {
+                    let ($($name,)*) = t.clone();
+                    g.reset();
+                    r_new = safe(move || {self_($($name),*)}).result(g);
+                    if r_new.is_failure() {
+                        r = r_new;
+                        let ($($name,)*) = t;
+                        r.arguments = vec![$(format!("{:?}", $name),)*];
+                    }
+                };
+                return r;
+            }
         }
     }
-    None
-}
+}}}
 
-// TODO(burntsushi): Use `std::thread::catch_panic` once it stabilizes.
-fn safe<T, F>(fun: F) -> Result<T, String>
-        where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
-    let t = ::std::thread::Builder::new().name("safe".into());
-    t.spawn(fun).unwrap().join().map_err(|any_err| {
-        match any_err.downcast_ref::<&Debug>() {
-            Some(ref s) => format!("{:?}", s),
-            None => "UNABLE TO SHOW RESULT OF PANIC.".into(),
-        }
-    })
-}
-
-/// Convenient aliases.
-trait AShow : Arbitrary + Debug {}
-impl<A: Arbitrary + Debug> AShow for A {}
+testable_fn!();
+testable_fn!(A);
+testable_fn!(A, B);
+testable_fn!(A, B, C);
+testable_fn!(A, B, C, D);
+testable_fn!(A, B, C, D, E);
+testable_fn!(A, B, C, D, E, F);
+testable_fn!(A, B, C, D, E, F, G);
+testable_fn!(A, B, C, D, E, F, G, H);
+testable_fn!(A, B, C, D, E, F, G, H, I);
+testable_fn!(A, B, C, D, E, F, G, H, I, J);
+testable_fn!(A, B, C, D, E, F, G, H, I, J, K);
+testable_fn!(A, B, C, D, E, F, G, H, I, J, K, L);

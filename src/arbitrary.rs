@@ -20,6 +20,7 @@ use rand::Rng;
 /// `gen` function in this crate.
 pub trait Gen : Rng {
     fn size(&self) -> usize;
+    fn reset(&mut self) {}
 }
 
 /// StdGen is the default implementation of `Gen`.
