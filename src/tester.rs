@@ -72,10 +72,22 @@ impl<G: Gen> QuickCheck<G> {
             if ntests >= self.tests {
                 break
             }
-            match f.result(&mut self.gen) {
-                TestResult { status: Pass, .. } => ntests += 1,
-                TestResult { status: Discard, .. } => continue,
-                r @ TestResult { status: Fail, .. } => return Err(r),
+            self.gen.reset();
+            let mut r = f.result(&mut self.gen);
+            match r.status {
+                Pass => ntests += 1,
+                Discard => continue,
+                Fail => {
+                    while self.gen.shrink_gen() {
+                        let r_new = f.result(&mut self.gen);
+                        if r_new.status == Fail {
+                            r = r_new;
+                        } else {
+                            self.gen.unshrink_gen();
+                        }
+                    }
+                    return Err(r);
+                }
             }
         }
         Ok(ntests)
@@ -134,7 +146,7 @@ pub struct TestResult {
 }
 
 /// Whether a test has passed, failed or been discarded.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 enum Status { Pass, Fail, Discard }
 
 impl TestResult {
@@ -424,3 +436,4 @@ fn safe<T, F>(fun: F) -> Result<T, String>
 /// Convenient aliases.
 trait AShow : Arbitrary + Debug {}
 impl<A: Arbitrary + Debug> AShow for A {}
+
