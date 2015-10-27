@@ -577,24 +577,16 @@ macro_rules! signed_shrinker {
 }
 
 macro_rules! signed_arbitrary {
-    ($(($ty:ident, $unsigned:ident)),*) => {
+    ($($ty:ident),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    let umax = ::std::$unsigned::MAX;
                     let s = g.size();
-                    let s = if s as $unsigned as usize == s {
-                        s as $unsigned
+                    if s as $ty as usize == s && s as $ty >= 0 {
+                        let s = s as $ty;
+                        g.gen_range(-s, nonzero!(s))
                     } else {
-                        umax
-                    };
-                    let u = nonzero!(s);
-                    let x: $unsigned = g.gen_range(0, u);
-                    assert!((umax / 2) <= (::std::$ty::MAX as $unsigned));
-                    if x > u / 2 {
-                        -((x / 2) as $ty)
-                    } else {
-                        x as $ty
+                        g.gen_range(::std::$ty::MIN, ::std::$ty::MAX)
                     }
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>> {
@@ -607,7 +599,7 @@ macro_rules! signed_arbitrary {
 }
 
 signed_arbitrary! {
-    (isize, usize), (i8, u8), (i16, u16), (i32, u32), (i64, u64)
+    isize, i8, i16, i32, i64
 }
 
 impl Arbitrary for f32 {

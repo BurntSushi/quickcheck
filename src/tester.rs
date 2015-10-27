@@ -28,7 +28,7 @@ impl QuickCheck<StdGen<rand::ThreadRng>> {
         QuickCheck {
             tests: 100,
             max_size: 100,
-            max_tests: 10000,
+            max_tests: 100,
             gen: g,
         }
     }
