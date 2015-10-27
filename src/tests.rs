@@ -1,6 +1,6 @@
 use std::cmp::Ord;
 use rand;
-use super::{QuickCheck, StdGen, TestResult, quickcheck};
+use super::{Arbitrary, QuickCheck, StdGen, TestResult, quickcheck};
 
 #[test]
 fn prop_oob() {
@@ -161,4 +161,23 @@ fn regression_issue_83_signed() {
     QuickCheck::new()
         .gen(StdGen::new(rand::thread_rng(), 1024))
         .quickcheck(prop as fn(i8) -> bool)
+}
+
+#[test]
+fn shrink_overflow() {
+    fn prop(positive: bool, k: u64) {
+        let m = (k / 2) as i64;
+        let x = if positive {
+            ::std::i64::MAX - m
+        } else {
+            ::std::i64::MIN + m
+        };
+        for (i, _) in x.shrink().enumerate() {
+            assert!(i < 64 * 2); // A fairly loose bound.
+        }
+    }
+    QuickCheck::new()
+        .gen(StdGen::new(rand::thread_rng(), 1024))
+        .tests(5000)
+        .quickcheck(prop as fn(bool, u64))
 }
