@@ -22,7 +22,6 @@ use rand::Rng;
 /// `gen` function in this crate.
 pub trait Gen : Rng {
     fn size(&self) -> usize;
-    fn reset(&mut self) {}
     fn shrink_gen(&mut self) -> bool { false }
     fn unshrink_gen(&mut self) { }
     fn reset(&mut self) { }
