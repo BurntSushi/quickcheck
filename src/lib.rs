@@ -18,6 +18,8 @@ pub use rand::Rng;
 pub use tester::{QuickCheck, Testable, TestResult, quickcheck};
 
 mod arbitrary;
+mod entropy_pool;
+mod shrink;
 mod tester;
 
 #[cfg(test)]

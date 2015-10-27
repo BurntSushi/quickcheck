@@ -10,6 +10,8 @@ use std::collections::{
 };
 use std::hash::Hash;
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
+use entropy_pool::EntropyPool;
+use shrink::{Shrinker, StdShrinker};
 
 use rand::Rng;
 
@@ -21,6 +23,9 @@ use rand::Rng;
 pub trait Gen : Rng {
     fn size(&self) -> usize;
     fn reset(&mut self) {}
+    fn shrink_gen(&mut self) -> bool { false }
+    fn unshrink_gen(&mut self) { }
+    fn reset(&mut self) { }
 }
 
 /// StdGen is the default implementation of `Gen`.
@@ -28,8 +33,10 @@ pub trait Gen : Rng {
 /// Values of type `StdGen` can be created with the `gen` function in this
 /// crate.
 pub struct StdGen<R> {
-    rng: R,
+    pool: EntropyPool<R>,
+    restore_buffer: Vec<u8>,
     size: usize,
+    shrinker: StdShrinker,
 }
 
 /// Returns a `StdGen` with the given configuration using any random number
@@ -40,21 +47,69 @@ pub struct StdGen<R> {
 /// and also will specify the maximum magnitude of a randomly generated number.
 impl<R: Rng> StdGen<R> {
     pub fn new(rng: R, size: usize) -> StdGen<R> {
-        StdGen { rng: rng, size: size }
+        let pool = EntropyPool::new(rng, 4 * size);
+        let shrinker = StdShrinker::default();
+        StdGen { pool: pool,
+                 restore_buffer: Vec::new(),
+                 size: size,
+                 shrinker: shrinker,
+        }
     }
 }
 
 impl<R: Rng> Rng for StdGen<R> {
-    fn next_u32(&mut self) -> u32 { self.rng.next_u32() }
-
-    // some RNGs implement these more efficiently than the default, so
-    // we might as well defer to them.
-    fn next_u64(&mut self) -> u64 { self.rng.next_u64() }
-    fn fill_bytes(&mut self, dest: &mut [u8]) { self.rng.fill_bytes(dest) }
+    #[inline]
+    fn next_u32(&mut self) -> u32 { self.pool.next_u32() }
+    #[inline]
+    fn next_u64(&mut self) -> u64 { self.pool.next_u64() }
+    #[inline]
+    fn fill_bytes(&mut self, dest: &mut [u8]) { self.pool.fill_bytes(dest) }
 }
+
 
 impl<R: Rng> Gen for StdGen<R> {
     fn size(&self) -> usize { self.size }
+
+    fn shrink_gen(&mut self) -> bool {
+
+        fn used_region(pool: &[u8]) -> &[u8] {
+            let i = pool.iter()
+                        .enumerate()
+                        .rev()
+                        .skip_while(|&u| *u.1 == 0)
+                        .map(|u| u.0 + 1)
+                        .next()
+                        .unwrap_or(0);
+            &pool[0..i]
+        }
+
+        self.pool.i = 0;
+        self.restore_buffer.clear();
+        self.restore_buffer.extend(used_region(&self.pool.v[..]));
+        if self.shrinker.use_shrinker(self.size, &mut self.pool.v[..]) {
+            true
+        } else {
+            self.restore_buffer.clear();
+            self.pool.randomize();
+            let shrinker = StdShrinker::default();
+            self.shrinker = shrinker;
+            false
+        }
+    }
+
+    fn unshrink_gen(&mut self) {
+        for (ptr, &w) in self.pool
+                             .v[..]
+                             .iter_mut()
+                             .zip(self.restore_buffer.iter()) {
+            *ptr = w;
+        }
+    }
+
+    fn reset(&mut self) {
+        self.pool.randomize();
+        self.pool.i = 0;
+    }
 }
 
 /// Creates a shrinker with zero elements.
@@ -79,6 +134,9 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<Iterator<Item=A>> {
 /// They must also be sendable and static since every test is run in its own
 /// thread using `thread::Builder::spawn`, which requires the `Send + 'static`
 /// bounds.
+///
+/// If you do not implement `shrink`, StdGen's automatic shrinking feature will
+/// typically do a reasonable job for you.
 pub trait Arbitrary : Clone + Send + 'static {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
 
