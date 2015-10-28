@@ -11,7 +11,7 @@ fn prop_oob() {
     match QuickCheck::new().quicktest(prop as fn() -> bool) {
         Ok(n) => panic!("prop_oob should fail with a runtime error \
                          but instead it passed {} tests.", n),
-        _ => return,
+                         _ => return,
     }
 }
 
@@ -33,7 +33,7 @@ fn reverse_single() {
         }
         return TestResult::from_bool(
             xs == xs.clone().into_iter().rev().collect::<Vec<_>>()
-        )
+            )
     }
     quickcheck(prop as fn(Vec<usize>) -> TestResult);
 }
@@ -53,6 +53,53 @@ fn reverse_app() {
     }
     quickcheck(prop as fn(Vec<usize>, Vec<usize>) -> bool);
 }
+
+macro_rules! reverse_static {
+    ($test:ident => $size:expr) => {
+        fn $test() {
+            fn prop(xs: [usize; $size]) -> bool {
+                let rev: Vec<usize> = xs.into_iter().map(|&i| i).rev().collect();
+                let revrev: Vec<usize> = rev.into_iter().rev().collect();
+                revrev == &xs[..]
+            }
+
+            quickcheck(prop as fn([usize; $size]) -> bool);
+        }
+    }
+}
+
+reverse_static!(reverse_1 => 1);
+// reverse_static!(reverse_2 => 2);
+// reverse_static!(reverse_3 => 3);
+// reverse_static!(reverse_4 => 4);
+// reverse_static!(reverse_5 => 5);
+// reverse_static!(reverse_6 => 6);
+// reverse_static!(reverse_7 => 7);
+// reverse_static!(reverse_8 => 8);
+// reverse_static!(reverse_9 => 9);
+// reverse_static!(reverse_10 => 10);
+// reverse_static!(reverse_11 => 11);
+// reverse_static!(reverse_12 => 12);
+// reverse_static!(reverse_13 => 13);
+// reverse_static!(reverse_14 => 14);
+// reverse_static!(reverse_15 => 15);
+// reverse_static!(reverse_16 => 16);
+// reverse_static!(reverse_17 => 17);
+// reverse_static!(reverse_18 => 18);
+// reverse_static!(reverse_19 => 19);
+// reverse_static!(reverse_20 => 20);
+// reverse_static!(reverse_21 => 21);
+// reverse_static!(reverse_22 => 22);
+// reverse_static!(reverse_23 => 23);
+// reverse_static!(reverse_24 => 24);
+// reverse_static!(reverse_25 => 25);
+// reverse_static!(reverse_26 => 26);
+// reverse_static!(reverse_27 => 27);
+// reverse_static!(reverse_28 => 28);
+// reverse_static!(reverse_29 => 29);
+// reverse_static!(reverse_30 => 30);
+// reverse_static!(reverse_31 => 31);
+// reverse_static!(reverse_32 => 32);
 
 #[test]
 fn max() {
@@ -96,9 +143,9 @@ fn sieve(n: usize) -> Vec<usize> {
         }
     }
     marked.iter()
-          .enumerate()
-          .filter_map(|(i, &m)| if m { None } else { Some(i) })
-          .collect()
+        .enumerate()
+        .filter_map(|(i, &m)| if m { None } else { Some(i) })
+        .collect()
 }
 
 fn is_prime(n: usize) -> bool {
