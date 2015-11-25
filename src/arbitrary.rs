@@ -9,6 +9,7 @@ use std::collections::{
     VecDeque,
 };
 use std::hash::Hash;
+use std::iter::{empty, once};
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 use entropy_pool::EntropyPool;
 use shrink::{Shrinker, StdShrinker};
@@ -113,12 +114,12 @@ impl<R: Rng> Gen for StdGen<R> {
 
 /// Creates a shrinker with zero elements.
 pub fn empty_shrinker<A: 'static>() -> Box<Iterator<Item=A>> {
-    Box::new(None.into_iter())
+    Box::new(empty())
 }
 
 /// Creates a shrinker with a single element.
 pub fn single_shrinker<A: 'static>(value: A) -> Box<Iterator<Item=A>> {
-    Box::new(Some(value).into_iter())
+    Box::new(once(value))
 }
 
 /// `Arbitrary` describes types whose values can be randomly generated and
