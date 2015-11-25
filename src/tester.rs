@@ -291,7 +291,6 @@ impl<T: Testable,
         let self_ = *self;
         let a: ($($name,)*) = Arbitrary::arbitrary(g);
         let ( $($name,)* ) = a.clone();
-        g.reset();
         let mut r = safe(move || {self_($($name),*)}).result(g);
         match r.status {
             Pass|Discard => return r,
@@ -301,7 +300,6 @@ impl<T: Testable,
                 let mut r_new;
                 for t in a.shrink() {
                     let ($($name,)*) = t.clone();
-                    g.reset();
                     r_new = safe(move || {self_($($name),*)}).result(g);
                     if r_new.is_failure() {
                         r = r_new;

@@ -3,6 +3,15 @@ use rand;
 use super::{QuickCheck, StdGen, TestResult, quickcheck};
 
 #[test]
+#[should_panic]
+fn regression_issue_107() {
+    fn prop(v: Vec<u8>) -> bool {
+        v.contains(&1)
+    }
+    quickcheck(prop as fn(_) -> bool)
+}
+
+#[test]
 fn prop_oob() {
     fn prop() -> bool {
         let zero: Vec<bool> = vec![];
