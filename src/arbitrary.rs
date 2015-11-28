@@ -642,6 +642,56 @@ impl Arbitrary for RangeFull {
     fn arbitrary<G: Gen>(_: &mut G) -> RangeFull { .. }
 }
 
+macro_rules! array_arbitrary {
+    ($size:expr) => {
+        impl<T: Arbitrary + Clone + Copy> Arbitrary for [T; $size] {
+            fn arbitrary<G: Gen>(g: &mut G) -> Self {
+                use std::mem;
+                let mut arr: [T; $size] = unsafe { mem::uninitialized() };
+
+                for item in &mut arr {
+                    *item = T::arbitrary(g);
+                }
+
+                arr
+            }
+        }
+    }
+}
+
+array_arbitrary!(1);
+array_arbitrary!(2);
+array_arbitrary!(3);
+array_arbitrary!(4);
+array_arbitrary!(5);
+array_arbitrary!(6);
+array_arbitrary!(7);
+array_arbitrary!(8);
+array_arbitrary!(9);
+array_arbitrary!(10);
+array_arbitrary!(11);
+array_arbitrary!(12);
+array_arbitrary!(13);
+array_arbitrary!(14);
+array_arbitrary!(15);
+array_arbitrary!(16);
+array_arbitrary!(17);
+array_arbitrary!(18);
+array_arbitrary!(19);
+array_arbitrary!(20);
+array_arbitrary!(21);
+array_arbitrary!(22);
+array_arbitrary!(23);
+array_arbitrary!(24);
+array_arbitrary!(25);
+array_arbitrary!(26);
+array_arbitrary!(27);
+array_arbitrary!(28);
+array_arbitrary!(29);
+array_arbitrary!(30);
+array_arbitrary!(31);
+array_arbitrary!(32);
+
 #[cfg(test)]
 mod test {
     use rand;
