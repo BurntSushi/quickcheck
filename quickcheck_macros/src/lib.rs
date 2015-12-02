@@ -8,7 +8,7 @@
 #![feature(plugin_registrar, rustc_private)]
 
 extern crate syntax;
-extern crate rustc;
+extern crate rustc_plugin;
 
 use syntax::abi;
 use syntax::ast;
@@ -20,7 +20,7 @@ use syntax::ext::base::{ExtCtxt, MultiModifier, Annotatable};
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
 
-use rustc::plugin::Registry;
+use rustc_plugin::Registry;
 
 /// For the `#[quickcheck]` attribute. Do not use.
 #[plugin_registrar]
