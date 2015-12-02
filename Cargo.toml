@@ -10,6 +10,9 @@ readme = "README.md"
 keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
 license = "Unlicense/MIT"
 
+[features]
+unstable = []
+
 [lib]
 name = "quickcheck"
 

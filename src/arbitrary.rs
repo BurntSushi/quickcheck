@@ -11,6 +11,7 @@ use std::collections::{
 use std::hash::Hash;
 use std::iter::{empty, once};
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
+use std::time::Duration;
 use entropy_pool::EntropyPool;
 use shrink::{Shrinker, StdShrinker};
 
@@ -640,6 +641,33 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeTo<T> {
 
 impl Arbitrary for RangeFull {
     fn arbitrary<G: Gen>(_: &mut G) -> RangeFull { .. }
+}
+
+impl Arbitrary for Duration {
+    fn arbitrary<G: Gen>(gen: &mut G) -> Self {
+        let seconds = u64::arbitrary(gen);
+        let nanoseconds = u32::arbitrary(gen) % 1_000_000;
+        Duration::new(seconds, nanoseconds)
+    }
+}
+
+
+#[cfg(feature = "unstable")]
+mod unstable_impls {
+    use {Arbitrary, Gen};
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+    impl Arbitrary for SystemTime {
+        fn arbitrary<G: Gen>(gen: &mut G) -> Self {
+            let after_epoch = bool::arbitrary(gen);
+            let duration = Duration::arbitrary(gen);
+            if after_epoch {
+                UNIX_EPOCH + duration
+            } else {
+                UNIX_EPOCH - duration
+            }
+        }
+    }
 }
 
 #[cfg(test)]
