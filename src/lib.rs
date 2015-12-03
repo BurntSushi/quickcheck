@@ -5,6 +5,7 @@
 //! [README](https://github.com/BurntSushi/quickcheck).
 
 #![allow(deprecated)] // for connect -> join in 1.3
+#![cfg_attr(feature = "unstable", feature(time2))]
 
 extern crate env_logger;
 #[macro_use] extern crate log;
