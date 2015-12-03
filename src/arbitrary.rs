@@ -649,6 +649,13 @@ impl Arbitrary for Duration {
         let nanoseconds = u32::arbitrary(gen) % 1_000_000;
         Duration::new(seconds, nanoseconds)
     }
+
+    fn shrink(&self) -> Box<Iterator<Item=Self>> {
+        Box::new((self.as_secs(), self.subsec_nanos()).shrink()
+            .map(|(secs, nanos)| {
+                Duration::new(secs, nanos % 1_000_000)
+            }))
+    }
 }
 
 
@@ -666,6 +673,14 @@ mod unstable_impls {
             } else {
                 UNIX_EPOCH - duration
             }
+        }
+
+        fn shrink(&self) -> Box<Iterator<Item=Self>> {
+            let duration = match self.duration_from_earlier(UNIX_EPOCH) {
+                Ok(duration) => duration,
+                Err(e) => e.duration(),
+            };
+            Box::new(duration.shrink().flat_map(|d| vec![UNIX_EPOCH + d, UNIX_EPOCH - d]))
         }
     }
 }
