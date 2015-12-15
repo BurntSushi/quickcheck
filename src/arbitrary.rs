@@ -461,7 +461,7 @@ impl Arbitrary for char {
         match mode {
             0...49 => {
                 // ASCII + some control characters
-                char::from_u32(g.gen_range(0, 0xB0)).expect("I except all characters with codepoints 0 to 255 to be valid")
+                g.gen_range(0,0xB0) as u8 as char
             }
             50...59 => {
                 // Unicode BMP characters
