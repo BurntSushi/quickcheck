@@ -13,7 +13,6 @@ extern crate rustc_plugin;
 use syntax::abi;
 use syntax::ast;
 use syntax::ast::Ty_::TyBareFn;
-use syntax::ast_util;
 use syntax::codemap;
 use syntax::parse::token;
 use syntax::ext::base::{ExtCtxt, MultiModifier, Annotatable};
@@ -116,7 +115,7 @@ fn item_fn(cx: &mut ExtCtxt, span: codemap::Span,
                            ast::Unsafety::Normal,
                            ast::Constness::NotConst,
                            abi::Rust,
-                           ast_util::empty_generics(),
+                           ast::Generics::default(),
                            body);
     cx.item(span, towrap_item.ident, vec![], item)
 }
