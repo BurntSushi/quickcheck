@@ -303,10 +303,12 @@ impl Shrinker for StdShrinker {
             &mut StdShrinkerBody::Div8(ref mut shrinker) =>
                 apply_strategy!(shrinker, Div8),
             &mut StdShrinkerBody::Sub8(ref mut shrinker) if self.pass >= 4 => {
-                    return shrinker.use_shrinker(size, pool);
+                return shrinker.use_shrinker(size, pool);
             }
-            &mut StdShrinkerBody::Sub8(ref mut shrinker) =>
-                apply_strategy!(shrinker, Sub8),
+            &mut StdShrinkerBody::Sub8(ref mut shrinker) => {
+                self.pass += 1;
+                apply_strategy!(shrinker, Sub8);
+            }
         }
 
         macro_rules! switch_strategy {
@@ -325,10 +327,7 @@ impl Shrinker for StdShrinker {
             StdStrategy::Sub32 => switch_strategy!(Mod8,  BlockShrinker),
             StdStrategy::Mod8  => switch_strategy!(Div8,  DivShrinker),
             StdStrategy::Div8  => switch_strategy!(Sub8,  SubShrinker),
-            StdStrategy::Sub8  => {
-                self.pass += 1;
-                switch_strategy!(Zero,  BlockShrinker)
-            }
+            StdStrategy::Sub8  => switch_strategy!(Zero,  BlockShrinker),
         }
         self.use_shrinker(size, pool)
     }

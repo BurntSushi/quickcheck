@@ -72,7 +72,6 @@ impl<R: Rng> Gen for StdGen<R> {
     fn size(&self) -> usize { self.size }
 
     fn shrink_gen(&mut self) -> bool {
-
         fn used_region(pool: &[u8]) -> &[u8] {
             let i = pool.iter()
                         .enumerate()
@@ -83,7 +82,6 @@ impl<R: Rng> Gen for StdGen<R> {
                         .unwrap_or(0);
             &pool[0..i]
         }
-
         self.pool.i = 0;
         self.restore_buffer.clear();
         self.restore_buffer.extend(used_region(&self.pool.v[..]));
