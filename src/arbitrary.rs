@@ -527,8 +527,18 @@ unsigned_arbitrary! {
     usize, u8, u16, u32, u64
 }
 
+macro_rules! safe_abs {
+    ($x: expr, $ty: ident) => {
+        if $x == ::std::$ty::MIN {
+            ::std::$ty::MAX
+        } else {
+            $x.abs()
+        }
+    }
+}
+
 macro_rules! signed_shrinker {
-    ($ty:ty) => {
+    ($ty:ident) => {
         mod shrinker {
             pub struct SignedShrinker {
                 x: $ty,
@@ -546,7 +556,7 @@ macro_rules! signed_shrinker {
                         };
                         let mut items = vec![0];
                         if shrinker.i < 0 {
-                            items.push(shrinker.x.abs());
+                            items.push(safe_abs!(shrinker.x, $ty));
                         }
                         Box::new(items.into_iter().chain(shrinker))
                     }
@@ -556,7 +566,8 @@ macro_rules! signed_shrinker {
             impl Iterator for SignedShrinker {
                 type Item = $ty;
                 fn next(&mut self) -> Option<$ty> {
-                    if (self.x - self.i).abs() < self.x.abs() {
+                    if safe_abs!(self.x - self.i, $ty) <
+                       safe_abs!(self.x, $ty) {
                         let result = Some(self.x - self.i);
                         self.i = self.i / 2;
                         result
@@ -570,7 +581,7 @@ macro_rules! signed_shrinker {
 }
 
 macro_rules! signed_arbitrary {
-    ($($ty:ty),*) => {
+    ($($ty:ident),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
@@ -783,7 +794,6 @@ mod test {
 
     #[test]
     fn ints() {
-        // TODO: Test overflow?
         eq(5isize, vec![0, 3, 4]);
         eq(-5isize, vec![5, 0, -3, -4]);
         eq(0isize, vec![]);
