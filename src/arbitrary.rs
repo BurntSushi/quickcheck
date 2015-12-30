@@ -1,4 +1,6 @@
 use std::char;
+use std::f32;
+use std::f64;
 use std::collections::{
     BTreeMap,
     BTreeSet,
@@ -24,9 +26,17 @@ use rand::Rng;
 /// `gen` function in this crate.
 pub trait Gen : Rng {
     fn size(&self) -> usize;
+    fn set_size(&mut self, usize);
+
     fn shrink_gen(&mut self) -> bool { false }
     fn unshrink_gen(&mut self) { }
     fn reset(&mut self) { }
+}
+
+macro_rules! nonzero {
+    ($x:expr) => {
+        if $x == 0 {1} else {$x}
+    }
 }
 
 /// StdGen is the default implementation of `Gen`.
@@ -70,6 +80,8 @@ impl<R: Rng> Rng for StdGen<R> {
 
 impl<R: Rng> Gen for StdGen<R> {
     fn size(&self) -> usize { self.size }
+
+    fn set_size(&mut self, size: usize) { self.size = size; }
 
     fn shrink_gen(&mut self) -> bool {
 
@@ -260,7 +272,7 @@ impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
 
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> Vec<A> {
-        let size = { let s = g.size(); g.gen_range(0, s) };
+        let size = { let s = nonzero!(g.size()); g.gen_range(0, s) };
         (0..size).map(|_| Arbitrary::arbitrary(g)).collect()
     }
 
@@ -341,7 +353,7 @@ impl <A> Iterator for VecShrinker<A>
 
             //The first element shrinker is already created so skip the first offset
             //(self.offset == 0 only on first entry to this part of the iterator)
-            if self.offset == 0 { self.offset = 1 }
+            self.offset = nonzero!(self.offset);
 
             match self.next_element() {
                 Some(e) => Some(self.seed[..self.offset-1].iter().cloned()
@@ -440,7 +452,7 @@ impl<T: Arbitrary> Arbitrary for VecDeque<T> {
 
 impl Arbitrary for String {
     fn arbitrary<G: Gen>(g: &mut G) -> String {
-        let size = { let s = g.size(); g.gen_range(0, s) };
+        let size = { let s = nonzero!(g.size()); g.gen_range(0, s) };
         let mut s = String::with_capacity(size);
         for _ in 0..size {
             s.push(char::arbitrary(g));
@@ -508,10 +520,7 @@ macro_rules! unsigned_arbitrary {
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
                     #![allow(trivial_numeric_casts)]
-                    let mut s = g.size() as $ty;
-                    if s == 0 {
-                        s = s + 1;
-                    }
+                    let s = nonzero!(g.size() as $ty);
                     g.gen_range(0, s)
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>> {
@@ -570,12 +579,17 @@ macro_rules! signed_shrinker {
 }
 
 macro_rules! signed_arbitrary {
-    ($($ty:ty),*) => {
+    ($($ty:ident),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    let s = g.size() as $ty;
-                    g.gen_range(-s, if s == 0 { 1 } else { s })
+                    let s = g.size();
+                    if s as $ty as usize == s && s as $ty >= 0 {
+                        let s = s as $ty;
+                        g.gen_range(-s, nonzero!(s))
+                    } else {
+                        g.gen_range(::std::$ty::MIN, ::std::$ty::MAX)
+                    }
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>> {
                     signed_shrinker!($ty);
@@ -592,7 +606,8 @@ signed_arbitrary! {
 
 impl Arbitrary for f32 {
     fn arbitrary<G: Gen>(g: &mut G) -> f32 {
-        let s = g.size(); g.gen_range(-(s as f32), s as f32)
+        let s = g.size();
+        g.gen_range(-(s as f32), if s == 0 {f32::EPSILON} else {s as f32})
     }
     fn shrink(&self) -> Box<Iterator<Item=f32>> {
         signed_shrinker!(i32);
@@ -603,7 +618,8 @@ impl Arbitrary for f32 {
 
 impl Arbitrary for f64 {
     fn arbitrary<G: Gen>(g: &mut G) -> f64 {
-        let s = g.size(); g.gen_range(-(s as f64), s as f64)
+        let s = g.size();
+        g.gen_range(-(s as f64), if s == 0 {f64::EPSILON} else {s as f64})
     }
     fn shrink(&self) -> Box<Iterator<Item=f64>> {
         signed_shrinker!(i64);

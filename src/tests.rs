@@ -152,6 +152,8 @@ fn regression_issue_83() {
     fn prop(_: u8) -> bool { true }
     QuickCheck::new()
         .gen(StdGen::new(rand::thread_rng(), 1024))
+        .tests(500)
+        .max_size(500)
         .quickcheck(prop as fn(u8) -> bool)
 }
 
@@ -160,5 +162,7 @@ fn regression_issue_83_signed() {
     fn prop(_: i8) -> bool { true }
     QuickCheck::new()
         .gen(StdGen::new(rand::thread_rng(), 1024))
+        .tests(500)
+        .max_size(500)
         .quickcheck(prop as fn(i8) -> bool)
 }
