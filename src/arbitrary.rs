@@ -414,7 +414,7 @@ impl Arbitrary for String {
 }
 
 impl Arbitrary for char {
-    fn arbitrary<G: Gen>(g: &mut G) -> char { 
+    fn arbitrary<G: Gen>(g: &mut G) -> char {
         let mode = g.gen_range(0, 100);
         match mode {
             0...49 => {
@@ -457,14 +457,15 @@ impl Arbitrary for char {
                     '\u{e0001}', // tag
                     '\u{e0020}',//  tag space
                     '\u{e000}', '\u{e001}', '\u{ef8ff}', // private use
-                    '\u{f0000}', '\u{ffffd}','\u{ffffe}', '\u{fffff}', 
+                    '\u{f0000}', '\u{ffffd}','\u{ffffe}', '\u{fffff}',
                     '\u{100000}','\u{10FFFD}','\u{10FFFE}','\u{10FFFF}',
                     // "Other, surrogate" characters are so that very special
                     // that they are not even allowed in safe Rust,
                     //so omitted here
                     '\u{3000}', // ideographic space
                     '\u{1680}',
-                    // other space characters are already covered by two next branches
+                    // other space characters are already covered by two next
+                    // branches
                 ]).unwrap()
             }
             90...94 => {
