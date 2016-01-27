@@ -29,11 +29,13 @@ fn prop_reverse_reverse() {
 fn reverse_single() {
     fn prop(xs: Vec<usize>) -> TestResult {
         if xs.len() != 1 {
-            return TestResult::discard()
+            TestResult::discard()
         }
-        return TestResult::from_bool(
-            xs == xs.clone().into_iter().rev().collect::<Vec<_>>()
-        )
+        else {
+            TestResult::from_bool(
+                xs == xs.clone().into_iter().rev().collect::<Vec<_>>()
+            )
+        }
     }
     quickcheck(prop as fn(Vec<usize>) -> TestResult);
 }
@@ -70,9 +72,8 @@ fn max() {
 fn sort() {
     fn prop(mut xs: Vec<isize>) -> bool {
         xs.sort_by(|x, y| x.cmp(y));
-        let upto = if xs.len() == 0 { 0 } else { xs.len()-1 };
-        for i in 0..upto {
-            if xs[i] > xs[i+1] {
+        for i in xs.windows(2) {
+            if i[0] > i[1] {
                 return false
             }
         }
