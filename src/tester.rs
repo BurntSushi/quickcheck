@@ -269,7 +269,7 @@ impl<T: Testable,
         let ( $($name,)* ) = a.clone();
         let mut r = safe(move || {self_($($name),*)}).result(g);
         match r.status {
-            Pass|Discard => return r,
+            Pass|Discard => r,
             Fail => {
                 let ( $($name,)* ) = a.clone();
                 r.arguments = vec![$(format!("{:?}", $name),)*];
@@ -282,8 +282,8 @@ impl<T: Testable,
                         let ($($name,)*) = t;
                         r.arguments = vec![$(format!("{:?}", $name),)*];
                     }
-                };
-                return r;
+                }
+                r
             }
         }
     }

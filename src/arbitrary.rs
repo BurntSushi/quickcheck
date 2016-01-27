@@ -96,9 +96,11 @@ impl Arbitrary for bool {
     fn arbitrary<G: Gen>(g: &mut G) -> bool { g.gen() }
 
     fn shrink(&self) -> Box<Iterator<Item=bool>> {
-        match *self {
-            true => single_shrinker(false),
-            false => empty_shrinker(),
+        if *self {
+            single_shrinker(false)
+        }
+        else {
+            empty_shrinker()
         }
     }
 }
@@ -156,8 +158,7 @@ macro_rules! impl_arb_for_tuple {
                 (
                     Arbitrary::arbitrary(g),
                     $({
-                        let arb: $type_n = Arbitrary::arbitrary(g);
-                        arb
+                        $type_n::arbitrary(g)
                     },
                     )*
                 )
