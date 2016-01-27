@@ -12,8 +12,6 @@ use std::hash::Hash;
 use std::iter::{empty, once};
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 use std::time::Duration;
-use entropy_pool::EntropyPool;
-use shrink::{Shrinker, StdShrinker};
 
 use rand::Rng;
 
@@ -24,9 +22,6 @@ use rand::Rng;
 /// `gen` function in this crate.
 pub trait Gen : Rng {
     fn size(&self) -> usize;
-    fn shrink_gen(&mut self) -> bool { false }
-    fn unshrink_gen(&mut self) { }
-    fn reset(&mut self) { }
 }
 
 /// StdGen is the default implementation of `Gen`.
@@ -34,10 +29,8 @@ pub trait Gen : Rng {
 /// Values of type `StdGen` can be created with the `gen` function in this
 /// crate.
 pub struct StdGen<R> {
-    pool: EntropyPool<R>,
-    restore_buffer: Vec<u8>,
+    rng: R,
     size: usize,
-    shrinker: StdShrinker,
 }
 
 /// Returns a `StdGen` with the given configuration using any random number
@@ -48,69 +41,21 @@ pub struct StdGen<R> {
 /// and also will specify the maximum magnitude of a randomly generated number.
 impl<R: Rng> StdGen<R> {
     pub fn new(rng: R, size: usize) -> StdGen<R> {
-        let pool = EntropyPool::new(rng, 4 * size);
-        let shrinker = StdShrinker::default();
-        StdGen { pool: pool,
-                 restore_buffer: Vec::new(),
-                 size: size,
-                 shrinker: shrinker,
-        }
+        StdGen { rng: rng, size: size }
     }
 }
 
 impl<R: Rng> Rng for StdGen<R> {
-    #[inline]
-    fn next_u32(&mut self) -> u32 { self.pool.next_u32() }
-    #[inline]
-    fn next_u64(&mut self) -> u64 { self.pool.next_u64() }
-    #[inline]
-    fn fill_bytes(&mut self, dest: &mut [u8]) { self.pool.fill_bytes(dest) }
-}
+    fn next_u32(&mut self) -> u32 { self.rng.next_u32() }
 
+    // some RNGs implement these more efficiently than the default, so
+    // we might as well defer to them.
+    fn next_u64(&mut self) -> u64 { self.rng.next_u64() }
+    fn fill_bytes(&mut self, dest: &mut [u8]) { self.rng.fill_bytes(dest) }
+}
 
 impl<R: Rng> Gen for StdGen<R> {
     fn size(&self) -> usize { self.size }
-
-    fn shrink_gen(&mut self) -> bool {
-
-        fn used_region(pool: &[u8]) -> &[u8] {
-            let i = pool.iter()
-                        .enumerate()
-                        .rev()
-                        .skip_while(|&u| *u.1 == 0)
-                        .map(|u| u.0 + 1)
-                        .next()
-                        .unwrap_or(0);
-            &pool[0..i]
-        }
-
-        self.pool.i = 0;
-        self.restore_buffer.clear();
-        self.restore_buffer.extend(used_region(&self.pool.v[..]));
-        if self.shrinker.use_shrinker(self.size, &mut self.pool.v[..]) {
-            true
-        } else {
-            self.restore_buffer.clear();
-            self.pool.randomize();
-            let shrinker = StdShrinker::default();
-            self.shrinker = shrinker;
-            false
-        }
-    }
-
-    fn unshrink_gen(&mut self) {
-        for (ptr, &w) in self.pool
-                             .v[..]
-                             .iter_mut()
-                             .zip(self.restore_buffer.iter()) {
-            *ptr = w;
-        }
-    }
-
-    fn reset(&mut self) {
-        self.pool.randomize();
-        self.pool.i = 0;
-    }
 }
 
 /// Creates a shrinker with zero elements.
@@ -135,9 +80,6 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<Iterator<Item=A>> {
 /// They must also be sendable and static since every test is run in its own
 /// thread using `thread::Builder::spawn`, which requires the `Send + 'static`
 /// bounds.
-///
-/// If you do not implement `shrink`, StdGen's automatic shrinking feature will
-/// typically do a reasonable job for you.
 pub trait Arbitrary : Clone + Send + 'static {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
 
@@ -272,11 +214,12 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
 ///Iterator which returns successive attempts to shrink the vector `seed`
 struct VecShrinker<A> {
     seed: Vec<A>,
-    ///How much which is removed when trying with smaller vectors
+    /// How much which is removed when trying with smaller vectors
     size: usize,
-    ///The end of the removed elements
+    /// The end of the removed elements
     offset: usize,
-    ///The shrinker for the element at `offset` once shrinking of individual elements are attempted
+    /// The shrinker for the element at `offset` once shrinking of individual
+    /// elements are attempted
     element_shrinker: Box<Iterator<Item=A>>
 }
 
@@ -288,11 +231,16 @@ impl <A: Arbitrary> VecShrinker<A> {
             None => return empty_shrinker()
         };
         let size = seed.len();
-        Box::new(VecShrinker { seed: seed, size: size, offset: size, element_shrinker: es })
+        Box::new(VecShrinker {
+            seed: seed,
+            size: size,
+            offset: size,
+            element_shrinker: es,
+        })
     }
 
-    ///Returns the next shrunk element if any, `offset` points to the index after the returned
-    ///element after the function returns
+    /// Returns the next shrunk element if any, `offset` points to the index
+    /// after the returned element after the function returns
     fn next_element(&mut self) -> Option<A> {
         loop {
             match self.element_shrinker.next() {
@@ -315,20 +263,22 @@ impl <A> Iterator for VecShrinker<A>
     where A: Arbitrary {
     type Item = Vec<A>;
     fn next(&mut self) -> Option<Vec<A>> {
-        //Try with an empty vector first
+        // Try with an empty vector first
         if self.size == self.seed.len() {
             self.size /= 2;
             self.offset = self.size;
             return Some(vec![])
         }
         if self.size != 0 {
-            //Generate a smaller vector by removing the elements between (offset - size) and offset
+            // Generate a smaller vector by removing the elements between
+            // (offset - size) and offset
             let xs1 = self.seed[..(self.offset - self.size)].iter()
                 .chain(&self.seed[self.offset..])
                 .cloned()
                 .collect();
             self.offset += self.size;
-            //Try to reduce the amount removed from the vector once all previous sizes tried
+            // Try to reduce the amount removed from the vector once all
+            // previous sizes tried
             if self.offset > self.seed.len() {
                 self.size /= 2;
                 self.offset = self.size;
@@ -336,11 +286,13 @@ impl <A> Iterator for VecShrinker<A>
             Some(xs1)
         }
         else {
-            //A smaller vector did not work so try to shrink each element of the vector instead
-            //Reuse `offset` as the index determining which element to shrink
+            // A smaller vector did not work so try to shrink each element of
+            // the vector instead Reuse `offset` as the index determining which
+            // element to shrink
 
-            //The first element shrinker is already created so skip the first offset
-            //(self.offset == 0 only on first entry to this part of the iterator)
+            // The first element shrinker is already created so skip the first
+            // offset (self.offset == 0 only on first entry to this part of the
+            // iterator)
             if self.offset == 0 { self.offset = 1 }
 
             match self.next_element() {
@@ -362,7 +314,8 @@ impl<K: Arbitrary + Ord, V: Arbitrary> Arbitrary for BTreeMap<K, V> {
 
     fn shrink(&self) -> Box<Iterator<Item=BTreeMap<K, V>>> {
         let vec: Vec<(K, V)> = self.clone().into_iter().collect();
-        Box::new(vec.shrink().map(|v| v.into_iter().collect::<BTreeMap<K, V>>()))
+        Box::new(vec.shrink()
+                    .map(|v| v.into_iter().collect::<BTreeMap<K, V>>()))
     }
 }
 
@@ -374,7 +327,8 @@ impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
 
     fn shrink(&self) -> Box<Iterator<Item=HashMap<K, V>>> {
         let vec: Vec<(K, V)> = self.clone().into_iter().collect();
-        Box::new(vec.shrink().map(|v| v.into_iter().collect::<HashMap<K, V>>()))
+        Box::new(vec.shrink()
+                    .map(|v| v.into_iter().collect::<HashMap<K, V>>()))
     }
 }
 
@@ -398,7 +352,8 @@ impl<T: Arbitrary + Ord> Arbitrary for BinaryHeap<T> {
 
     fn shrink(&self) -> Box<Iterator<Item=BinaryHeap<T>>> {
         let vec: Vec<T> = self.clone().into_iter().collect();
-        Box::new(vec.shrink().map(|v| v.into_iter().collect::<BinaryHeap<T>>()))
+        Box::new(vec.shrink()
+                    .map(|v| v.into_iter().collect::<BinaryHeap<T>>()))
     }
 }
 
@@ -422,7 +377,8 @@ impl<T: Arbitrary> Arbitrary for LinkedList<T> {
 
     fn shrink(&self) -> Box<Iterator<Item=LinkedList<T>>> {
         let vec: Vec<T> = self.clone().into_iter().collect();
-        Box::new(vec.shrink().map(|v| v.into_iter().collect::<LinkedList<T>>()))
+        Box::new(vec.shrink()
+                    .map(|v| v.into_iter().collect::<LinkedList<T>>()))
     }
 }
 
@@ -434,7 +390,8 @@ impl<T: Arbitrary> Arbitrary for VecDeque<T> {
 
     fn shrink(&self) -> Box<Iterator<Item=VecDeque<T>>> {
         let vec: Vec<T> = self.clone().into_iter().collect();
-        Box::new(vec.shrink().map(|v| v.into_iter().collect::<VecDeque<T>>()))
+        Box::new(vec.shrink()
+                    .map(|v| v.into_iter().collect::<VecDeque<T>>()))
     }
 }
 
@@ -617,7 +574,9 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for Range<T> {
         Arbitrary::arbitrary(g) .. Arbitrary::arbitrary(g)
     }
     fn shrink(&self) -> Box<Iterator<Item=Range<T>>> {
-        Box::new((self.start.clone(), self.end.clone()).shrink().map(|(s, e)| s .. e))
+        Box::new(
+            (self.start.clone(), self.end.clone())
+            .shrink().map(|(s, e)| s .. e))
     }
 }
 
@@ -680,7 +639,9 @@ mod unstable_impls {
                 Ok(duration) => duration,
                 Err(e) => e.duration(),
             };
-            Box::new(duration.shrink().flat_map(|d| vec![UNIX_EPOCH + d, UNIX_EPOCH - d]))
+            Box::new(duration.shrink().flat_map(|d| {
+                vec![UNIX_EPOCH + d, UNIX_EPOCH - d]
+            }))
         }
     }
 }
@@ -914,7 +875,9 @@ mod test {
 
     #[test]
     fn binaryheaps() {
-        ordered_eq(BinaryHeap::<usize>::new().into_iter().collect::<Vec<_>>(), vec![]);
+        ordered_eq(
+            BinaryHeap::<usize>::new().into_iter().collect::<Vec<_>>(),
+            vec![]);
 
         {
             let mut heap = BinaryHeap::<usize>::new();

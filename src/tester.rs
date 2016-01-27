@@ -72,22 +72,10 @@ impl<G: Gen> QuickCheck<G> {
             if ntests >= self.tests {
                 break
             }
-            self.gen.reset();
-            let mut r = f.result(&mut self.gen);
-            match r.status {
-                Pass => ntests += 1,
-                Discard => continue,
-                Fail => {
-                    while self.gen.shrink_gen() {
-                        let r_new = f.result(&mut self.gen);
-                        if r_new.status == Fail {
-                            r = r_new;
-                        } else {
-                            self.gen.unshrink_gen();
-                        }
-                    }
-                    return Err(r);
-                }
+            match f.result(&mut self.gen) {
+                TestResult { status: Pass, .. } => ntests += 1,
+                TestResult { status: Discard, .. } => continue,
+                r @ TestResult { status: Fail, .. } => return Err(r),
             }
         }
         Ok(ntests)
@@ -146,7 +134,7 @@ pub struct TestResult {
 }
 
 /// Whether a test has passed, failed or been discarded.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 enum Status { Pass, Fail, Discard }
 
 impl TestResult {
@@ -259,7 +247,8 @@ impl Testable for TestResult {
     fn result<G: Gen>(&self, _: &mut G) -> TestResult { self.clone() }
 }
 
-impl<A, E> Testable for Result<A, E> where A: Testable, E: Debug + Send + 'static {
+impl<A, E> Testable for Result<A, E>
+        where A: Testable, E: Debug + Send + 'static {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         match *self {
             Ok(ref r) => r.result(g),
@@ -275,23 +264,9 @@ impl<T: Testable,
      $($name: Arbitrary + Debug),*> Testable for fn($($name),*) -> T {
     #[allow(non_snake_case)]
     fn result<G_: Gen>(&self, g: &mut G_) -> TestResult {
-
-        // TODO(burntsushi): Use `std::thread::catch_panic` once it stabilizes.
-        fn safe<T, F>(fun: F) -> Result<T, String>
-                where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
-            let t = ::std::thread::Builder::new().name("safe".into());
-            t.spawn(fun).unwrap().join().map_err(|any_err| {
-                match any_err.downcast_ref::<&Debug>() {
-                    Some(ref s) => format!("{:?}", s),
-                    None => "UNABLE TO SHOW RESULT OF PANIC.".into(),
-                }
-            })
-        }
-
         let self_ = *self;
         let a: ($($name,)*) = Arbitrary::arbitrary(g);
         let ( $($name,)* ) = a.clone();
-        g.reset();
         let mut r = safe(move || {self_($($name),*)}).result(g);
         match r.status {
             Pass|Discard => return r,
@@ -301,7 +276,6 @@ impl<T: Testable,
                 let mut r_new;
                 for t in a.shrink() {
                     let ($($name,)*) = t.clone();
-                    g.reset();
                     r_new = safe(move || {self_($($name),*)}).result(g);
                     if r_new.is_failure() {
                         r = r_new;
@@ -328,3 +302,19 @@ testable_fn!(A, B, C, D, E, F, G, H, I);
 testable_fn!(A, B, C, D, E, F, G, H, I, J);
 testable_fn!(A, B, C, D, E, F, G, H, I, J, K);
 testable_fn!(A, B, C, D, E, F, G, H, I, J, K, L);
+
+// TODO(burntsushi): Use `std::thread::catch_panic` once it stabilizes.
+fn safe<T, F>(fun: F) -> Result<T, String>
+        where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
+    let t = ::std::thread::Builder::new().name("safe".into());
+    t.spawn(fun).unwrap().join().map_err(|any_err| {
+        match any_err.downcast_ref::<&Debug>() {
+            Some(ref s) => format!("{:?}", s),
+            None => "UNABLE TO SHOW RESULT OF PANIC.".into(),
+        }
+    })
+}
+
+/// Convenient aliases.
+trait AShow : Arbitrary + Debug {}
+impl<A: Arbitrary + Debug> AShow for A {}
