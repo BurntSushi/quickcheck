@@ -413,7 +413,70 @@ impl Arbitrary for String {
 }
 
 impl Arbitrary for char {
-    fn arbitrary<G: Gen>(g: &mut G) -> char { g.gen() }
+    fn arbitrary<G: Gen>(g: &mut G) -> char { 
+        let mode = g.gen_range(0, 100);
+        match mode {
+            0...49 => {
+                // ASCII + some control characters
+                g.gen_range(0,0xB0) as u8 as char
+            }
+            50...59 => {
+                // Unicode BMP characters
+                loop {
+                    if let Some(x) = char::from_u32(g.gen_range(0, 0x10000)) {
+                        return x
+                    }
+                    // ignore surrogate pairs
+                }
+            }
+            60...84 => {
+                // Characters often used in programming languages
+                *g.choose(&[
+                    ' ', ' ', ' ',
+                    '\t',
+                    '\n',
+                    '~', '`', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')',
+                    '_', '-', '=', '+','[', ']', '{', '}',':',';','\'','"','\\',
+                    '|',',','<','>','.','/','?',
+                    '0', '1','2','3','4','5','6','7','8','9',
+                ]).unwrap()
+            }
+            85...89 => {
+                // Tricky Unicode, part 1
+                *g.choose(&[
+                    '\u{0149}', // a deprecated character
+                    '\u{fff0}', // some of "Other, format" category:
+                    '\u{fff1}','\u{fff2}','\u{fff3}','\u{fff4}','\u{fff5}',
+                    '\u{fff6}','\u{fff7}','\u{fff8}','\u{fff9}','\u{fffA}',
+                    '\u{fffB}','\u{fffC}','\u{fffD}','\u{fffE}','\u{fffF}',
+                    '\u{0600}','\u{0601}','\u{0602}','\u{0603}',
+                    '\u{0604}','\u{0605}','\u{061C}',
+                    '\u{06DD}','\u{070F}','\u{180E}',
+                    '\u{110BD}', '\u{1D173}',
+                    '\u{e0001}', // tag
+                    '\u{e0020}',//  tag space
+                    '\u{e000}', '\u{e001}', '\u{ef8ff}', // private use
+                    '\u{f0000}', '\u{ffffd}','\u{ffffe}', '\u{fffff}', 
+                    '\u{100000}','\u{10FFFD}','\u{10FFFE}','\u{10FFFF}',
+                    // "Other, surrogate" characters are so that very special
+                    // that they are not even allowed in safe Rust,
+                    //so omitted here
+                    '\u{3000}', // ideographic space
+                    '\u{1680}',
+                    // other space characters are already covered by two next branches
+                ]).unwrap()
+            }
+            90...94 => {
+                // Tricky unicode, part 2
+                char::from_u32(g.gen_range(0x2000, 0x2070)).unwrap()
+            }
+            95...99 => {
+                // Completely arbitrary characters
+                g.gen()
+            }
+            _ => unreachable!()
+        }
+    }
 
     fn shrink(&self) -> Box<Iterator<Item=char>> {
         Box::new((*self as u32).shrink().filter_map(char::from_u32))
