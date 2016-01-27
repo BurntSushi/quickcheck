@@ -162,3 +162,33 @@ fn regression_issue_83_signed() {
         .gen(StdGen::new(rand::thread_rng(), 1024))
         .quickcheck(prop as fn(i8) -> bool)
 }
+
+// Test that we can show the message after panic
+#[test]
+#[should_panic(expected = "foo")]
+fn panic_msg_1() {
+    fn prop() -> bool {
+        panic!("foo");
+    }
+    quickcheck(prop as fn() -> bool);
+}
+
+#[test]
+#[should_panic(expected = "foo")]
+fn panic_msg_2() {
+    fn prop() -> bool {
+        assert!("foo" == "bar");
+        true
+    }
+    quickcheck(prop as fn() -> bool);
+}
+
+#[test]
+#[should_panic(expected = "foo")]
+fn panic_msg_3() {
+    fn prop() -> bool {
+        assert_eq!("foo", "bar");
+        true
+    }
+    quickcheck(prop as fn() -> bool);
+}

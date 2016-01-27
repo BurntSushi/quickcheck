@@ -308,9 +308,14 @@ fn safe<T, F>(fun: F) -> Result<T, String>
         where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
     let t = ::std::thread::Builder::new().name("safe".into());
     t.spawn(fun).unwrap().join().map_err(|any_err| {
-        match any_err.downcast_ref::<&Debug>() {
-            Some(ref s) => format!("{:?}", s),
-            None => "UNABLE TO SHOW RESULT OF PANIC.".into(),
+        // Extract common types of panic payload:
+        // panic and assert produce &str or String
+        if let Some(&s) = any_err.downcast_ref::<&str>() {
+            s.to_owned()
+        } else if let Some(s) = any_err.downcast_ref::<String>() {
+            s.to_owned()
+        } else {
+            "UNABLE TO SHOW RESULT OF PANIC.".to_owned()
         }
     })
 }
