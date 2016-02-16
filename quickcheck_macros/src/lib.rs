@@ -10,9 +10,9 @@
 extern crate syntax;
 extern crate rustc_plugin;
 
-use syntax::abi;
+use syntax::abi::Abi;
 use syntax::ast;
-use syntax::ast::Ty_::TyBareFn;
+use syntax::ast::{DeclKind, ItemKind, StmtKind, TyKind};
 use syntax::codemap;
 use syntax::parse::token;
 use syntax::ext::base::{ExtCtxt, MultiModifier, Annotatable};
@@ -54,9 +54,9 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
                           annot_item: Annotatable) -> Annotatable {
     let item = annot_item.expect_item();
     match item.node {
-        ast::ItemFn(ref decl, unsafety, _constness, abi, _, _) => {
+        ItemKind::Fn(ref decl, unsafety, _constness, abi, _, _) => {
             let prop_ident = cx.expr_ident(span, item.ident);
-            let prop_ty = cx.ty(span, TyBareFn(P(ast::BareFnTy {
+            let prop_ty = cx.ty(span, TyKind::BareFn(P(ast::BareFnTy {
                 unsafety: unsafety,
                 abi: abi,
                 lifetimes: vec![],
@@ -65,7 +65,7 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
             let inner_ident = cx.expr_cast(span, prop_ident, prop_ty);
             return wrap_item(cx, span, &*item, inner_ident);
         },
-        ast::ItemStatic(..) => {
+        ItemKind::Static(..) => {
             let inner_ident = cx.expr_ident(span, item.ident);
             return wrap_item(cx, span, &*item, inner_ident);
         },
@@ -88,9 +88,9 @@ fn wrap_item(cx: &mut ExtCtxt,
     let check_path = vec!(check_ident, check_ident);
     // Wrap original function in new outer function,
     // calling ::quickcheck::quickcheck()
-    let fn_decl = P(codemap::respan(span, ast::DeclItem(prop.clone())));
-    let inner_fn =
-        P(codemap::respan(span, ast::StmtDecl(fn_decl, ast::DUMMY_NODE_ID)));
+    let fn_decl = P(codemap::respan(span, DeclKind::Item(prop.clone())));
+    let inner_fn = codemap::respan(
+        span, StmtKind::Decl(fn_decl, ast::DUMMY_NODE_ID));
     let check_call = cx.expr_call_global(span, check_path, vec![inner_ident]);
     let body = cx.block(span, vec![inner_fn], Some(check_call));
     let test = item_fn(cx, span, item, body);
@@ -108,14 +108,11 @@ fn item_fn(cx: &mut ExtCtxt, span: codemap::Span,
            towrap_item: &ast::Item, body: P<ast::Block>) -> P<ast::Item> {
     let decl = P(ast::FnDecl {
         inputs: vec![],
-        output: ast::FunctionRetTy::DefaultReturn(span),
+        output: ast::FunctionRetTy::Default(span),
         variadic: false,
     });
-    let item = ast::ItemFn(decl,
-                           ast::Unsafety::Normal,
-                           ast::Constness::NotConst,
-                           abi::Rust,
-                           ast::Generics::default(),
-                           body);
+    let item = ItemKind::Fn(
+        decl, ast::Unsafety::Normal, ast::Constness::NotConst, Abi::Rust,
+        ast::Generics::default(), body);
     cx.item(span, towrap_item.ident, vec![], item)
 }
