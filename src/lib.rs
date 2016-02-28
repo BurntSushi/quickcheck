@@ -5,14 +5,14 @@
 //! [README](https://github.com/BurntSushi/quickcheck).
 
 #![allow(deprecated)] // for connect -> join in 1.3
-#![cfg_attr(feature = "unstable", feature(time2))]
+#![cfg_attr(feature = "unstable", feature(core_intrinsics, time2))]
 
 extern crate env_logger;
 #[macro_use] extern crate log;
 extern crate rand;
 
 pub use arbitrary::{
-    Arbitrary, Gen, StdGen,
+    Arbitrary, Gen, StdGen, RAnd, ROr, Restricted, Restriction,
     empty_shrinker, single_shrinker,
 };
 pub use rand::Rng;

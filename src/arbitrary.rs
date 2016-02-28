@@ -1,4 +1,4 @@
-use std::char;
+use std::{char, fmt};
 use std::collections::{
     BTreeMap,
     BTreeSet,
@@ -10,6 +10,7 @@ use std::collections::{
 };
 use std::hash::Hash;
 use std::iter::{empty, once};
+use std::marker::PhantomData;
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 use std::time::Duration;
 
@@ -682,6 +683,110 @@ impl Arbitrary for Duration {
     }
 }
 
+pub trait Restriction<T> {
+    #[cfg(feature = "unstable")]
+    fn format_name(f: &mut fmt::Formatter) -> fmt::Result {
+        use std::intrinsics::type_name;
+        write!(f, "{}", unsafe { type_name::<Self>() })
+    }
+
+    #[cfg(not(feature = "unstable"))]
+    fn format_name(f: &mut fmt::Formatter) -> fmt::Result;
+
+    fn is_permitted(&T) -> bool;
+}
+
+pub struct Restricted<T, R: Restriction<T>>(pub T, PhantomData<R>);
+
+impl<T, R: Restriction<T>> Restricted<T, R> {
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
+
+impl<T, R: Restriction<T>> Clone for Restricted<T, R> where T: Clone {
+    fn clone(&self) -> Restricted<T, R> {
+        Restricted(self.0.clone(), PhantomData)
+    }
+}
+
+impl<T, R: Restriction<T>> PartialEq for Restricted<T, R> where T: PartialEq {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        self.0 != other.0
+    }
+}
+
+impl<T, R: Restriction<T>> Eq for Restricted<T, R> where T: Eq {}
+
+/* It's okay because R is only used as PhantomData. */
+unsafe impl<T, R: Restriction<T>> Send for Restricted<T, R> where T: Send {}
+
+impl<T, R: Restriction<T>> fmt::Debug for Restricted<T, R> where T: fmt::Debug + Sized {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "Restricted({:?}, ", self.0));
+        try!(R::format_name(f));
+        write!(f, ")")
+    }
+}
+
+impl<T, R: Restriction<T>> Restriction<Restricted<T, R>> for Restricted<T, R> {
+    fn is_permitted(t: &Restricted<T, R>) -> bool {
+        R::is_permitted(&t.0)
+    }
+}
+
+impl<T, R: Restriction<T>> Arbitrary for Restricted<T, R> where T: Arbitrary + Clone + Send + 'static, R: 'static {
+    fn arbitrary<G: Gen>(g: &mut G) -> Restricted<T, R> {
+        loop {
+            let ret = T::arbitrary(&mut *g);
+            if R::is_permitted(&ret) {
+                return Restricted(ret, PhantomData);
+            }
+        }
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+        let iter = Arbitrary::shrink(&self.0)
+            .map(|s| Restricted(s, PhantomData));
+        Box::new(iter)
+    }
+}
+
+pub struct RAnd<A, B>(PhantomData<A>, PhantomData<B>);
+impl<A, B, T> Restriction<T> for RAnd<A, B> where A: Restriction<T>, B: Restriction<T> {
+    fn is_permitted(x: &T) -> bool {
+        A::is_permitted(x) && B::is_permitted(x)
+    }
+
+    fn format_name(f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "("));
+        try!(A::format_name(f));
+        try!(write!(f, " && "));
+        try!(B::format_name(f));
+        try!(write!(f, ")"));
+        Ok(())
+    }
+}
+
+pub struct ROr<A, B>(PhantomData<A>, PhantomData<B>);
+impl<A, B, T> Restriction<T> for ROr<A, B> where A: Restriction<T>, B: Restriction<T> {
+    fn is_permitted(x: &T) -> bool {
+        A::is_permitted(x) || B::is_permitted(x)
+    }
+
+    fn format_name(f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "("));
+        try!(A::format_name(f));
+        try!(write!(f, " || "));
+        try!(B::format_name(f));
+        try!(write!(f, ")"));
+        Ok(())
+    }
+}
 
 #[cfg(feature = "unstable")]
 mod unstable_impls {
@@ -750,7 +855,7 @@ mod test {
         super::StdGen::new(rand::thread_rng(), 5)
     }
 
-    fn rep<F>(f: &mut F) where F : FnMut() -> () {
+    pub fn rep<F>(f: &mut F) where F : FnMut() -> () {
         for _ in 0..100 {
             f()
         }
@@ -989,5 +1094,111 @@ mod test {
         ordered_eq(3.., vec![0.., 2..]);
         ordered_eq(..3, vec![..0, ..2]);
         ordered_eq(.., vec![]);
+    }
+}
+
+#[cfg(all(feature = "unstable", test))]
+mod restriction_test {
+    use std::ops;
+    use super::{Restricted, Restriction, RAnd, ROr};
+    use super::test::rep;
+
+    fn big_arby<A: super::Arbitrary>() -> A {
+        super::Arbitrary::arbitrary(&mut big_gen())
+    }
+
+    fn big_gen() -> super::StdGen<::rand::ThreadRng> {
+        super::StdGen::new(::rand::thread_rng(), ::std::u16::MAX as usize)
+    }
+
+    trait NumericValues {
+        fn zero() -> Self;
+        fn three() -> Self;
+        fn five() -> Self;
+        fn seven() -> Self;
+    }
+
+    macro_rules! divisible {
+        ($name:ident, $method:ident) => {
+            enum $name {}
+            impl<T> Restriction<T> for $name where T: Clone + NumericValues + ops::Rem<Output = T> + Eq {
+                fn is_permitted(x: &T) -> bool {
+                    x.clone() % T::$method() == T::zero()
+                }
+            }
+        };
+    }
+
+    divisible!(DivisibleByThree, three);
+    divisible!(DivisibleByFive, five);
+    divisible!(DivisibleBySeven, seven);
+
+    macro_rules! numeric_values {
+        ($($t:ty),*) => {
+            $(impl NumericValues for $t {
+                fn zero() -> $t { 0 }
+                fn three() -> $t { 3 }
+                fn five() -> $t { 5 }
+                fn seven() -> $t { 7 }
+            })*
+        };
+    }
+
+    numeric_values!(u8, i8, usize, isize);
+
+    enum LessThanSeven {}
+    impl<T> Restriction<T> for LessThanSeven where T: Clone + NumericValues + Ord {
+        fn is_permitted(x: &T) -> bool {
+            x.clone() < T::seven()
+        }
+    }
+
+    #[test]
+    fn arby_isize_mod_three() {
+        rep(&mut move || {
+            let n: Restricted<isize, DivisibleByThree> = big_arby();
+            assert_eq!(n.into_inner() % 3, 0);
+        });
+    }
+
+    #[test]
+    fn arby_isize_mod_fifteen() {
+        rep(&mut move || {
+            let n: Restricted<isize, RAnd<DivisibleByFive, DivisibleByThree>> = big_arby();
+            assert_eq!(n.into_inner() % 1, 0);
+        });
+    }
+
+    #[test]
+    fn arby_isize_mod_105() {
+        rep(&mut move || {
+            let n: Restricted<isize, RAnd<RAnd<DivisibleByFive, DivisibleBySeven>, DivisibleByThree>> = big_arby();
+            assert_eq!(n.into_inner() % 105, 0);
+        });
+    }
+
+    #[test]
+    fn arby_u8_mod_fifteen_or_under_seven() {
+        rep(&mut move || {
+            let n: Restricted<u8, ROr<LessThanSeven, RAnd<DivisibleByFive, DivisibleByThree>>> = big_arby();
+            let n = n.into_inner();
+            assert!(n % 15 == 0 || n < 7);
+        });
+    }
+
+    #[test]
+    fn arby_usize_vec_mod_seven() {
+        rep(&mut move || {
+            let nv: Vec<Restricted<usize, DivisibleBySeven>> = big_arby();
+            let mut sum = 0usize;
+            for a in nv.into_iter() {
+                if let Some(new_sum) = a.into_inner().checked_add(sum) {
+                    sum = new_sum;
+                } else {
+                    panic!("overflow");
+                }
+            }
+            assert_eq!(sum % 7, 0);
+        });
     }
 }
