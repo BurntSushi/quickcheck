@@ -264,26 +264,38 @@ impl<T: Testable,
      $($name: Arbitrary + Debug),*> Testable for fn($($name),*) -> T {
     #[allow(non_snake_case)]
     fn result<G_: Gen>(&self, g: &mut G_) -> TestResult {
+        fn shrink_failure<T: Testable, G_: Gen, $($name: Arbitrary + Debug),*>(
+                g: &mut G_, self_: fn($($name),*) -> T, a: ($($name,)*)) -> Option<TestResult> {
+            for t in a.shrink() {
+                let ($($name,)*) = t.clone();
+                let mut r_new = safe(move || {self_($($name),*)}).result(g);
+                if r_new.is_failure() {
+                    let ($($name,)*) : ($($name,)*) = t.clone();
+                    r_new.arguments = vec![$(format!("{:?}", $name),)*];
+
+                    // The shrunk value *does* witness a failure, so keep trying
+                    // to shrink it.
+                    let shrunk = shrink_failure(g, self_, t);
+
+                    // If we couldn't witness a failure on any shrunk value,
+                    // then return the failure we already have.
+                    return Some(shrunk.unwrap_or(r_new))
+                }
+            }
+            None
+        }
+
         let self_ = *self;
         let a: ($($name,)*) = Arbitrary::arbitrary(g);
         let ( $($name,)* ) = a.clone();
         let mut r = safe(move || {self_($($name),*)}).result(g);
+
+        let ( $($name,)* ) = a.clone();
+        r.arguments = vec![$(format!("{:?}", $name),)*];
         match r.status {
             Pass|Discard => r,
             Fail => {
-                let ( $($name,)* ) = a.clone();
-                r.arguments = vec![$(format!("{:?}", $name),)*];
-                let mut r_new;
-                for t in a.shrink() {
-                    let ($($name,)*) = t.clone();
-                    r_new = safe(move || {self_($($name),*)}).result(g);
-                    if r_new.is_failure() {
-                        r = r_new;
-                        let ($($name,)*) = t;
-                        r.arguments = vec![$(format!("{:?}", $name),)*];
-                    }
-                }
-                r
+                shrink_failure(g, self_, a).unwrap_or(r)
             }
         }
     }
