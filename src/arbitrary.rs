@@ -700,7 +700,7 @@ mod unstable_impls {
         }
 
         fn shrink(&self) -> Box<Iterator<Item=Self>> {
-            let duration = match self.duration_from_earlier(UNIX_EPOCH) {
+            let duration = match self.duration_since(UNIX_EPOCH) {
                 Ok(duration) => duration,
                 Err(e) => e.duration(),
             };
