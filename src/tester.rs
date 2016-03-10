@@ -338,8 +338,8 @@ impl<A: Arbitrary + Debug> AShow for A {}
 
 #[cfg(test)]
 mod test {
-    use {QuickCheck, StdGen, quickcheck};
-    use super::TestResult;
+    use QuickCheck;
+
     #[test]
     fn shrinking_regression_issue_126() {
         fn thetest(vals: Vec<bool>) -> bool {
