@@ -335,3 +335,18 @@ fn safe<T, F>(fun: F) -> Result<T, String>
 /// Convenient aliases.
 trait AShow : Arbitrary + Debug {}
 impl<A: Arbitrary + Debug> AShow for A {}
+
+#[cfg(test)]
+mod test {
+    use {QuickCheck, StdGen, quickcheck};
+    use super::TestResult;
+    #[test]
+    fn shrinking_regression_issue_126() {
+        fn thetest(vals: Vec<bool>) -> bool {
+            vals.iter().filter(|&v| *v).count() < 2
+        }
+        let failing_case = QuickCheck::new().quicktest(thetest as fn(vals: Vec<bool>) -> bool).unwrap_err();
+        let expected_argument = format!("{:?}", [true, true]);
+        assert_eq!(failing_case.arguments, vec![expected_argument]);
+    }
+}
