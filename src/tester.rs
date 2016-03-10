@@ -265,7 +265,10 @@ impl<T: Testable,
     #[allow(non_snake_case)]
     fn result<G_: Gen>(&self, g: &mut G_) -> TestResult {
         fn shrink_failure<T: Testable, G_: Gen, $($name: Arbitrary + Debug),*>(
-                g: &mut G_, self_: fn($($name),*) -> T, a: ($($name,)*)) -> Option<TestResult> {
+            g: &mut G_,
+            self_: fn($($name),*) -> T,
+            a: ($($name,)*),
+        ) -> Option<TestResult> {
             for t in a.shrink() {
                 let ($($name,)*) = t.clone();
                 let mut r_new = safe(move || {self_($($name),*)}).result(g);
@@ -273,8 +276,8 @@ impl<T: Testable,
                     let ($($name,)*) : ($($name,)*) = t.clone();
                     r_new.arguments = vec![$(format!("{:?}", $name),)*];
 
-                    // The shrunk value *does* witness a failure, so keep trying
-                    // to shrink it.
+                    // The shrunk value *does* witness a failure, so keep
+                    // trying to shrink it.
                     let shrunk = shrink_failure(g, self_, t);
 
                     // If we couldn't witness a failure on any shrunk value,
@@ -345,7 +348,10 @@ mod test {
         fn thetest(vals: Vec<bool>) -> bool {
             vals.iter().filter(|&v| *v).count() < 2
         }
-        let failing_case = QuickCheck::new().quicktest(thetest as fn(vals: Vec<bool>) -> bool).unwrap_err();
+        let failing_case =
+            QuickCheck::new()
+            .quicktest(thetest as fn(vals: Vec<bool>) -> bool)
+            .unwrap_err();
         let expected_argument = format!("{:?}", [true, true]);
         assert_eq!(failing_case.arguments, vec![expected_argument]);
     }
