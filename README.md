@@ -203,7 +203,7 @@ fn prop(xs: Vec<int>) -> TestResult {
     }
     TestResult::from_bool(xs == reverse(&xs))
 }
-quickcheck(prop as fn(Vec<int>) -> bool);
+quickcheck(prop as fn(Vec<int>) -> TestResult);
 ```
 
 (A full working program for this example is in
