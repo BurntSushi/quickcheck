@@ -197,13 +197,13 @@ As an example, let's test our reverse function to make sure that the reverse of
 a vector of length 1 is equal to the vector itself.
 
 ```rust
-fn prop(xs: Vec<int>) -> TestResult {
+fn prop(xs: Vec<isize>) -> TestResult {
     if xs.len() != 1 {
         return TestResult::discard()
     }
     TestResult::from_bool(xs == reverse(&xs))
 }
-quickcheck(prop as fn(Vec<int>) -> TestResult);
+quickcheck(prop as fn(Vec<isize>) -> TestResult);
 ```
 
 (A full working program for this example is in
@@ -247,10 +247,10 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
 And a property to test that `xs == reverse(reverse(xs))`:
 
 ```rust
-fn prop(xs: Vec<int>) -> bool {
+fn prop(xs: Vec<isize>) -> bool {
     xs == reverse(&reverse(&xs))
 }
-quickcheck(prop as fn(Vec<int>) -> bool);
+quickcheck(prop as fn(Vec<isize>) -> bool);
 ```
 
 Then without shrinking, you might get a counter-example like:
