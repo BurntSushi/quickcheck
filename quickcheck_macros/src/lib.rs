@@ -12,7 +12,7 @@ extern crate rustc_plugin;
 
 use syntax::abi::Abi;
 use syntax::ast;
-use syntax::ast::{DeclKind, ItemKind, StmtKind, TyKind};
+use syntax::ast::{ItemKind, StmtKind, Stmt, TyKind};
 use syntax::codemap;
 use syntax::parse::token;
 use syntax::ext::base::{ExtCtxt, MultiModifier, Annotatable};
@@ -88,11 +88,17 @@ fn wrap_item(cx: &mut ExtCtxt,
     let check_path = vec!(check_ident, check_ident);
     // Wrap original function in new outer function,
     // calling ::quickcheck::quickcheck()
-    let fn_decl = P(codemap::respan(span, DeclKind::Item(prop.clone())));
-    let inner_fn = codemap::respan(
-        span, StmtKind::Decl(fn_decl, ast::DUMMY_NODE_ID));
-    let check_call = cx.expr_call_global(span, check_path, vec![inner_ident]);
-    let body = cx.block(span, vec![inner_fn], Some(check_call));
+    let fn_decl = Stmt {
+        id: ast::DUMMY_NODE_ID,
+        node: StmtKind::Item(prop),
+        span: span,
+    };
+    let check_call = Stmt {
+        id: ast::DUMMY_NODE_ID,
+        node: StmtKind::Expr(cx.expr_call_global(span, check_path, vec![inner_ident])),
+        span: span,
+    };
+    let body = cx.block(span, vec![fn_decl, check_call]);
     let test = item_fn(cx, span, item, body);
 
     // Copy attributes from original function
