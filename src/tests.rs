@@ -25,6 +25,14 @@ fn prop_reverse_reverse() {
     quickcheck(prop as fn(Vec<usize>) -> bool);
 }
 
+quickcheck! {
+    fn prop_reverse_reverse_macro(xs: Vec<usize>) -> bool {
+        let rev: Vec<_> = xs.clone().into_iter().rev().collect();
+        let revrev: Vec<_> = rev.into_iter().rev().collect();
+        xs == revrev
+    }
+}
+
 #[test]
 fn reverse_single() {
     fn prop(xs: Vec<usize>) -> TestResult {
