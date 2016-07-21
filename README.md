@@ -31,9 +31,8 @@ Here's a
 that tests a function that reverses a vector:
 
 ```rust
+#[macro_use]
 extern crate quickcheck;
-
-use quickcheck::quickcheck;
 
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
     let mut rev = vec!();
@@ -43,15 +42,16 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
     rev
 }
 
-fn main() {
-    fn prop(xs: Vec<isize>) -> bool {
+quickcheck! {
+    fn prop(xs: Vec<u32>) -> bool {
         xs == reverse(&reverse(&xs))
     }
-    quickcheck(prop as fn(Vec<isize>) -> bool);
 }
 ```
 
-### The `#[quickcheck]` attribute
+This example uses the `quickcheck!` macro, which is available on stable Rust.
+
+### The `#[quickcheck]` attribute (requires Rust nightly)
 
 To make it easier to write QuickCheck tests, the `#[quickcheck]` attribute
 will convert a property function into a `#[test]` function.
@@ -90,7 +90,7 @@ mod tests {
 
 ```toml
 [dependencies]
-quickcheck = "0.2"
+quickcheck = "0.3"
 ```
 
 If you're only using `quickcheck` in your test code, then you can add it as a
@@ -98,14 +98,14 @@ development dependency instead:
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.2"
+quickcheck = "0.3"
 ```
 
 If you want to use the `#[quickcheck]` attribute, then add `quickcheck_macros`
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.2"
+quickcheck = "0.3"
 quickcheck_macros = "0.2"
 ```
 
