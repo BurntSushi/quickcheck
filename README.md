@@ -26,11 +26,10 @@ The API is fully documented:
 
 ### Simple example
 
-Here's a
-[complete working program](https://github.com/BurntSushi/quickcheck/blob/master/examples/reverse.rs)
-that tests a function that reverses a vector:
+Here's an example that tests a function that reverses a vector:
 
 ```rust
+#[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
 
@@ -42,10 +41,13 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
     rev
 }
 
-quickcheck! {
-    fn prop(xs: Vec<u32>) -> bool {
-        xs == reverse(&reverse(&xs))
-    }
+#[cfg(test)]
+mod tests {
+  quickcheck! {
+      fn prop(xs: Vec<u32>) -> bool {
+          xs == reverse(&reverse(&xs))
+      }
+  }
 }
 ```
 
