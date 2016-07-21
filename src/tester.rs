@@ -1,8 +1,10 @@
-use rand;
 use std::fmt::Debug;
-use std::thread;
-use super::{Arbitrary, Gen, StdGen};
+use std::panic;
+
+use rand;
+
 use tester::Status::{Discard, Fail, Pass};
+use {Arbitrary, Gen, StdGen};
 
 /// The main QuickCheck type for setting configuration and running QuickCheck.
 pub struct QuickCheck<G> {
@@ -178,12 +180,8 @@ impl TestResult {
     /// `f` generates a task failure during its execution.
     pub fn must_fail<T, F>(f: F) -> TestResult
             where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
-        TestResult::from_bool(
-            thread::Builder::new()
-                            .spawn(move || { let _ = f(); })
-                            .unwrap()
-                            .join()
-                            .is_err())
+        let f = panic::AssertUnwindSafe(f);
+        TestResult::from_bool(panic::catch_unwind(f).is_err())
     }
 
     /// Returns `true` if and only if this test result describes a failing
@@ -318,11 +316,9 @@ testable_fn!(A, B, C, D, E, F, G, H, I, J);
 testable_fn!(A, B, C, D, E, F, G, H, I, J, K);
 testable_fn!(A, B, C, D, E, F, G, H, I, J, K, L);
 
-// TODO(burntsushi): Use `std::thread::catch_panic` once it stabilizes.
 fn safe<T, F>(fun: F) -> Result<T, String>
         where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
-    let t = ::std::thread::Builder::new().name("safe".into());
-    t.spawn(fun).unwrap().join().map_err(|any_err| {
+    panic::catch_unwind(panic::AssertUnwindSafe(fun)).map_err(|any_err| {
         // Extract common types of panic payload:
         // panic and assert produce &str or String
         if let Some(&s) = any_err.downcast_ref::<&str>() {
