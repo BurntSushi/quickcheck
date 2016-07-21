@@ -1,13 +1,12 @@
 language: rust
-matrix:
-  include:
-    - rust: "nightly"
-      env: TEST_SUITE=suite_nightly
-    - rust: "beta"
-      env: TEST_SUITE=suite_beta
+rust:
+  - stable
+  - beta
+  - nightly
 script:
   - cargo build --verbose
   - cargo test --verbose
+  - cargo doc
   - if [ "$TEST_SUITE" = "suite_nightly" ]; then
       cargo build --verbose --manifest-path quickcheck_macros/Cargo.toml;
       cargo test --verbose --manifest-path quickcheck_macros/Cargo.toml;
