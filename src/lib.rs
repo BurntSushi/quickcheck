@@ -36,7 +36,7 @@ pub use tester::{QuickCheck, Testable, TestResult, quickcheck};
 ///         let revrev: Vec<_> = rev.into_iter().rev().collect();
 ///         xs == revrev
 ///     }
-/// }
+/// };
 /// # }
 /// ```
 #[macro_export]
