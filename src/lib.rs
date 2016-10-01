@@ -6,7 +6,9 @@
 
 #![allow(deprecated)] // for connect -> join in 1.3
 
+#[cfg(feature = "use_logging")]
 extern crate env_logger;
+#[cfg(feature = "use_logging")]
 #[macro_use] extern crate log;
 extern crate rand;
 
@@ -63,6 +65,19 @@ macro_rules! quickcheck {
         }
     )
 }
+
+#[cfg(feature = "use_logging")]
+fn env_logger_init() -> Result<(), log::SetLoggerError> {
+    env_logger::init()
+}
+
+#[cfg(not(feature = "use_logging"))]
+fn env_logger_init() { }
+#[cfg(not(feature = "use_logging"))]
+macro_rules! info {
+    ($($_ignore:tt)*) => { () };
+}
+
 
 mod arbitrary;
 mod tester;
