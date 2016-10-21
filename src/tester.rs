@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 use std::panic;
+use std::env;
+use std::cmp;
 
 use rand;
 
@@ -13,6 +15,21 @@ pub struct QuickCheck<G> {
     gen: G,
 }
 
+fn qc_tests() -> usize {
+    match env::var("QC_TESTS") {
+        Ok(val) => val.parse().expect("QC_TESTS value could not converted to number"),
+        Err(_) => 100,
+    }
+}
+
+fn qc_max_tests() -> usize {
+    match env::var("QC_MAX_TESTS") {
+        Ok(val) => val.parse().expect("QC_MAX_TESTS value could not converted to number"),
+        Err(_) => 10000,
+    }
+}
+
+
 impl QuickCheck<StdGen<rand::ThreadRng>> {
     /// Creates a new QuickCheck value.
     ///
@@ -24,9 +41,11 @@ impl QuickCheck<StdGen<rand::ThreadRng>> {
     /// the max number of overall tests is set to `10000` and the generator
     /// is set to a `StdGen` with a default size of `100`.
     pub fn new() -> QuickCheck<StdGen<rand::ThreadRng>> {
+        let tests = qc_tests();
+        let max_tests = cmp::max(tests, qc_max_tests());
         QuickCheck {
-            tests: 100,
-            max_tests: 10000,
+            tests: tests,
+            max_tests: max_tests,
             gen: StdGen::new(rand::thread_rng(), 100),
         }
     }
