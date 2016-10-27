@@ -255,6 +255,11 @@ impl<A, E> Testable for Result<A, E>
     }
 }
 
+/// Return a vector of the debug formatting of each item in `args`
+fn debug_reprs(args: &[&Debug]) -> Vec<String> {
+    args.iter().map(|x| format!("{:?}", x)).collect()
+}
+
 macro_rules! testable_fn {
     ($($name: ident),*) => {
 
@@ -271,8 +276,10 @@ impl<T: Testable,
                 let ($($name,)*) = t.clone();
                 let mut r_new = safe(move || {self_($($name),*)}).result(g);
                 if r_new.is_failure() {
-                    let ($($name,)*) : ($($name,)*) = t.clone();
-                    r_new.arguments = vec![$(format!("{:?}", $name),)*];
+                    {
+                        let ($(ref $name,)*) : ($($name,)*) = t;
+                        r_new.arguments = debug_reprs(&[$($name),*]);
+                    }
 
                     // The shrunk value *does* witness a failure, so keep
                     // trying to shrink it.
@@ -291,8 +298,10 @@ impl<T: Testable,
         let ( $($name,)* ) = a.clone();
         let mut r = safe(move || {self_($($name),*)}).result(g);
 
-        let ( $($name,)* ) = a.clone();
-        r.arguments = vec![$(format!("{:?}", $name),)*];
+        {
+            let ( $(ref $name,)* ) = a;
+            r.arguments = debug_reprs(&[$($name),*]);
+        }
         match r.status {
             Pass|Discard => r,
             Fail => {
