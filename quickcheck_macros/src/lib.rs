@@ -10,7 +10,6 @@
 extern crate syntax;
 extern crate rustc_plugin;
 
-use syntax::abi::Abi;
 use syntax::ast;
 use syntax::ast::{ItemKind, StmtKind, Stmt, TyKind};
 use syntax::codemap;
@@ -99,7 +98,7 @@ fn wrap_item(cx: &mut ExtCtxt,
         span: span,
     };
     let body = cx.block(span, vec![fn_decl, check_call]);
-    let test = item_fn(cx, span, item, body);
+    let test = cx.item_fn(span, item.ident, vec![], cx.ty(span, TyKind::Tup(vec![])), body);
 
     // Copy attributes from original function
     let mut attrs = item.attrs.clone();
@@ -108,17 +107,4 @@ fn wrap_item(cx: &mut ExtCtxt,
         span, cx.meta_word(span, token::intern_and_get_ident("test"))));
     // Attach the attributes to the outer function
     Annotatable::Item(P(ast::Item {attrs: attrs, ..(*test).clone()}))
-}
-
-fn item_fn(cx: &mut ExtCtxt, span: codemap::Span,
-           towrap_item: &ast::Item, body: P<ast::Block>) -> P<ast::Item> {
-    let decl = P(ast::FnDecl {
-        inputs: vec![],
-        output: ast::FunctionRetTy::Default(span),
-        variadic: false,
-    });
-    let item = ItemKind::Fn(
-        decl, ast::Unsafety::Normal, ast::Constness::NotConst, Abi::Rust,
-        ast::Generics::default(), body);
-    cx.item(span, towrap_item.ident, vec![], item)
 }
