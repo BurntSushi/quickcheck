@@ -192,14 +192,6 @@ impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
                     (g, G));
 impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
                     (g, G), (h, H));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G), (h, H), (i, I));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G), (h, H), (i, I), (j, J));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G), (h, H), (i, I), (j, J), (k, K));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G), (h, H), (i, I), (j, J), (k, K), (l, L));
 
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> Vec<A> {

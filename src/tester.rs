@@ -320,10 +320,6 @@ testable_fn!(A, B, C, D, E);
 testable_fn!(A, B, C, D, E, F);
 testable_fn!(A, B, C, D, E, F, G);
 testable_fn!(A, B, C, D, E, F, G, H);
-testable_fn!(A, B, C, D, E, F, G, H, I);
-testable_fn!(A, B, C, D, E, F, G, H, I, J);
-testable_fn!(A, B, C, D, E, F, G, H, I, J, K);
-testable_fn!(A, B, C, D, E, F, G, H, I, J, K, L);
 
 fn safe<T, F>(fun: F) -> Result<T, String>
         where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
