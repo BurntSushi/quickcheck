@@ -125,6 +125,13 @@ N.B. When using `quickcheck` (either directly or via the attributes),
 (like the number of tests passed). This is **not** needed to show
 witnesses for failures.
 
+Crate features:
+
+- `"unstable"`: Enables Arbitrary implementations that require the Rust nightly
+  channel.
+- `"use_logging"`: (Enabled by default.) Enables the log messages governed
+  `RUST_LOG`.
+
 
 ### Discarding test results (or, properties are polymorphic!)
 
