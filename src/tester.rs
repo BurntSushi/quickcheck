@@ -16,19 +16,20 @@ pub struct QuickCheck<G> {
 }
 
 fn qc_tests() -> usize {
-    match env::var("QC_TESTS") {
-        Ok(val) => val.parse().expect("QC_TESTS value could not converted to number"),
-        Err(_) => 100,
+    let default = 100;
+    match env::var("QUICKCHECK_TESTS") {
+        Ok(val) => val.parse().unwrap_or(default),
+        Err(_) => default,
     }
 }
 
 fn qc_max_tests() -> usize {
-    match env::var("QC_MAX_TESTS") {
-        Ok(val) => val.parse().expect("QC_MAX_TESTS value could not converted to number"),
-        Err(_) => 10000,
+    let default = 10_000;
+    match env::var("QUICKCHECK_MAX_TESTS") {
+        Ok(val) => val.parse().unwrap_or(default),
+        Err(_) => default,
     }
 }
-
 
 impl QuickCheck<StdGen<rand::ThreadRng>> {
     /// Creates a new QuickCheck value.
