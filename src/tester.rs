@@ -31,6 +31,14 @@ fn qc_max_tests() -> usize {
     }
 }
 
+fn qc_gen_size() -> usize {
+    let default = 100;
+    match env::var("QUICKCHECK_GENERATOR_SIZE") {
+        Ok(val) => val.parse().unwrap_or(default),
+        Err(_) => default,
+    }
+}
+
 impl QuickCheck<StdGen<rand::ThreadRng>> {
     /// Creates a new QuickCheck value.
     ///
@@ -44,10 +52,11 @@ impl QuickCheck<StdGen<rand::ThreadRng>> {
     pub fn new() -> QuickCheck<StdGen<rand::ThreadRng>> {
         let tests = qc_tests();
         let max_tests = cmp::max(tests, qc_max_tests());
+        let gen_size = qc_gen_size();
         QuickCheck {
             tests: tests,
             max_tests: max_tests,
-            gen: StdGen::new(rand::thread_rng(), 100),
+            gen: StdGen::new(rand::thread_rng(), gen_size),
         }
     }
 }
