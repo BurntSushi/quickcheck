@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 use std::panic;
+use std::env;
+use std::cmp;
 
 use rand;
 
@@ -13,6 +15,30 @@ pub struct QuickCheck<G> {
     gen: G,
 }
 
+fn qc_tests() -> usize {
+    let default = 100;
+    match env::var("QUICKCHECK_TESTS") {
+        Ok(val) => val.parse().unwrap_or(default),
+        Err(_) => default,
+    }
+}
+
+fn qc_max_tests() -> usize {
+    let default = 10_000;
+    match env::var("QUICKCHECK_MAX_TESTS") {
+        Ok(val) => val.parse().unwrap_or(default),
+        Err(_) => default,
+    }
+}
+
+fn qc_gen_size() -> usize {
+    let default = 100;
+    match env::var("QUICKCHECK_GENERATOR_SIZE") {
+        Ok(val) => val.parse().unwrap_or(default),
+        Err(_) => default,
+    }
+}
+
 impl QuickCheck<StdGen<rand::ThreadRng>> {
     /// Creates a new QuickCheck value.
     ///
@@ -24,10 +50,13 @@ impl QuickCheck<StdGen<rand::ThreadRng>> {
     /// the max number of overall tests is set to `10000` and the generator
     /// is set to a `StdGen` with a default size of `100`.
     pub fn new() -> QuickCheck<StdGen<rand::ThreadRng>> {
+        let tests = qc_tests();
+        let max_tests = cmp::max(tests, qc_max_tests());
+        let gen_size = qc_gen_size();
         QuickCheck {
-            tests: 100,
-            max_tests: 10000,
-            gen: StdGen::new(rand::thread_rng(), 100),
+            tests: tests,
+            max_tests: max_tests,
+            gen: StdGen::new(rand::thread_rng(), gen_size),
         }
     }
 }
