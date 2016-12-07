@@ -31,6 +31,12 @@ quickcheck! {
         let revrev: Vec<_> = rev.into_iter().rev().collect();
         xs == revrev
     }
+
+    #[should_panic]
+    fn prop_macro_panic(_x: u32) -> bool {
+        assert!(false);
+        false
+    }
 }
 
 #[test]
