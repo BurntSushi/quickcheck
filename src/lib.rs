@@ -46,6 +46,7 @@ macro_rules! quickcheck {
     (@as_items $($i:item)*) => ($($i)*);
     {
         $(
+            $(#[$m:meta])*
             fn $fn_name:ident($($arg_name:ident : $arg_ty:ty),*) -> $ret:ty {
                 $($code:tt)*
             }
@@ -55,6 +56,7 @@ macro_rules! quickcheck {
             @as_items
             $(
                 #[test]
+                $(#[$m])*
                 fn $fn_name() {
                     fn prop($($arg_name: $arg_ty),*) -> $ret {
                         $($code)*
