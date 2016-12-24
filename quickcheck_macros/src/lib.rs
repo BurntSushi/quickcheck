@@ -11,12 +11,12 @@ extern crate syntax;
 extern crate rustc_plugin;
 
 use syntax::ast;
-use syntax::ast::{ItemKind, StmtKind, Stmt, TyKind};
+use syntax::ast::{Ident, ItemKind, StmtKind, Stmt, TyKind};
 use syntax::codemap;
-use syntax::parse::token;
 use syntax::ext::base::{ExtCtxt, MultiModifier, Annotatable};
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
+use syntax::symbol::Symbol;
 
 use rustc_plugin::Registry;
 
@@ -24,7 +24,7 @@ use rustc_plugin::Registry;
 #[plugin_registrar]
 #[doc(hidden)]
 pub fn plugin_registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(token::intern("quickcheck"),
+    reg.register_syntax_extension(Symbol::intern("quickcheck"),
                                   MultiModifier(Box::new(expand_meta_quickcheck)));
 }
 
@@ -83,7 +83,7 @@ fn wrap_item(cx: &mut ExtCtxt,
     // Copy original function without attributes
     let prop = P(ast::Item {attrs: Vec::new(), ..item.clone()});
     // ::quickcheck::quickcheck
-    let check_ident = token::str_to_ident("quickcheck");
+    let check_ident = Ident::from_str("quickcheck");
     let check_path = vec!(check_ident, check_ident);
     // Wrap original function in new outer function,
     // calling ::quickcheck::quickcheck()
@@ -104,7 +104,7 @@ fn wrap_item(cx: &mut ExtCtxt,
     let mut attrs = item.attrs.clone();
     // Add #[test] attribute
     attrs.push(cx.attribute(
-        span, cx.meta_word(span, token::intern_and_get_ident("test"))));
+        span, cx.meta_word(span, Symbol::intern("test"))));
     // Attach the attributes to the outer function
     Annotatable::Item(P(ast::Item {attrs: attrs, ..(*test).clone()}))
 }
