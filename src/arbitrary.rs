@@ -674,6 +674,15 @@ impl Arbitrary for Duration {
     }
 }
 
+impl<A: Arbitrary> Arbitrary for Box<A> {
+    fn arbitrary<G: Gen>(g: &mut G) -> Box<A> {
+        Box::new(A::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=Box<A>>> {
+        Box::new((**self).shrink().map(Box::new))
+    }
+}
 
 #[cfg(feature = "unstable")]
 mod unstable_impls {
