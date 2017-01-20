@@ -8,6 +8,7 @@ homepage = "https://github.com/BurntSushi/quickcheck"
 repository = "https://github.com/BurntSushi/quickcheck"
 readme = "README.md"
 keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
+categories = ["development-tools::testing"]
 license = "Unlicense/MIT"
 
 [features]
