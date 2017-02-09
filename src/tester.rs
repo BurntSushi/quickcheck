@@ -301,25 +301,41 @@ impl<T: Testable,
             self_: fn($($name),*) -> T,
             a: ($($name,)*),
         ) -> Option<TestResult> {
-            for t in a.shrink() {
-                let ($($name,)*) = t.clone();
+            let mut values = Vec::new();
+            let mut best = None;
+            let mut depth = 1;
+
+            values.extend(a.shrink());
+            while let Some(next) = values.pop() {
+                let ($($name,)*) = next.clone();
                 let mut r_new = safe(move || {self_($($name),*)}).result(g);
                 if r_new.is_failure() {
                     {
-                        let ($(ref $name,)*) : ($($name,)*) = t;
+                        let ($(ref $name,)*) : ($($name,)*) = next;
                         r_new.arguments = debug_reprs(&[$($name),*]);
                     }
-
                     // The shrunk value *does* witness a failure, so keep
                     // trying to shrink it.
-                    let shrunk = shrink_failure(g, self_, t);
+                    depth += 1;
 
-                    // If we couldn't witness a failure on any shrunk value,
-                    // then return the failure we already have.
-                    return Some(shrunk.unwrap_or(r_new))
+                    // unless we're so deep into the shrinking process we
+                    // fear a misbehaving, unterminating shrinker
+                    // TODO: read maximum depth from configuration
+                    if depth > 1000 {
+                        r_new.err = Some(format!("Shrink did not terminate after 1000 iterations; last value {:?}",
+                                                 r_new.arguments).into());
+                        return Some(r_new)
+                    }
+
+                    // otherwise keep going
+                    best = Some(r_new);
+                    values.truncate(0);
+                    values.extend(next.shrink());
                 }
             }
-            None
+            // as soon as we hit a node where none of the results of next.shrink()
+            // maintain failure, return it
+            best
         }
 
         let self_ = *self;
