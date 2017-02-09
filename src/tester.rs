@@ -301,11 +301,10 @@ impl<T: Testable,
             self_: fn($($name),*) -> T,
             a: ($($name,)*),
         ) -> Option<TestResult> {
-            let mut values = Vec::new();
+            let mut values = a.shrink().collect::<Vec<_>>();
             let mut best = None;
             let mut depth = 1;
 
-            values.extend(a.shrink());
             while let Some(next) = values.pop() {
                 let ($($name,)*) = next.clone();
                 let mut r_new = safe(move || {self_($($name),*)}).result(g);
