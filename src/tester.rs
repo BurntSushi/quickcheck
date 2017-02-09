@@ -329,8 +329,7 @@ impl<T: Testable,
 
                     // otherwise keep going
                     best = Some(r_new);
-                    values.truncate(0);
-                    values.extend(next.shrink());
+                    values = next.shrink().collect();
                 }
             }
             // as soon as we hit a node where none of the results of next.shrink()
