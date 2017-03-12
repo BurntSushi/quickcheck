@@ -11,7 +11,7 @@ extern crate syntax;
 extern crate rustc_plugin;
 
 use syntax::ast;
-use syntax::ast::{Ident, ItemKind, StmtKind, Stmt, TyKind};
+use syntax::ast::{Ident, ItemKind, PatKind, StmtKind, Stmt, TyKind};
 use syntax::codemap;
 use syntax::ext::base::{ExtCtxt, MultiModifier, Annotatable};
 use syntax::ext::build::AstBuilder;
@@ -59,7 +59,15 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
                 unsafety: unsafety,
                 abi: abi,
                 lifetimes: vec![],
-                decl: decl.clone(),
+                decl: decl.clone().map(|mut decl| {
+                    for arg in decl.inputs.iter_mut() {
+                        arg.pat = arg.pat.clone().map(|mut pat| {
+                            pat.node = PatKind::Wild;
+                            pat
+                        });
+                    }
+                    decl
+                }),
             })));
             let inner_ident = cx.expr_cast(span, prop_ident, prop_ty);
             return wrap_item(cx, span, &*item, inner_ident);
