@@ -1,6 +1,7 @@
 use std::cmp::Ord;
 use rand;
 use super::{QuickCheck, StdGen, TestResult, quickcheck};
+use super::{Arbitrary, Gen, single_shrinker};
 
 #[test]
 fn prop_oob() {
@@ -215,4 +216,37 @@ fn regression_issue_107_hang() {
         a.contains(&1)
     }
     quickcheck(prop as fn(_) -> bool);
+}
+
+
+// verify that infinite shrinkers eventually terminate
+
+#[derive(Clone, Debug)]
+enum BadlyShrunkValue {
+    Left,
+    Right,
+}
+
+impl Arbitrary for BadlyShrunkValue {
+    fn arbitrary<G: Gen>(g: &mut G) -> BadlyShrunkValue {
+        if g.gen() {
+            return BadlyShrunkValue::Left;
+        } else {
+            return BadlyShrunkValue::Right;
+        }
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=Self>> {
+        match *self {
+            BadlyShrunkValue::Left => single_shrinker(BadlyShrunkValue::Right),
+            BadlyShrunkValue::Right => single_shrinker(BadlyShrunkValue::Left),
+        }
+    }
+}
+
+#[test]
+#[should_panic(expected = "did not terminate")]
+fn infinite_shrinker() {
+    fn prop(_: BadlyShrunkValue) -> bool { false }
+    quickcheck(prop as fn(_) -> bool)
 }
