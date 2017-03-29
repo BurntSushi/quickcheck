@@ -1,6 +1,8 @@
 use std::cmp::Ord;
 use rand;
 use super::{QuickCheck, StdGen, TestResult, quickcheck};
+use std::collections::{HashSet, HashMap};
+use std::hash::{BuildHasherDefault, SipHasher};
 
 #[test]
 fn prop_oob() {
@@ -215,4 +217,22 @@ fn regression_issue_107_hang() {
         a.contains(&1)
     }
     quickcheck(prop as fn(_) -> bool);
+}
+
+quickcheck! {
+    fn basic_hashset(_set: HashSet<u8>) -> bool {
+        true
+    }
+
+    fn basic_hashmap(_map: HashMap<u8, u8>) -> bool {
+        true
+    }
+
+    fn substitute_hashset(_set: HashSet<u8, BuildHasherDefault<SipHasher>>) -> bool {
+        true
+    }
+
+    fn substitute_hashmap(_map: HashMap<u8, u8, BuildHasherDefault<SipHasher>>) -> bool {
+        true
+    }
 }

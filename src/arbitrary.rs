@@ -8,7 +8,7 @@ use std::collections::{
     LinkedList,
     VecDeque,
 };
-use std::hash::Hash;
+use std::hash::{BuildHasher, Hash};
 use std::iter::{empty, once};
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 use std::time::Duration;
@@ -312,16 +312,16 @@ impl<K: Arbitrary + Ord, V: Arbitrary> Arbitrary for BTreeMap<K, V> {
     }
 }
 
-impl<K: Arbitrary + Eq + Hash, V: Arbitrary> Arbitrary for HashMap<K, V> {
-    fn arbitrary<G: Gen>(g: &mut G) -> HashMap<K, V> {
+impl<K: Arbitrary + Eq + Hash, V: Arbitrary, S: BuildHasher + Default + Clone + Send + 'static> Arbitrary for HashMap<K, V, S> {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let vec: Vec<(K, V)> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=HashMap<K, V>>> {
+    fn shrink(&self) -> Box<Iterator<Item=Self>> {
         let vec: Vec<(K, V)> = self.clone().into_iter().collect();
         Box::new(vec.shrink()
-                    .map(|v| v.into_iter().collect::<HashMap<K, V>>()))
+                    .map(|v| v.into_iter().collect::<Self>()))
     }
 }
 
@@ -350,15 +350,15 @@ impl<T: Arbitrary + Ord> Arbitrary for BinaryHeap<T> {
     }
 }
 
-impl<T: Arbitrary + Eq + Hash> Arbitrary for HashSet<T> {
-    fn arbitrary<G: Gen>(g: &mut G) -> HashSet<T> {
+impl<T: Arbitrary + Eq + Hash, S: BuildHasher + Default + Clone + Send + 'static> Arbitrary for HashSet<T, S> {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let vec: Vec<T> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=HashSet<T>>> {
+    fn shrink(&self) -> Box<Iterator<Item=Self>> {
         let vec: Vec<T> = self.clone().into_iter().collect();
-        Box::new(vec.shrink().map(|v| v.into_iter().collect::<HashSet<T>>()))
+        Box::new(vec.shrink().map(|v| v.into_iter().collect::<Self>()))
     }
 }
 
