@@ -4,3 +4,4 @@ tags
 target
 build
 Cargo.lock
+*~
