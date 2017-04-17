@@ -1,3 +1,4 @@
+use std;
 use std::char;
 use std::collections::{
     BTreeMap,
@@ -12,6 +13,9 @@ use std::hash::{BuildHasher, Hash};
 use std::iter::{empty, once};
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 use std::time::Duration;
+
+use std::ffi::OsString;
+use std::path::PathBuf;
 
 use rand::Rng;
 
@@ -388,6 +392,42 @@ impl<T: Arbitrary> Arbitrary for VecDeque<T> {
     }
 }
 
+impl Arbitrary for PathBuf {
+    fn arbitrary<G: Gen>(g: &mut G) -> PathBuf {
+        // use some real directories as guesses, so we may end up with
+        // actual working directories in case that is relevant.
+        let here = std::env::current_dir().unwrap_or(PathBuf::from("/test/directory"));
+        let temp = std::env::temp_dir();
+        let home = std::env::home_dir().unwrap_or(PathBuf::from("/home/user"));
+        let mut p = g.choose(&[here,
+                               temp,
+                               home,
+                               PathBuf::from("."),
+                               PathBuf::from(".."),
+                               PathBuf::from("../../.."),
+                               PathBuf::new()]).unwrap().clone();
+        for sub in Vec::<OsString>::arbitrary(g).iter() {
+            p.push(sub);
+        }
+        p
+    }
+
+    // I'm not sure how to shrink this.  Help appreciated!
+    // fn shrink(&self) -> Box<Iterator<Item=PathBuf>> {
+    // }
+}
+
+impl Arbitrary for OsString {
+    fn arbitrary<G: Gen>(g: &mut G) -> OsString {
+        OsString::from(String::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=OsString>> {
+        let mystring: String = self.clone().into_string().unwrap();
+        Box::new(mystring.shrink().map(|s| OsString::from(s)))
+    }
+}
+
 impl Arbitrary for String {
     fn arbitrary<G: Gen>(g: &mut G) -> String {
         let size = { let s = g.size(); g.gen_range(0, s) };
@@ -476,6 +516,7 @@ impl Arbitrary for char {
         Box::new((*self as u32).shrink().filter_map(char::from_u32))
     }
 }
+
 
 macro_rules! unsigned_shrinker {
     ($ty:ty) => {
