@@ -3,6 +3,7 @@ use rand;
 use super::{QuickCheck, StdGen, TestResult, quickcheck};
 use std::collections::{HashSet, HashMap};
 use std::hash::{BuildHasherDefault, SipHasher};
+use std::path::PathBuf;
 
 #[test]
 fn prop_oob() {
@@ -239,6 +240,13 @@ fn all_tests_discarded_min_tests_passed_missing() {
 }
 
 quickcheck! {
+    /// The following is a very simplistic test, which only verifies
+    /// that our PathBuf::arbitrary does not panic.  Still, that's
+    /// something!  :)
+    fn pathbuf(_p: PathBuf) -> bool {
+        true
+    }
+
     fn basic_hashset(_set: HashSet<u8>) -> bool {
         true
     }
@@ -247,11 +255,15 @@ quickcheck! {
         true
     }
 
-    fn substitute_hashset(_set: HashSet<u8, BuildHasherDefault<SipHasher>>) -> bool {
+    fn substitute_hashset(
+        _set: HashSet<u8, BuildHasherDefault<SipHasher>>
+    ) -> bool {
         true
     }
 
-    fn substitute_hashmap(_map: HashMap<u8, u8, BuildHasherDefault<SipHasher>>) -> bool {
+    fn substitute_hashmap(
+        _map: HashMap<u8, u8, BuildHasherDefault<SipHasher>>
+    ) -> bool {
         true
     }
 }

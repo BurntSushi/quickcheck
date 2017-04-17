@@ -1,24 +1,21 @@
 use std::char;
 use std::collections::{
-    BTreeMap,
-    BTreeSet,
+    BTreeMap, BTreeSet,
     BinaryHeap,
-    HashMap,
-    HashSet,
+    HashMap, HashSet,
     LinkedList,
     VecDeque,
 };
+use std::env;
+use std::ffi::OsString;
 use std::hash::{BuildHasher, Hash};
 use std::iter::{empty, once};
 use std::net::{
-    IpAddr,
-    Ipv4Addr,
-    Ipv6Addr,
-    SocketAddr,
-    SocketAddrV4,
-    SocketAddrV6,
+    IpAddr, Ipv4Addr, Ipv6Addr,
+    SocketAddr, SocketAddrV4, SocketAddrV6,
 };
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -376,7 +373,11 @@ impl<K: Arbitrary + Ord, V: Arbitrary> Arbitrary for BTreeMap<K, V> {
     }
 }
 
-impl<K: Arbitrary + Eq + Hash, V: Arbitrary, S: BuildHasher + Default + Clone + Send + 'static> Arbitrary for HashMap<K, V, S> {
+impl<
+    K: Arbitrary + Eq + Hash,
+    V: Arbitrary,
+    S: BuildHasher + Default + Clone + Send + 'static,
+> Arbitrary for HashMap<K, V, S> {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let vec: Vec<(K, V)> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
@@ -414,7 +415,10 @@ impl<T: Arbitrary + Ord> Arbitrary for BinaryHeap<T> {
     }
 }
 
-impl<T: Arbitrary + Eq + Hash, S: BuildHasher + Default + Clone + Send + 'static> Arbitrary for HashSet<T, S> {
+impl<
+    T: Arbitrary + Eq + Hash,
+    S: BuildHasher + Default + Clone + Send + 'static,
+> Arbitrary for HashSet<T, S> {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let vec: Vec<T> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
@@ -495,6 +499,66 @@ impl Arbitrary for SocketAddrV6 {
     }
 }
 
+impl Arbitrary for PathBuf {
+    fn arbitrary<G: Gen>(g: &mut G) -> PathBuf {
+        // use some real directories as guesses, so we may end up with
+        // actual working directories in case that is relevant.
+        let here = env::current_dir()
+            .unwrap_or(PathBuf::from("/test/directory"));
+        let temp = env::temp_dir();
+        let home = env::home_dir()
+            .unwrap_or(PathBuf::from("/home/user"));
+        let choices = &[
+            here,
+            temp,
+            home,
+            PathBuf::from("."),
+            PathBuf::from(".."),
+            PathBuf::from("../../.."),
+            PathBuf::new(),
+        ];
+        let mut p = g.choose(choices).unwrap().clone();
+        p.extend(Vec::<OsString>::arbitrary(g).iter());
+        p
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=PathBuf>> {
+        let mut shrunk = vec![];
+        let mut popped = self.clone();
+        if popped.pop() {
+            shrunk.push(popped);
+        }
+
+        // Iterating over a Path performs a small amount of normalization.
+        let normalized = self.iter().collect::<PathBuf>();
+        if normalized.as_os_str() != self.as_os_str() {
+            shrunk.push(normalized);
+        }
+
+        // Add the canonicalized variant only if canonicalizing the path
+        // actually does something, making it (hopefully) smaller. Also, ignore
+        // canonicalization if canonicalization errors.
+        if let Ok(canonicalized) = self.canonicalize() {
+            if canonicalized.as_os_str() != self.as_os_str() {
+                shrunk.push(canonicalized);
+            }
+        }
+
+        Box::new(shrunk.into_iter())
+    }
+}
+
+impl Arbitrary for OsString {
+    fn arbitrary<G: Gen>(g: &mut G) -> OsString {
+        OsString::from(String::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=OsString>> {
+        let mystring: String = self.clone().into_string().unwrap();
+        Box::new(mystring.shrink().map(|s| OsString::from(s)))
+    }
+}
+
 impl Arbitrary for String {
     fn arbitrary<G: Gen>(g: &mut G) -> String {
         let size = { let s = g.size(); g.gen_range(0, s) };
@@ -536,8 +600,8 @@ impl Arbitrary for char {
                     '\t',
                     '\n',
                     '~', '`', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')',
-                    '_', '-', '=', '+','[', ']', '{', '}',':',';','\'','"','\\',
-                    '|',',','<','>','.','/','?',
+                    '_', '-', '=', '+','[', ']', '{', '}', ':', ';', '\'', '"',
+                    '\\', '|',',','<','>','.','/','?',
                     '0', '1','2','3','4','5','6','7','8','9',
                 ]).unwrap()
             }
@@ -583,6 +647,7 @@ impl Arbitrary for char {
         Box::new((*self as u32).shrink().filter_map(char::from_u32))
     }
 }
+
 
 macro_rules! unsigned_shrinker {
     ($ty:ty) => {
@@ -799,7 +864,7 @@ impl<A: Arbitrary + Sync> Arbitrary for Arc<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> Arc<A> {
         Arc::new(A::arbitrary(g))
     }
-    
+
     fn shrink(&self) -> Box<Iterator<Item=Arc<A>>> {
         Box::new((**self).shrink().map(Arc::new))
     }
@@ -847,6 +912,7 @@ mod test {
     };
     use std::fmt::Debug;
     use std::hash::Hash;
+    use std::path::PathBuf;
     use super::Arbitrary;
 
     #[test]
@@ -1003,7 +1069,10 @@ mod test {
                 for n in v {
                     let found = shrunk.iter().any(|&i| i == n);
                     if !found {
-                        panic!(format!("Element {:?} was not found in shrink results {:?}", n, shrunk));
+                        panic!(format!(
+                            "Element {:?} was not found \
+                             in shrink results {:?}",
+                            n, shrunk));
                     }
                 }
             }
@@ -1150,5 +1219,13 @@ mod test {
         ordered_eq(3.., vec![0.., 2..]);
         ordered_eq(..3, vec![..0, ..2]);
         ordered_eq(.., vec![]);
+    }
+
+    #[test]
+    fn pathbuf() {
+        ordered_eq(PathBuf::from("/home/foo//.././bar"), vec![
+            PathBuf::from("/home/foo//.."),
+            PathBuf::from("/home/foo/../bar"),
+        ]);
     }
 }

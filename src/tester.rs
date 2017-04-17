@@ -103,9 +103,12 @@ impl<G: Gen> QuickCheck<G> {
 
     /// Set the minimum number of tests that needs to pass.
     ///
-    /// This actually refers to the minimum number of *valid* *passed* tests that
-    /// needs to pass for the property to be considered successful.
-    pub fn min_tests_passed(mut self, min_tests_passed: usize) -> QuickCheck<G> {
+    /// This actually refers to the minimum number of *valid* *passed* tests
+    /// that needs to pass for the property to be considered successful.
+    pub fn min_tests_passed(
+        mut self,
+        min_tests_passed: usize,
+    ) -> QuickCheck<G> {
         self.min_tests_passed = min_tests_passed;
         self
     }
@@ -171,7 +174,9 @@ impl<G: Gen> QuickCheck<G> {
         if n_tests_passed >= self.min_tests_passed {
             info!("(Passed {} QuickCheck tests.)", n_tests_passed)
         } else {
-            panic!("(Unable to generate enough tests, {} not discarded.)", n_tests_passed)
+            panic!(
+                "(Unable to generate enough tests, {} not discarded.)",
+                n_tests_passed)
         }
 
     }
