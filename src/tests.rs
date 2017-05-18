@@ -3,6 +3,7 @@ use rand;
 use super::{QuickCheck, StdGen, TestResult, quickcheck};
 use std::collections::{HashSet, HashMap};
 use std::hash::{BuildHasherDefault, SipHasher};
+use std::path::PathBuf;
 
 #[test]
 fn prop_oob() {
@@ -220,6 +221,13 @@ fn regression_issue_107_hang() {
 }
 
 quickcheck! {
+    /// The following is a very simplistic test, which only verifies
+    /// that our PathBuf::arbitraryl does not panic.  Still, that's
+    /// something!  :)
+    fn pathbuf(_p: PathBuf) -> bool {
+        true
+    }
+
     fn basic_hashset(_set: HashSet<u8>) -> bool {
         true
     }
