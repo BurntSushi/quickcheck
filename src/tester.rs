@@ -293,15 +293,16 @@ macro_rules! testable_fn {
     ($($name: ident),*) => {
 
 impl<T: Testable,
-     $($name: Arbitrary + Debug),*> Testable for fn($($name),*) -> T {
+     $($name: Arbitrary + Debug + Eq),*> Testable for fn($($name),*) -> T {
     #[allow(non_snake_case)]
     fn result<G_: Gen>(&self, g: &mut G_) -> TestResult {
-        fn shrink_failure<T: Testable, G_: Gen, $($name: Arbitrary + Debug),*>(
+        fn shrink_failure<T: Testable, G_: Gen, $($name: Arbitrary + Debug + Eq),*>(
             g: &mut G_,
             self_: fn($($name),*) -> T,
             a: ($($name,)*),
         ) -> Option<TestResult> {
             for t in a.shrink() {
+                debug_assert!(t != a, "ill-behaved shrinker produced previous value as shrunk value");
                 let ($($name,)*) = t.clone();
                 let mut r_new = safe(move || {self_($($name),*)}).result(g);
                 if r_new.is_failure() {
