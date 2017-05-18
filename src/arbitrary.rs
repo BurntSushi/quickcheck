@@ -11,6 +11,7 @@ use std::collections::{
 use std::hash::{BuildHasher, Hash};
 use std::iter::{empty, once};
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
+use std::sync::Arc;
 use std::time::Duration;
 
 use rand::Rng;
@@ -681,6 +682,16 @@ impl<A: Arbitrary> Arbitrary for Box<A> {
 
     fn shrink(&self) -> Box<Iterator<Item=Box<A>>> {
         Box::new((**self).shrink().map(Box::new))
+    }
+}
+
+impl<A: Arbitrary + Sync> Arbitrary for Arc<A> {
+    fn arbitrary<G: Gen>(g: &mut G) -> Arc<A> {
+        Arc::new(A::arbitrary(g))
+    }
+    
+    fn shrink(&self) -> Box<Iterator<Item=Arc<A>>> {
+        Box::new((**self).shrink().map(Arc::new))
     }
 }
 
