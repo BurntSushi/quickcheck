@@ -1,0 +1,17 @@
+[package]
+authors = ["Nathaniel Ringo <remexre@gmail.com>"]
+description = "#[derive(Arbitrary, Clone)]"
+license = "MIT"
+name = "quickcheck_derive"
+version = "0.1.2"
+
+[dependencies]
+quote = "^0.3.15"
+syn = "^0.11.11"
+
+[dev-dependencies.quickcheck]
+path = ".."
+version = "0.4.2"
+
+[lib]
+proc-macro = true

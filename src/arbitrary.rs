@@ -80,6 +80,10 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<Iterator<Item=A>> {
 /// Aside from shrinking, `Arbitrary` is different from the `std::Rand` trait
 /// in that it uses a `Gen` to control the distribution of random values.
 ///
+/// This trait can be derived with the `quickcheck_derive` crate. In that case,
+/// constraints can be added via attributes, and the `valid` function will be
+/// generated based on them.
+///
 /// As of now, all types that implement `Arbitrary` must also implement
 /// `Clone`. (I'm not sure if this is a permanent restriction.)
 ///
