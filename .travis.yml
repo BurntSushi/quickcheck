@@ -5,9 +5,9 @@ rust:
   - beta
   - nightly
 script:
-  - cargo build --verbose
-  - cargo test --verbose
-  - cargo doc
+  - cargo build --all --verbose
+  - cargo test --all --verbose
+  - cargo doc --all
   - if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
       cargo build --verbose --manifest-path quickcheck_macros/Cargo.toml;
       cargo test --verbose --manifest-path quickcheck_macros/Cargo.toml;
