@@ -233,6 +233,9 @@ will try to replace the discarded test with a fresh one. However, if your
 condition is seldom met, it's possible that `quickcheck` will have to settle
 for running fewer tests than usual. By default, if `quickcheck` can't find
 `100` valid tests after trying `10,000` times, then it will give up.
+There is also `QUICKCHECK_MIN_TESTS_PASSED` which sets the minimum number of
+valid tests that need pass in order for it to be considered a success,
+this value defaults to `0`.
 This parameter may be changed using
 [`quickcheck_config`](http://burntsushi.net/rustdoc/quickcheck/fn.quickcheck_config.html).
 
