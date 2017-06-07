@@ -12,6 +12,7 @@ use {Arbitrary, Gen, StdGen};
 pub struct QuickCheck<G> {
     tests: usize,
     max_tests: usize,
+    min_tests_passed: usize,
     gen: G,
 }
 
@@ -39,6 +40,14 @@ fn qc_gen_size() -> usize {
     }
 }
 
+fn qc_min_tests_passed() -> usize {
+    let default = 0;
+    match env::var("QUICKCHECK_MIN_TESTS_PASSED") {
+        Ok(val) => val.parse().unwrap_or(default),
+        Err(_) => default,
+    }
+}
+
 impl QuickCheck<StdGen<rand::ThreadRng>> {
     /// Creates a new QuickCheck value.
     ///
@@ -53,9 +62,12 @@ impl QuickCheck<StdGen<rand::ThreadRng>> {
         let tests = qc_tests();
         let max_tests = cmp::max(tests, qc_max_tests());
         let gen_size = qc_gen_size();
+        let min_tests_passed = qc_min_tests_passed();
+
         QuickCheck {
             tests: tests,
             max_tests: max_tests,
+            min_tests_passed: min_tests_passed,
             gen: StdGen::new(rand::thread_rng(), gen_size),
         }
     }
@@ -89,6 +101,15 @@ impl<G: Gen> QuickCheck<G> {
         self
     }
 
+    /// Set the minimum number of tests that needs to pass.
+    ///
+    /// This actually refers to the minimum number of *valid* *passed* tests that
+    /// needs to pass for the property to be considered successful.
+    pub fn min_tests_passed(mut self, min_tests_passed: usize) -> QuickCheck<G> {
+        self.min_tests_passed = min_tests_passed;
+        self
+    }
+
     /// Tests a property and returns the result.
     ///
     /// The result returned is either the number of tests passed or a witness
@@ -98,18 +119,18 @@ impl<G: Gen> QuickCheck<G> {
     /// want to use the `quickcheck` method, which will `panic!` on failure.)
     pub fn quicktest<A>(&mut self, f: A) -> Result<usize, TestResult>
                     where A: Testable {
-        let mut ntests: usize = 0;
+        let mut n_tests_passed: usize = 0;
         for _ in 0..self.max_tests {
-            if ntests >= self.tests {
+            if n_tests_passed >= self.tests {
                 break
             }
             match f.result(&mut self.gen) {
-                TestResult { status: Pass, .. } => ntests += 1,
+                TestResult { status: Pass, .. } => n_tests_passed += 1,
                 TestResult { status: Discard, .. } => continue,
                 r @ TestResult { status: Fail, .. } => return Err(r),
             }
         }
-        Ok(ntests)
+        Ok(n_tests_passed)
     }
 
     /// Tests a property and calls `panic!` on failure.
@@ -142,10 +163,17 @@ impl<G: Gen> QuickCheck<G> {
         // Ignore log init failures, implying it has already been done.
         let _ = ::env_logger_init();
 
-        match self.quicktest(f) {
-            Ok(_ntests) => info!("(Passed {} QuickCheck tests.)", _ntests),
+        let n_tests_passed = match self.quicktest(f) {
+            Ok(n_tests_passed) => n_tests_passed,
             Err(result) => panic!(result.failed_msg()),
+        };
+
+        if n_tests_passed >= self.min_tests_passed {
+            info!("(Passed {} QuickCheck tests.)", n_tests_passed)
+        } else {
+            panic!("(Unable to generate enough tests, {} not discarded.)", n_tests_passed)
         }
+
     }
 }
 

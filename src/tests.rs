@@ -219,6 +219,25 @@ fn regression_issue_107_hang() {
     quickcheck(prop as fn(_) -> bool);
 }
 
+#[test]
+#[should_panic(expected = "(Unable to generate enough tests, 0 not discarded.)")]
+fn all_tests_discarded_min_tests_passed_set() {
+    fn prop_discarded(_: u8) -> TestResult { TestResult::discard() }
+
+    QuickCheck::new()
+        .tests(16)
+        .min_tests_passed(8)
+        .quickcheck(prop_discarded as fn(u8) -> TestResult)
+}
+
+#[test]
+fn all_tests_discarded_min_tests_passed_missing() {
+    fn prop_discarded(_: u8) -> TestResult { TestResult::discard() }
+
+    QuickCheck::new()
+        .quickcheck(prop_discarded as fn(u8) -> TestResult)
+}
+
 quickcheck! {
     fn basic_hashset(_set: HashSet<u8>) -> bool {
         true
