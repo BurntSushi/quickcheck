@@ -10,6 +10,14 @@ use std::collections::{
 };
 use std::hash::{BuildHasher, Hash};
 use std::iter::{empty, once};
+use std::net::{
+    IpAddr,
+    Ipv4Addr,
+    Ipv6Addr,
+    SocketAddr,
+    SocketAddrV4,
+    SocketAddrV6,
+};
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 use std::sync::Arc;
 use std::time::Duration;
@@ -386,6 +394,49 @@ impl<T: Arbitrary> Arbitrary for VecDeque<T> {
         let vec: Vec<T> = self.clone().into_iter().collect();
         Box::new(vec.shrink()
                     .map(|v| v.into_iter().collect::<VecDeque<T>>()))
+    }
+}
+
+impl Arbitrary for IpAddr {
+    fn arbitrary<G: Gen>(g: &mut G) -> IpAddr {
+        let ipv4: bool = g.gen();
+        if ipv4 {
+            IpAddr::V4(Arbitrary::arbitrary(g))
+        } else {
+            IpAddr::V6(Arbitrary::arbitrary(g))
+        }
+    }
+}
+
+impl Arbitrary for Ipv4Addr {
+    fn arbitrary<G: Gen>(g: &mut G) -> Ipv4Addr {
+        Ipv4Addr::new(g.gen(), g.gen(), g.gen(), g.gen())
+    }
+}
+
+impl Arbitrary for Ipv6Addr {
+    fn arbitrary<G: Gen>(g: &mut G) -> Ipv6Addr {
+        Ipv6Addr::new(g.gen(), g.gen(), g.gen(), g.gen(),
+                      g.gen(), g.gen(), g.gen(), g.gen())
+    }
+}
+
+impl Arbitrary for SocketAddr {
+    fn arbitrary<G: Gen>(g: &mut G) -> SocketAddr {
+        SocketAddr::new(Arbitrary::arbitrary(g), g.gen())
+    }
+}
+
+impl Arbitrary for SocketAddrV4 {
+    fn arbitrary<G: Gen>(g: &mut G) -> SocketAddrV4 {
+        SocketAddrV4::new(Arbitrary::arbitrary(g), g.gen())
+    }
+}
+
+impl Arbitrary for SocketAddrV6 {
+    fn arbitrary<G: Gen>(g: &mut G) -> SocketAddrV6 {
+        SocketAddrV6::new(Arbitrary::arbitrary(g),
+            g.gen(), g.gen(), g.gen())
     }
 }
 
