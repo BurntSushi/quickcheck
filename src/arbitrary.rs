@@ -886,6 +886,26 @@ mod test {
     }
 
     #[test]
+    fn floats32() {
+        fn eq(s:f32, v: Vec<f32> ) {
+            let shrunk: Vec<f32> = s.shrink().collect();
+            for n in v {
+                let found = shrunk.iter().any(|&i| i == n);
+                if !found {
+                    panic!(format!("Element {:?} was not found in shrink results {:?}", n, shrunk));
+                }
+            }
+        }
+
+        eq(0.0, vec![]);
+        eq(-0.0, vec![]);
+        eq(1.0, vec![0.0]);
+        eq(2.0, vec![0.0, 1.0]);
+        eq(-2.0, vec![0.0, 2.0, -1.0]);
+        eq(1.5, vec![0.0]);
+    }
+
+    #[test]
     fn floats64() {
         fn eq(s:f64, v: Vec<f64> ) {
             let shrunk: Vec<f64> = s.shrink().collect();
