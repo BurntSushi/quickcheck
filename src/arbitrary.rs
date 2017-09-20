@@ -885,17 +885,24 @@ mod test {
         eq(0u64, vec![]);
     }
 
-    #[test]
-    fn floats32() {
-        fn eq(s:f32, v: Vec<f32> ) {
-            let shrunk: Vec<f32> = s.shrink().collect();
-            for n in v {
-                let found = shrunk.iter().any(|&i| i == n);
-                if !found {
-                    panic!(format!("Element {:?} was not found in shrink results {:?}", n, shrunk));
+
+    macro_rules! define_float_eq {
+        ($ty:ty) => {
+            fn eq(s:$ty, v: Vec<$ty> ) {
+                let shrunk: Vec<$ty> = s.shrink().collect();
+                for n in v {
+                    let found = shrunk.iter().any(|&i| i == n);
+                    if !found {
+                        panic!(format!("Element {:?} was not found in shrink results {:?}", n, shrunk));
+                    }
                 }
             }
         }
+    }
+
+    #[test]
+    fn floats32() {
+        define_float_eq!(f32);
 
         eq(0.0, vec![]);
         eq(-0.0, vec![]);
@@ -907,15 +914,7 @@ mod test {
 
     #[test]
     fn floats64() {
-        fn eq(s:f64, v: Vec<f64> ) {
-            let shrunk: Vec<f64> = s.shrink().collect();
-            for n in v {
-                let found = shrunk.iter().any(|&i| i == n);
-                if !found {
-                    panic!(format!("Element {:?} was not found in shrink results {:?}", n, shrunk));
-                }
-            }
-        }
+        define_float_eq!(f64);
 
         eq(0.0, vec![]);
         eq(-0.0, vec![]);
