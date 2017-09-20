@@ -936,6 +936,45 @@ mod test {
         eq(0u64, vec![]);
     }
 
+
+    macro_rules! define_float_eq {
+        ($ty:ty) => {
+            fn eq(s:$ty, v: Vec<$ty> ) {
+                let shrunk: Vec<$ty> = s.shrink().collect();
+                for n in v {
+                    let found = shrunk.iter().any(|&i| i == n);
+                    if !found {
+                        panic!(format!("Element {:?} was not found in shrink results {:?}", n, shrunk));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn floats32() {
+        define_float_eq!(f32);
+
+        eq(0.0, vec![]);
+        eq(-0.0, vec![]);
+        eq(1.0, vec![0.0]);
+        eq(2.0, vec![0.0, 1.0]);
+        eq(-2.0, vec![0.0, 2.0, -1.0]);
+        eq(1.5, vec![0.0]);
+    }
+
+    #[test]
+    fn floats64() {
+        define_float_eq!(f64);
+
+        eq(0.0, vec![]);
+        eq(-0.0, vec![]);
+        eq(1.0, vec![0.0]);
+        eq(2.0, vec![0.0, 1.0]);
+        eq(-2.0, vec![0.0, 2.0, -1.0]);
+        eq(1.5, vec![0.0]);
+    }
+
     #[test]
     fn vecs() {
         eq({let it: Vec<isize> = vec![]; it}, vec![]);
