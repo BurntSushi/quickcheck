@@ -1,4 +1,5 @@
 use std::char;
+use std::{f32, f64};
 use std::collections::{
     BTreeMap,
     BTreeSet,
@@ -23,6 +24,7 @@ use rand::Rng;
 /// `gen` function in this crate.
 pub trait Gen : Rng {
     fn size(&self) -> usize;
+    fn floats_finite_only(&self) -> bool;
 }
 
 /// StdGen is the default implementation of `Gen`.
@@ -32,6 +34,7 @@ pub trait Gen : Rng {
 pub struct StdGen<R> {
     rng: R,
     size: usize,
+    floats_finite_only: bool,
 }
 
 /// Returns a `StdGen` with the given configuration using any random number
@@ -41,8 +44,8 @@ pub struct StdGen<R> {
 /// For example, it specifies the maximum length of a randomly generated vector
 /// and also will specify the maximum magnitude of a randomly generated number.
 impl<R: Rng> StdGen<R> {
-    pub fn new(rng: R, size: usize) -> StdGen<R> {
-        StdGen { rng: rng, size: size }
+    pub fn new(rng: R, size: usize, floats_finite_only: bool) -> StdGen<R> {
+        StdGen { rng: rng, size: size, floats_finite_only }
     }
 }
 
@@ -57,6 +60,7 @@ impl<R: Rng> Rng for StdGen<R> {
 
 impl<R: Rng> Gen for StdGen<R> {
     fn size(&self) -> usize { self.size }
+    fn floats_finite_only(&self) -> bool { self.floats_finite_only }
 }
 
 /// Creates a shrinker with zero elements.
@@ -552,15 +556,15 @@ macro_rules! signed_shrinker {
 
             impl SignedShrinker {
                 pub fn new(x: $ty) -> Box<Iterator<Item=$ty>> {
-                    if x == 0 {
+                    if x == 0 as $ty {
                         super::empty_shrinker()
                     } else {
                         let shrinker = SignedShrinker {
                             x: x,
-                            i: x / 2,
+                            i: x / 2 as $ty,
                         };
-                        let mut items = vec![0];
-                        if shrinker.i < 0 {
+                        let mut items = vec![0 as $ty];
+                        if shrinker.i < 0 as $ty {
                             items.push(shrinker.x.abs());
                         }
                         Box::new(items.into_iter().chain(shrinker))
@@ -573,7 +577,7 @@ macro_rules! signed_shrinker {
                 fn next(&mut self) -> Option<$ty> {
                     if (self.x - self.i).abs() < self.x.abs() {
                         let result = Some(self.x - self.i);
-                        self.i = self.i / 2;
+                        self.i = self.i / 2 as $ty;
                         result
                     } else {
                         None
@@ -607,22 +611,70 @@ signed_arbitrary! {
 
 impl Arbitrary for f32 {
     fn arbitrary<G: Gen>(g: &mut G) -> f32 {
-        let s = g.size(); g.gen_range(-(s as f32), s as f32)
+        let special_value = g.gen_weighted_bool(100);
+
+        if special_value {
+            let mut values = vec![
+                f32::MIN,
+                -1.0,
+                -0.0,
+                0.0,
+                f32::MIN_POSITIVE,
+                1.0,
+                f32::MAX,
+            ];
+
+            if !g.floats_finite_only() {
+                values.push(f32::NEG_INFINITY);
+                values.push(f32::NAN);
+                values.push(f32::INFINITY);
+            }
+
+            *g.choose(&values).unwrap()
+        } else {
+            let exp = g.gen_range(f32::MIN_10_EXP, f32::MAX_10_EXP);
+            let sign = *g.choose(&[-1.0, 1.0]).unwrap();
+            sign * g.next_f32() * 10f32.powi(exp)
+        }
     }
     fn shrink(&self) -> Box<Iterator<Item=f32>> {
-        signed_shrinker!(i32);
-        let it = shrinker::SignedShrinker::new(*self as i32);
+        signed_shrinker!(f32);
+        let it = shrinker::SignedShrinker::new(*self);
         Box::new(it.map(|x| x as f32))
     }
 }
 
 impl Arbitrary for f64 {
     fn arbitrary<G: Gen>(g: &mut G) -> f64 {
-        let s = g.size(); g.gen_range(-(s as f64), s as f64)
+        let special_value = g.gen_weighted_bool(100);
+
+        if special_value {
+            let mut values = vec![
+                f64::MIN,
+                -1.0,
+                -0.0,
+                0.0,
+                f64::MIN_POSITIVE,
+                1.0,
+                f64::MAX,
+            ];
+
+            if !g.floats_finite_only() {
+                values.push(f64::NEG_INFINITY);
+                values.push(f64::NAN);
+                values.push(f64::INFINITY);
+            }
+
+            *g.choose(&values).unwrap()
+        } else {
+            let exp = g.gen_range(f64::MIN_10_EXP, f64::MAX_10_EXP);
+            let sign = *g.choose(&[-1.0, 1.0]).unwrap();
+            sign * g.next_f64() * 10f64.powi(exp)
+        }
     }
     fn shrink(&self) -> Box<Iterator<Item=f64>> {
-        signed_shrinker!(i64);
-        let it = shrinker::SignedShrinker::new(*self as i64);
+        signed_shrinker!(f64);
+        let it = shrinker::SignedShrinker::new(*self);
         Box::new(it.map(|x| x as f64))
     }
 }
@@ -736,6 +788,7 @@ mod test {
         VecDeque,
     };
     use std::fmt::Debug;
+    use std::{f32, f64};
     use std::hash::Hash;
     use super::Arbitrary;
 
@@ -759,7 +812,7 @@ mod test {
     }
 
     fn gen() -> super::StdGen<rand::ThreadRng> {
-        super::StdGen::new(rand::thread_rng(), 5)
+        super::StdGen::new(rand::thread_rng(), 5, false)
     }
 
     fn rep<F>(f: &mut F) where F : FnMut() -> () {
@@ -910,6 +963,9 @@ mod test {
         eq(2.0, vec![0.0, 1.0]);
         eq(-2.0, vec![0.0, 2.0, -1.0]);
         eq(1.5, vec![0.0]);
+        eq(f32::NAN, vec![0.0]);
+        eq(f32::INFINITY, vec![0.0]);
+        eq(f32::NEG_INFINITY, vec![0.0]);
     }
 
     #[test]
@@ -922,6 +978,9 @@ mod test {
         eq(2.0, vec![0.0, 1.0]);
         eq(-2.0, vec![0.0, 2.0, -1.0]);
         eq(1.5, vec![0.0]);
+        eq(f64::NAN, vec![0.0]);
+        eq(f64::INFINITY, vec![0.0]);
+        eq(f64::NEG_INFINITY, vec![0.0]);
     }
 
     #[test]
