@@ -168,7 +168,7 @@ fn testable_unit_panic() {
 fn regression_issue_83() {
     fn prop(_: u8) -> bool { true }
     QuickCheck::new()
-        .gen(StdGen::new(rand::thread_rng(), 1024))
+        .gen(StdGen::new(rand::thread_rng(), 1024, false))
         .quickcheck(prop as fn(u8) -> bool)
 }
 
@@ -176,7 +176,7 @@ fn regression_issue_83() {
 fn regression_issue_83_signed() {
     fn prop(_: i8) -> bool { true }
     QuickCheck::new()
-        .gen(StdGen::new(rand::thread_rng(), 1024))
+        .gen(StdGen::new(rand::thread_rng(), 1024, false))
         .quickcheck(prop as fn(i8) -> bool)
 }
 

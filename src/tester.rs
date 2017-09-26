@@ -39,6 +39,16 @@ fn qc_gen_size() -> usize {
     }
 }
 
+fn qc_gen_floats_finite_only() -> bool {
+    let default = false;
+    match env::var("QUICKCHECK_GENERATOR_FLOATS_FINITE_ONLY") {
+        Ok(val) => {
+            val.parse().unwrap_or(default)
+        },
+        Err(_) => default,
+    }
+}
+
 impl QuickCheck<StdGen<rand::ThreadRng>> {
     /// Creates a new QuickCheck value.
     ///
@@ -53,10 +63,11 @@ impl QuickCheck<StdGen<rand::ThreadRng>> {
         let tests = qc_tests();
         let max_tests = cmp::max(tests, qc_max_tests());
         let gen_size = qc_gen_size();
+        let gen_floats_finite_only = qc_gen_floats_finite_only();
         QuickCheck {
             tests: tests,
             max_tests: max_tests,
-            gen: StdGen::new(rand::thread_rng(), gen_size),
+            gen: StdGen::new(rand::thread_rng(), gen_size, gen_floats_finite_only),
         }
     }
 }
@@ -371,7 +382,8 @@ impl<A: Arbitrary + Debug> AShow for A {}
 
 #[cfg(test)]
 mod test {
-    use QuickCheck;
+    use {QuickCheck, StdGen, Arbitrary};
+    use rand;
 
     #[test]
     fn shrinking_regression_issue_126() {
@@ -384,5 +396,58 @@ mod test {
             .unwrap_err();
         let expected_argument = format!("{:?}", [true, true]);
         assert_eq!(failing_case.arguments, vec![expected_argument]);
+    }
+
+    #[test]
+    fn floats_finite_only_flag_is_set_then_all_the_generated_floats_are_finite() {
+        let floats_finite_only = true;
+
+        let mut qc = QuickCheck {
+            tests: 10000,
+            max_tests: 20000,
+            gen: StdGen::new(rand::thread_rng(), 100, floats_finite_only),
+        };
+
+        qc.quicktest((|n| n.is_finite()) as fn(n: f32) -> bool)
+            .expect("Infinite number was generated for f32");
+
+        qc.quicktest((|n| n.is_finite()) as fn(n: f64) -> bool)
+            .expect("Infinite number was generated for f64");
+    }
+
+    #[test]
+    fn when_floats_finite_only_flag_set_to_false_generates_non_finite_f64() {
+        let floats_finite_only = false;
+
+        let mut gen = StdGen::new(rand::thread_rng(), 100, floats_finite_only);
+        let mut non_finite_was_found = false;
+
+        for _ in 0..10000 {
+            let f = f64::arbitrary(&mut gen);
+            if !f.is_finite() {
+                non_finite_was_found = true;
+                break;
+            }
+        }
+
+        assert!(non_finite_was_found);
+    }
+
+    #[test]
+    fn when_floats_finite_only_flag_set_to_false_generates_non_finite_f32() {
+        let floats_finite_only = false;
+
+        let mut gen = StdGen::new(rand::thread_rng(), 100, floats_finite_only);
+        let mut non_finite_was_found = false;
+
+        for _ in 0..10000 {
+            let f = f32::arbitrary(&mut gen);
+            if !f.is_finite() {
+                non_finite_was_found = true;
+                break;
+            }
+        }
+
+        assert!(non_finite_was_found);
     }
 }
