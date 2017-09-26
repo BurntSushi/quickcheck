@@ -382,7 +382,7 @@ impl<A: Arbitrary + Debug> AShow for A {}
 
 #[cfg(test)]
 mod test {
-    use {QuickCheck, StdGen};
+    use {QuickCheck, StdGen, Arbitrary};
     use rand;
 
     #[test]
@@ -413,5 +413,41 @@ mod test {
 
         qc.quicktest((|n| n.is_finite()) as fn(n: f64) -> bool)
             .expect("Infinite number was generated for f64");
+    }
+
+    #[test]
+    fn when_floats_finite_only_flag_set_to_false_generates_non_finite_f64() {
+        let floats_finite_only = false;
+
+        let mut gen = StdGen::new(rand::thread_rng(), 100, floats_finite_only);
+        let mut non_finite_was_found = false;
+
+        for _ in 0..10000 {
+            let f = f64::arbitrary(&mut gen);
+            if !f.is_finite() {
+                non_finite_was_found = true;
+                break;
+            }
+        }
+
+        assert!(non_finite_was_found);
+    }
+
+    #[test]
+    fn when_floats_finite_only_flag_set_to_false_generates_non_finite_f32() {
+        let floats_finite_only = false;
+
+        let mut gen = StdGen::new(rand::thread_rng(), 100, floats_finite_only);
+        let mut non_finite_was_found = false;
+
+        for _ in 0..10000 {
+            let f = f32::arbitrary(&mut gen);
+            if !f.is_finite() {
+                non_finite_was_found = true;
+                break;
+            }
+        }
+
+        assert!(non_finite_was_found);
     }
 }
