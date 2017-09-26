@@ -611,7 +611,7 @@ signed_arbitrary! {
 
 impl Arbitrary for f32 {
     fn arbitrary<G: Gen>(g: &mut G) -> f32 {
-        let special_value = g.gen_weighted_bool(100);
+        let special_value = g.gen_weighted_bool(10);
 
         if special_value {
             let mut values = vec![
@@ -646,7 +646,7 @@ impl Arbitrary for f32 {
 
 impl Arbitrary for f64 {
     fn arbitrary<G: Gen>(g: &mut G) -> f64 {
-        let special_value = g.gen_weighted_bool(100);
+        let special_value = g.gen_weighted_bool(10);
 
         if special_value {
             let mut values = vec![
