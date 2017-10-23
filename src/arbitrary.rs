@@ -710,6 +710,10 @@ macro_rules! unsigned_arbitrary {
 unsigned_arbitrary! {
     usize, u8, u16, u32, u64
 }
+#[cfg(feature = "i128")]
+unsigned_arbitrary! {
+    u128
+}
 
 macro_rules! signed_shrinker {
     ($ty:ty) => {
@@ -778,6 +782,10 @@ macro_rules! signed_arbitrary {
 
 signed_arbitrary! {
     isize, i8, i16, i32, i64
+}
+#[cfg(feature = "i128")]
+signed_arbitrary! {
+    i128
 }
 
 impl Arbitrary for f32 {
@@ -1031,6 +1039,14 @@ mod test {
         eq(0i64, vec![]);
     }
 
+    #[cfg(feature="i128")]
+    #[test]
+    fn ints128() {
+        eq(5i128, vec![0, 3, 4]);
+        eq(-5i128, vec![5, 0, -3, -4]);
+        eq(0i128, vec![]);
+    }
+
     #[test]
     fn uints() {
         eq(5usize, vec![0, 3, 4]);
@@ -1061,6 +1077,12 @@ mod test {
         eq(0u64, vec![]);
     }
 
+    #[cfg(feature = "i128")]
+    #[test]
+    fn uints128() {
+        eq(5u128, vec![0, 3, 4]);
+        eq(0u128, vec![]);
+    }
 
     macro_rules! define_float_eq {
         ($ty:ty) => {

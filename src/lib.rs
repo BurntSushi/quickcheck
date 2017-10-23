@@ -6,6 +6,8 @@
 
 #![allow(deprecated)] // for connect -> join in 1.3
 
+#![cfg_attr(feature = "i128", feature(i128_type, i128))]
+
 #[cfg(feature = "use_logging")]
 extern crate env_logger;
 #[cfg(feature = "use_logging")]

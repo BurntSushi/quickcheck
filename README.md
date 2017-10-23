@@ -124,6 +124,7 @@ witnesses for failures.
 
 Crate features:
 
+- `"i128"`: Enables Arbitrary implementations for 128-bit integers.
 - `"unstable"`: Enables Arbitrary implementations that require the Rust nightly
   channel.
 - `"use_logging"`: (Enabled by default.) Enables the log messages governed
