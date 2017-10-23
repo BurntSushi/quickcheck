@@ -92,7 +92,7 @@ mod tests {
 
 ```toml
 [dependencies]
-quickcheck = "0.3"
+quickcheck = "0.4"
 ```
 
 If you're only using `quickcheck` in your test code, then you can add it as a
@@ -100,15 +100,15 @@ development dependency instead:
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.3"
+quickcheck = "0.4"
 ```
 
 If you want to use the `#[quickcheck]` attribute, then add `quickcheck_macros`
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.3"
-quickcheck_macros = "0.2"
+quickcheck = "0.4"
+quickcheck_macros = "0.4"
 ```
 
 and only enable the `quickcheck_macros` plugin for the test build
@@ -116,9 +116,6 @@ and only enable the `quickcheck_macros` plugin for the test build
 #![cfg_attr(test, feature(plugin))]
 #![cfg_attr(test, plugin(quickcheck_macros))]
 ```
-
-Note that the `#[quickcheck]` macro will not work when Rust 1.0 stable is
-released, although it will continue to work on the nightlies.
 
 N.B. When using `quickcheck` (either directly or via the attributes),
 `RUST_LOG=quickcheck` enables `info!` so that it shows useful output
@@ -233,8 +230,12 @@ will try to replace the discarded test with a fresh one. However, if your
 condition is seldom met, it's possible that `quickcheck` will have to settle
 for running fewer tests than usual. By default, if `quickcheck` can't find
 `100` valid tests after trying `10,000` times, then it will give up.
-This parameter may be changed using
-[`quickcheck_config`](http://burntsushi.net/rustdoc/quickcheck/fn.quickcheck_config.html).
+These parameters may be changed using
+[`QuickCheck::tests`](https://docs.rs/quickcheck/0.4.1/quickcheck/struct.QuickCheck.html#method.tests)
+and [`QuickCheck::max_tests`](https://docs.rs/quickcheck/0.4.1/quickcheck/struct.QuickCheck.html#method.max_tests),
+or by setting the `QUICKCHECK_TESTS` and `QUICKCHECK_MAX_TESTS`
+environment variables.
+
 
 
 ### Shrinking
@@ -430,7 +431,7 @@ passing.
 
 I think I've captured the key features, but there are still things missing:
 
-* As of now, only functions with 4 or fewer parameters can be quickchecked.
+* As of now, only functions with 8 or fewer parameters can be quickchecked.
 This limitation can be lifted to some `N`, but requires an implementation
 for each `n` of the `Testable` trait.
 * Functions that fail because of a stack overflow are not caught by QuickCheck.
