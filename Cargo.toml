@@ -15,6 +15,7 @@ license = "Unlicense/MIT"
 unstable = []
 use_logging = ["log", "env_logger"]
 default = ["use_logging"]
+i128 = ["rand/i128_support"]
 
 [lib]
 name = "quickcheck"
