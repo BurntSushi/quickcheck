@@ -371,7 +371,8 @@ impl<A: Arbitrary + Debug> AShow for A {}
 
 #[cfg(test)]
 mod test {
-    use QuickCheck;
+    use {QuickCheck, StdGen};
+    use rand;
 
     #[test]
     fn shrinking_regression_issue_126() {
@@ -384,5 +385,13 @@ mod test {
             .unwrap_err();
         let expected_argument = format!("{:?}", [true, true]);
         assert_eq!(failing_case.arguments, vec![expected_argument]);
+    }
+
+    #[test]
+    fn size_for_small_types_issue_143() {
+        fn t(_: i8) -> bool { true }
+        QuickCheck::new()
+            .gen(StdGen::new(rand::thread_rng(), 129))
+            .quickcheck(t as fn(i8) -> bool);
     }
 }

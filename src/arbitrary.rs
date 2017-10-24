@@ -569,16 +569,14 @@ macro_rules! unsigned_shrinker {
 }
 
 macro_rules! unsigned_arbitrary {
-    ($($ty:ty),*) => {
+    ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
                     #![allow(trivial_numeric_casts)]
-                    let mut s = g.size() as $ty;
-                    if s == 0 {
-                        s = s + 1;
-                    }
-                    g.gen_range(0, s)
+                    let s = g.size() as $ty;
+                    use std::cmp::{min, max};
+                    g.gen_range(0, max(1, min(s, $ty::max_value())))
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>> {
                     unsigned_shrinker!($ty);
@@ -636,12 +634,18 @@ macro_rules! signed_shrinker {
 }
 
 macro_rules! signed_arbitrary {
-    ($($ty:ty),*) => {
+    ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    let s = g.size() as $ty;
-                    g.gen_range(-s, if s == 0 { 1 } else { s })
+                    use std::cmp::{min,max};
+                    let upper = min(g.size(), $ty::max_value() as usize);
+                    let lower = if upper > $ty::max_value() as usize {
+                        $ty::min_value()
+                    } else {
+                        -(upper as $ty)
+                    };
+                    g.gen_range(lower, max(1, upper as $ty))
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>> {
                     signed_shrinker!($ty);
