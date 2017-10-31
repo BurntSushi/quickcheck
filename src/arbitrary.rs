@@ -159,48 +159,103 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
     }
 }
 
-macro_rules! impl_arb_for_tuple {
-    (($var_a:ident, $type_a:ident) $(, ($var_n:ident, $type_n:ident))*) => (
-        impl<$type_a: Arbitrary, $($type_n: Arbitrary),*> Arbitrary
-                for ($type_a, $($type_n),*) {
-            fn arbitrary<GEN: Gen>(g: &mut GEN) -> ($type_a, $($type_n),*) {
+macro_rules! impl_arb_for_single_tuple {
+    ($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)*) => {
+        impl<$($type_param),*> Arbitrary for ($($type_param,)*)
+            where $($type_param: Arbitrary,)*
+        {
+            fn arbitrary<GEN: Gen>(g: &mut GEN) -> ($($type_param,)*) {
                 (
-                    Arbitrary::arbitrary(g),
-                    $({
-                        $type_n::arbitrary(g)
-                    },
+                    $(
+                        $type_param::arbitrary(g),
                     )*
                 )
             }
 
-            fn shrink(&self)
-                     -> Box<Iterator<Item=($type_a, $($type_n),*)>> {
-                let (ref $var_a, $(ref $var_n),*) = *self;
-                let sa = $var_a.shrink().scan(
-                    ($($var_n.clone(),)*),
-                    |&mut ($(ref $var_n,)*), $var_a|
-                        Some(($var_a, $($var_n.clone(),)*))
-                );
-                let srest = ($($var_n.clone(),)*).shrink()
-                    .scan($var_a.clone(), |$var_a, ($($var_n,)*)|
-                        Some(($var_a.clone(), $($var_n,)*))
-                    );
-                Box::new(sa.chain(srest))
+            fn shrink(&self) -> Box<Iterator<Item=($($type_param,)*)>> {
+                $(
+                    let $cloned_for_index = self.clone();
+                )*
+
+                Box::new(
+                    ::std::iter::empty()
+                    $(
+                        .chain(self.$tuple_index.shrink().map(move |shr_value| {
+                            let mut result = $cloned_for_index.clone();
+                            result.$tuple_index = shr_value;
+                            result
+                        }))
+                    )*
+                )
             }
         }
-    );
+    };
 }
 
-impl_arb_for_tuple!((a, A));
-impl_arb_for_tuple!((a, A), (b, B));
-impl_arb_for_tuple!((a, A), (b, B), (c, C));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G), (h, H));
+macro_rules! impl_arb_for_single_tuple_with_reversed_args {
+    (@internal [$($output:tt,)*]) => {
+        impl_arb_for_single_tuple!($($output,)*);
+    };
+    (@internal [$($output:tt,)*] $first:tt, $($rest:tt,)*) => {
+        impl_arb_for_single_tuple_with_reversed_args!(@internal [$first, $($output,)*] $($rest,)*);
+    };
+    (($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)+),) => {
+        impl_arb_for_single_tuple_with_reversed_args!(@internal
+            []
+            $(($type_param, $tuple_index, $cloned_for_index),)+
+        );
+    };
+}
+
+macro_rules! impl_arb_for_tuples_with_reversed_args {
+    (@internal [$($output:tt,)*]) => {
+        $(
+            impl_arb_for_single_tuple_with_reversed_args!($output,);
+        )*
+    };
+    (@internal [$($output:tt,)*] $first:tt, $($rest:tt,)*) => {
+        impl_arb_for_tuples_with_reversed_args!(@internal
+            [($first, $($rest,)*), $($output,)*]
+            $($rest,)*
+        );
+    };
+    ($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)*) => {
+        impl_arb_for_tuples_with_reversed_args!(@internal
+            []
+            $(($type_param, $tuple_index, $cloned_for_index),)*
+        );
+    };
+}
+
+macro_rules! impl_arb_for_tuples {
+    (@internal [$($reversed_args:tt,)*]) => {
+        impl_arb_for_tuples_with_reversed_args!($($reversed_args,)*);
+    };
+    (@internal
+        [$($reversed_args:tt,)*]
+        ($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),
+        $($rest:tt,)*
+    ) => {
+        impl_arb_for_tuples!(@internal
+            [($type_param, $tuple_index, $cloned_for_index), $($reversed_args,)*]
+            $($rest,)*
+        );
+    };
+    ($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)*) => {
+        impl_arb_for_tuples!(@internal [] $(($type_param, $tuple_index, $cloned_for_index),)*);
+    };
+}
+
+impl_arb_for_tuples! {
+    (A, 0, cloned_for_0),
+    (B, 1, cloned_for_1),
+    (C, 2, cloned_for_2),
+    (D, 3, cloned_for_3),
+    (E, 4, cloned_for_4),
+    (F, 5, cloned_for_5),
+    (G, 6, cloned_for_6),
+    (H, 7, cloned_for_7),
+}
 
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> Vec<A> {
