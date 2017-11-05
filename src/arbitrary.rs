@@ -412,9 +412,23 @@ impl Arbitrary for PathBuf {
         p
     }
 
-    // I'm not sure how to shrink this.  Help appreciated!
-    // fn shrink(&self) -> Box<Iterator<Item=PathBuf>> {
-    // }
+    fn shrink(&self) -> Box<Iterator<Item=PathBuf>> {
+        let mut shrunk = Vec::new();
+
+        let mut popped = self.clone();
+        if popped.pop() {
+            shrunk.push(popped);
+        }
+
+        // Add the canonicalized variant only if canonicalizing the path actually does something,
+        // making it (hopefully) smaller.
+        let canonicalized = self.canonicalize();
+        if canonicalized != self {
+            shrunk.push(canonicalized);
+        }
+
+        Box::new(shrunk.into_iter())
+    }
 }
 
 impl Arbitrary for OsString {
