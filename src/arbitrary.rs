@@ -421,10 +421,11 @@ impl Arbitrary for PathBuf {
         }
 
         // Add the canonicalized variant only if canonicalizing the path actually does something,
-        // making it (hopefully) smaller.
-        let canonicalized = self.canonicalize();
-        if canonicalized != self {
-            shrunk.push(canonicalized);
+        // making it (hopefully) smaller. Also, ignore canonicalization if canonicalization errors.
+        if let Ok(canonicalized) = self.canonicalize() {
+            if &canonicalized != self {
+                shrunk.push(canonicalized);
+            }
         }
 
         Box::new(shrunk.into_iter())
