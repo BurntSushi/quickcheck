@@ -412,9 +412,30 @@ impl Arbitrary for PathBuf {
         p
     }
 
-    // I'm not sure how to shrink this.  Help appreciated!
-    // fn shrink(&self) -> Box<Iterator<Item=PathBuf>> {
-    // }
+    fn shrink(&self) -> Box<Iterator<Item=PathBuf>> {
+        let mut shrunk = Vec::new();
+
+        let mut popped = self.clone();
+        if popped.pop() {
+            shrunk.push(popped);
+        }
+
+        // Iterating over a Path performs a small amount of normalization.
+        let normalized = self.iter().collect::<PathBuf>();
+        if normalized.as_os_str() != self.as_os_str() {
+            shrunk.push(normalized);
+        }
+
+        // Add the canonicalized variant only if canonicalizing the path actually does something,
+        // making it (hopefully) smaller. Also, ignore canonicalization if canonicalization errors.
+        if let Ok(canonicalized) = self.canonicalize() {
+            if canonicalized.as_os_str() != self.as_os_str() {
+                shrunk.push(canonicalized);
+            }
+        }
+
+        Box::new(shrunk.into_iter())
+    }
 }
 
 impl Arbitrary for OsString {
@@ -767,6 +788,7 @@ mod test {
     };
     use std::fmt::Debug;
     use std::hash::Hash;
+    use std::path::PathBuf;
     use super::Arbitrary;
 
     #[test]
@@ -1031,5 +1053,10 @@ mod test {
         ordered_eq(3.., vec![0.., 2..]);
         ordered_eq(..3, vec![..0, ..2]);
         ordered_eq(.., vec![]);
+    }
+
+    #[test]
+    fn pathbuf() {
+        ordered_eq(PathBuf::from("/home/foo//.././bar"), vec![PathBuf::from("/home/foo//.."), PathBuf::from("/home/foo/../bar")]);
     }
 }
