@@ -420,10 +420,16 @@ impl Arbitrary for PathBuf {
             shrunk.push(popped);
         }
 
+        // Iterating over a Path performs a small amount of normalization.
+        let normalized = self.iter().collect::<PathBuf>();
+        if normalized.as_os_str() != self.as_os_str() {
+            shrunk.push(normalized);
+        }
+
         // Add the canonicalized variant only if canonicalizing the path actually does something,
         // making it (hopefully) smaller. Also, ignore canonicalization if canonicalization errors.
         if let Ok(canonicalized) = self.canonicalize() {
-            if &canonicalized != self {
+            if canonicalized.as_os_str() != self.as_os_str() {
                 shrunk.push(canonicalized);
             }
         }
@@ -782,6 +788,7 @@ mod test {
     };
     use std::fmt::Debug;
     use std::hash::Hash;
+    use std::path::PathBuf;
     use super::Arbitrary;
 
     #[test]
@@ -1046,5 +1053,10 @@ mod test {
         ordered_eq(3.., vec![0.., 2..]);
         ordered_eq(..3, vec![..0, ..2]);
         ordered_eq(.., vec![]);
+    }
+
+    #[test]
+    fn pathbuf() {
+        ordered_eq(PathBuf::from("/home/foo//.././bar"), vec![PathBuf::from("/home/foo//.."), PathBuf::from("/home/foo/../bar")]);
     }
 }
