@@ -10,13 +10,13 @@ use {Arbitrary, Gen, StdGen};
 
 /// The main QuickCheck type for setting configuration and running QuickCheck.
 pub struct QuickCheck<G> {
-    tests: usize,
-    max_tests: usize,
-    min_tests_passed: usize,
+    tests: u64,
+    max_tests: u64,
+    min_tests_passed: u64,
     gen: G,
 }
 
-fn qc_tests() -> usize {
+fn qc_tests() -> u64 {
     let default = 100;
     match env::var("QUICKCHECK_TESTS") {
         Ok(val) => val.parse().unwrap_or(default),
@@ -24,7 +24,7 @@ fn qc_tests() -> usize {
     }
 }
 
-fn qc_max_tests() -> usize {
+fn qc_max_tests() -> u64 {
     let default = 10_000;
     match env::var("QUICKCHECK_MAX_TESTS") {
         Ok(val) => val.parse().unwrap_or(default),
@@ -40,7 +40,7 @@ fn qc_gen_size() -> usize {
     }
 }
 
-fn qc_min_tests_passed() -> usize {
+fn qc_min_tests_passed() -> u64 {
     let default = 0;
     match env::var("QUICKCHECK_MIN_TESTS_PASSED") {
         Ok(val) => val.parse().unwrap_or(default),
@@ -80,7 +80,7 @@ impl<G: Gen> QuickCheck<G> {
     /// can occur. Namely, if a test causes a failure, future testing on that
     /// property stops. Additionally, if tests are discarded, there may be
     /// fewer than `tests` passed.
-    pub fn tests(mut self, tests: usize) -> QuickCheck<G> {
+    pub fn tests(mut self, tests: u64) -> QuickCheck<G> {
         self.tests = tests;
         self
     }
@@ -90,7 +90,7 @@ impl<G: Gen> QuickCheck<G> {
     /// The number of invocations of a property will never exceed this number.
     /// This is necessary to cap the number of tests because QuickCheck
     /// properties can discard tests.
-    pub fn max_tests(mut self, max_tests: usize) -> QuickCheck<G> {
+    pub fn max_tests(mut self, max_tests: u64) -> QuickCheck<G> {
         self.max_tests = max_tests;
         self
     }
@@ -107,7 +107,7 @@ impl<G: Gen> QuickCheck<G> {
     /// that needs to pass for the property to be considered successful.
     pub fn min_tests_passed(
         mut self,
-        min_tests_passed: usize,
+        min_tests_passed: u64,
     ) -> QuickCheck<G> {
         self.min_tests_passed = min_tests_passed;
         self
@@ -120,9 +120,9 @@ impl<G: Gen> QuickCheck<G> {
     ///
     /// (If you're using Rust's unit testing infrastructure, then you'll
     /// want to use the `quickcheck` method, which will `panic!` on failure.)
-    pub fn quicktest<A>(&mut self, f: A) -> Result<usize, TestResult>
+    pub fn quicktest<A>(&mut self, f: A) -> Result<u64, TestResult>
                     where A: Testable {
-        let mut n_tests_passed: usize = 0;
+        let mut n_tests_passed = 0;
         for _ in 0..self.max_tests {
             if n_tests_passed >= self.tests {
                 break
