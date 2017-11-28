@@ -10,6 +10,14 @@ use std::collections::{
 };
 use std::hash::{BuildHasher, Hash};
 use std::iter::{empty, once};
+use std::net::{
+    IpAddr,
+    Ipv4Addr,
+    Ipv6Addr,
+    SocketAddr,
+    SocketAddrV4,
+    SocketAddrV6,
+};
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 use std::sync::Arc;
 use std::time::Duration;
@@ -151,48 +159,103 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
     }
 }
 
-macro_rules! impl_arb_for_tuple {
-    (($var_a:ident, $type_a:ident) $(, ($var_n:ident, $type_n:ident))*) => (
-        impl<$type_a: Arbitrary, $($type_n: Arbitrary),*> Arbitrary
-                for ($type_a, $($type_n),*) {
-            fn arbitrary<GEN: Gen>(g: &mut GEN) -> ($type_a, $($type_n),*) {
+macro_rules! impl_arb_for_single_tuple {
+    ($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)*) => {
+        impl<$($type_param),*> Arbitrary for ($($type_param,)*)
+            where $($type_param: Arbitrary,)*
+        {
+            fn arbitrary<GEN: Gen>(g: &mut GEN) -> ($($type_param,)*) {
                 (
-                    Arbitrary::arbitrary(g),
-                    $({
-                        $type_n::arbitrary(g)
-                    },
+                    $(
+                        $type_param::arbitrary(g),
                     )*
                 )
             }
 
-            fn shrink(&self)
-                     -> Box<Iterator<Item=($type_a, $($type_n),*)>> {
-                let (ref $var_a, $(ref $var_n),*) = *self;
-                let sa = $var_a.shrink().scan(
-                    ($($var_n.clone(),)*),
-                    |&mut ($(ref $var_n,)*), $var_a|
-                        Some(($var_a, $($var_n.clone(),)*))
-                );
-                let srest = ($($var_n.clone(),)*).shrink()
-                    .scan($var_a.clone(), |$var_a, ($($var_n,)*)|
-                        Some(($var_a.clone(), $($var_n,)*))
-                    );
-                Box::new(sa.chain(srest))
+            fn shrink(&self) -> Box<Iterator<Item=($($type_param,)*)>> {
+                $(
+                    let $cloned_for_index = self.clone();
+                )*
+
+                Box::new(
+                    ::std::iter::empty()
+                    $(
+                        .chain(self.$tuple_index.shrink().map(move |shr_value| {
+                            let mut result = $cloned_for_index.clone();
+                            result.$tuple_index = shr_value;
+                            result
+                        }))
+                    )*
+                )
             }
         }
-    );
+    };
 }
 
-impl_arb_for_tuple!((a, A));
-impl_arb_for_tuple!((a, A), (b, B));
-impl_arb_for_tuple!((a, A), (b, B), (c, C));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G));
-impl_arb_for_tuple!((a, A), (b, B), (c, C), (d, D), (e, E), (f, F),
-                    (g, G), (h, H));
+macro_rules! impl_arb_for_single_tuple_with_reversed_args {
+    (@internal [$($output:tt,)*]) => {
+        impl_arb_for_single_tuple!($($output,)*);
+    };
+    (@internal [$($output:tt,)*] $first:tt, $($rest:tt,)*) => {
+        impl_arb_for_single_tuple_with_reversed_args!(@internal [$first, $($output,)*] $($rest,)*);
+    };
+    (($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)+),) => {
+        impl_arb_for_single_tuple_with_reversed_args!(@internal
+            []
+            $(($type_param, $tuple_index, $cloned_for_index),)+
+        );
+    };
+}
+
+macro_rules! impl_arb_for_tuples_with_reversed_args {
+    (@internal [$($output:tt,)*]) => {
+        $(
+            impl_arb_for_single_tuple_with_reversed_args!($output,);
+        )*
+    };
+    (@internal [$($output:tt,)*] $first:tt, $($rest:tt,)*) => {
+        impl_arb_for_tuples_with_reversed_args!(@internal
+            [($first, $($rest,)*), $($output,)*]
+            $($rest,)*
+        );
+    };
+    ($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)*) => {
+        impl_arb_for_tuples_with_reversed_args!(@internal
+            []
+            $(($type_param, $tuple_index, $cloned_for_index),)*
+        );
+    };
+}
+
+macro_rules! impl_arb_for_tuples {
+    (@internal [$($reversed_args:tt,)*]) => {
+        impl_arb_for_tuples_with_reversed_args!($($reversed_args,)*);
+    };
+    (@internal
+        [$($reversed_args:tt,)*]
+        ($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),
+        $($rest:tt,)*
+    ) => {
+        impl_arb_for_tuples!(@internal
+            [($type_param, $tuple_index, $cloned_for_index), $($reversed_args,)*]
+            $($rest,)*
+        );
+    };
+    ($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)*) => {
+        impl_arb_for_tuples!(@internal [] $(($type_param, $tuple_index, $cloned_for_index),)*);
+    };
+}
+
+impl_arb_for_tuples! {
+    (A, 0, cloned_for_0),
+    (B, 1, cloned_for_1),
+    (C, 2, cloned_for_2),
+    (D, 3, cloned_for_3),
+    (E, 4, cloned_for_4),
+    (F, 5, cloned_for_5),
+    (G, 6, cloned_for_6),
+    (H, 7, cloned_for_7),
+}
 
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> Vec<A> {
@@ -389,6 +452,49 @@ impl<T: Arbitrary> Arbitrary for VecDeque<T> {
     }
 }
 
+impl Arbitrary for IpAddr {
+    fn arbitrary<G: Gen>(g: &mut G) -> IpAddr {
+        let ipv4: bool = g.gen();
+        if ipv4 {
+            IpAddr::V4(Arbitrary::arbitrary(g))
+        } else {
+            IpAddr::V6(Arbitrary::arbitrary(g))
+        }
+    }
+}
+
+impl Arbitrary for Ipv4Addr {
+    fn arbitrary<G: Gen>(g: &mut G) -> Ipv4Addr {
+        Ipv4Addr::new(g.gen(), g.gen(), g.gen(), g.gen())
+    }
+}
+
+impl Arbitrary for Ipv6Addr {
+    fn arbitrary<G: Gen>(g: &mut G) -> Ipv6Addr {
+        Ipv6Addr::new(g.gen(), g.gen(), g.gen(), g.gen(),
+                      g.gen(), g.gen(), g.gen(), g.gen())
+    }
+}
+
+impl Arbitrary for SocketAddr {
+    fn arbitrary<G: Gen>(g: &mut G) -> SocketAddr {
+        SocketAddr::new(Arbitrary::arbitrary(g), g.gen())
+    }
+}
+
+impl Arbitrary for SocketAddrV4 {
+    fn arbitrary<G: Gen>(g: &mut G) -> SocketAddrV4 {
+        SocketAddrV4::new(Arbitrary::arbitrary(g), g.gen())
+    }
+}
+
+impl Arbitrary for SocketAddrV6 {
+    fn arbitrary<G: Gen>(g: &mut G) -> SocketAddrV6 {
+        SocketAddrV6::new(Arbitrary::arbitrary(g),
+            g.gen(), g.gen(), g.gen())
+    }
+}
+
 impl Arbitrary for String {
     fn arbitrary<G: Gen>(g: &mut G) -> String {
         let size = { let s = g.size(); g.gen_range(0, s) };
@@ -518,16 +624,14 @@ macro_rules! unsigned_shrinker {
 }
 
 macro_rules! unsigned_arbitrary {
-    ($($ty:ty),*) => {
+    ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
                     #![allow(trivial_numeric_casts)]
-                    let mut s = g.size() as $ty;
-                    if s == 0 {
-                        s = s + 1;
-                    }
-                    g.gen_range(0, s)
+                    let s = g.size() as $ty;
+                    use std::cmp::{min, max};
+                    g.gen_range(0, max(1, min(s, $ty::max_value())))
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>> {
                     unsigned_shrinker!($ty);
@@ -585,12 +689,18 @@ macro_rules! signed_shrinker {
 }
 
 macro_rules! signed_arbitrary {
-    ($($ty:ty),*) => {
+    ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    let s = g.size() as $ty;
-                    g.gen_range(-s, if s == 0 { 1 } else { s })
+                    use std::cmp::{min,max};
+                    let upper = min(g.size(), $ty::max_value() as usize);
+                    let lower = if upper > $ty::max_value() as usize {
+                        $ty::min_value()
+                    } else {
+                        -(upper as $ty)
+                    };
+                    g.gen_range(lower, max(1, upper as $ty))
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>> {
                     signed_shrinker!($ty);
@@ -883,6 +993,45 @@ mod test {
     fn uints64() {
         eq(5u64, vec![0, 3, 4]);
         eq(0u64, vec![]);
+    }
+
+
+    macro_rules! define_float_eq {
+        ($ty:ty) => {
+            fn eq(s:$ty, v: Vec<$ty> ) {
+                let shrunk: Vec<$ty> = s.shrink().collect();
+                for n in v {
+                    let found = shrunk.iter().any(|&i| i == n);
+                    if !found {
+                        panic!(format!("Element {:?} was not found in shrink results {:?}", n, shrunk));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn floats32() {
+        define_float_eq!(f32);
+
+        eq(0.0, vec![]);
+        eq(-0.0, vec![]);
+        eq(1.0, vec![0.0]);
+        eq(2.0, vec![0.0, 1.0]);
+        eq(-2.0, vec![0.0, 2.0, -1.0]);
+        eq(1.5, vec![0.0]);
+    }
+
+    #[test]
+    fn floats64() {
+        define_float_eq!(f64);
+
+        eq(0.0, vec![]);
+        eq(-0.0, vec![]);
+        eq(1.0, vec![0.0]);
+        eq(2.0, vec![0.0, 1.0]);
+        eq(-2.0, vec![0.0, 2.0, -1.0]);
+        eq(1.5, vec![0.0]);
     }
 
     #[test]
