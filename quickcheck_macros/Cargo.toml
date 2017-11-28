@@ -1,6 +1,6 @@
 [package]
 name = "quickcheck_macros"
-version = "0.4.2"  #:version
+version = "0.5.0"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "A macro attribute for quickcheck."
 documentation = "http://burntsushi.net/rustdoc/quickcheck/"
