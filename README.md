@@ -235,8 +235,9 @@ These parameters may be changed using
 and [`QuickCheck::max_tests`](https://docs.rs/quickcheck/0.4.1/quickcheck/struct.QuickCheck.html#method.max_tests),
 or by setting the `QUICKCHECK_TESTS` and `QUICKCHECK_MAX_TESTS`
 environment variables.
-
-
+There is also `QUICKCHECK_MIN_TESTS_PASSED` which sets the minimum number of
+valid tests that need pass (default is `0`) in order for it to be considered
+a success.
 
 ### Shrinking
 
