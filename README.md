@@ -218,7 +218,7 @@ quickcheck(prop as fn(Vec<isize>) -> TestResult);
 So now our property returns a `TestResult`, which allows us to encode a bit
 more information. There are a few more
 [convenience functions defined for the `TestResult`
-type](http://burntsushi.net/rustdoc/quickcheck/struct.TestResult.html).
+type](http://docs.rs/quickcheck/0.5.0/quickcheck/struct.TestResult.html).
 For example, we can't just return a `bool`, so we convert a `bool` value to a
 `TestResult`.
 
