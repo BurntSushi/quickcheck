@@ -130,6 +130,19 @@ Crate features:
   `RUST_LOG`.
 
 
+### Alternative Rust crates for property testing
+
+The [`proptest`](https://docs.rs/proptest) crate is inspired by the
+[Hypothesis](http://hypothesis.works) framework for Python.
+You can read a comparison between `proptest` and `quickcheck`
+[here](https://docs.rs/proptest/*/proptest/#differences-between-quickcheck-and-proptest)
+and
+[here](https://github.com/AltSysrq/proptest/issues/15#issuecomment-348382287).
+In particular, `proptest` improves on the concept of shrinking. So if you've
+ever had problems/frustration with shrinking in `quickcheck`, then `proptest`
+might be worth a try!
+
+
 ### Discarding test results (or, properties are polymorphic!)
 
 Sometimes you want to test a property that only holds for a *subset* of the
