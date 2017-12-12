@@ -294,6 +294,63 @@ guaranteed to get this counter-example every time:
 
 Which is going to be much easier to debug.
 
+### More Thorough Checking
+
+Quickcheck uses random input to test, so it won't
+always find bugs that could be uncovered with a particular
+property. You can improve your odds of finding these latent
+bugs by spending more CPU cycles asking quickcheck to find
+them for you. There are a few different ways to do this, and
+which one you choose is mostly a matter of taste.
+
+##### Running in a Loop
+
+One approach is to run your quickcheck properties in a loop that
+just keeps going until you tell it to stop or it finds a bug.
+For example, you could use a bash script such as the following
+one.
+
+```bash
+#!/usr/bin/bash
+
+while true
+do
+    cargo test qc_
+    if [[ x$? != x0 ]] ; then
+        exit $?
+    fi
+done
+```
+
+One thing to note is that this script passes the `qc_` filter to
+`cargo test`. This assumes that you've prefixed all your quickcheck
+properties with `qc_`. You could leave off the filter, but then
+you would be running all your deterministic tests as well, which
+would take time away from quickcheck!
+
+Checking the return code and exiting is also important. Without that
+test, you won't ever notice when a failure happens.
+
+##### Cranking the Number of Tests
+
+Another approach is to just ask quickcheck to run properties more
+times. You can do this either via the
+[tests()](http://vim.wikia.com/wiki/Append_output_of_an_external_command)
+method, or via the `QUICKCHECK_TESTS` environment variable.
+This will cause quickcheck to run for a much longer time. Unlike,
+the loop approach this will take a bounded amount of time, which
+makes it more suitable for something like a release cycle that
+wants to really hammer your software.
+
+##### Making Arbitrary Smarter
+
+This approach entails spending more time generating interesting
+inputs in your implementations of Arbitrary. The idea is to
+focus on the corner cases. This approach can be tricky because
+programmers are not usually great at intuiting corner cases,
+and the whole idea of property checking is to take that burden
+off the programmer. Despite the theoretical discomfort, this
+approach can turn out to be practical.
 
 ### Case study: The Sieve of Eratosthenes
 
