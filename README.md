@@ -303,6 +303,11 @@ bugs by spending more CPU cycles asking quickcheck to find
 them for you. There are a few different ways to do this, and
 which one you choose is mostly a matter of taste.
 
+If you are finding yourself doing this sort of thing a
+lot, you might also be interested in trying out
+[`cargo fuzz`](https://github.com/rust-fuzz/cargo-fuzz),
+which runs in a loop by default.
+
 ##### Running in a Loop
 
 One approach is to run your quickcheck properties in a loop that
