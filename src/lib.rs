@@ -17,7 +17,7 @@ pub use arbitrary::{
     empty_shrinker, single_shrinker,
 };
 pub use rand::Rng;
-pub use tester::{QuickCheck, Testable, TestResult, quickcheck};
+pub use tester::{QuickCheck, Testable, TestResult, quickcheck, qc_gen_size};
 
 /// A macro for writing quickcheck tests.
 ///

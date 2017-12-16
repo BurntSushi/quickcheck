@@ -32,7 +32,13 @@ fn qc_max_tests() -> u64 {
     }
 }
 
-fn qc_gen_size() -> usize {
+/// The default size of the generator used by:
+/// `QuickCheck::<StdGen<rand::ThreadRng>>::new()`.
+///
+/// You can customize this by setting the environment variable
+/// `QUICKCHECK_GENERATOR_SIZE` to a value that can be parsed
+/// as a `usize`.
+pub fn qc_gen_size() -> usize {
     let default = 100;
     match env::var("QUICKCHECK_GENERATOR_SIZE") {
         Ok(val) => val.parse().unwrap_or(default),
