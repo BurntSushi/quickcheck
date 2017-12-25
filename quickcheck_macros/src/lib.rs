@@ -58,7 +58,7 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
             let prop_ty = cx.ty(span, TyKind::BareFn(P(ast::BareFnTy {
                 unsafety: unsafety,
                 abi: abi,
-                lifetimes: vec![],
+                generic_params: vec![],
                 decl: decl.clone().map(|mut decl| {
                     for arg in decl.inputs.iter_mut() {
                         arg.pat = arg.pat.clone().map(|mut pat| {
