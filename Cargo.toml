@@ -22,4 +22,4 @@ name = "quickcheck"
 [dependencies]
 env_logger = { version = "0.4", optional = true }
 log = { version = "0.3", optional = true }
-rand = "0.3"
+rand = "0.4"
