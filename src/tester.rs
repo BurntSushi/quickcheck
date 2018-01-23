@@ -439,8 +439,10 @@ mod test {
     #[test]
     fn different_generator() {
         fn prop(_: i32) -> bool { true }
-        let rng = OsRng::new().unwrap();
-        QuickCheck::with_gen(StdGen::new(rng, 129))
+        QuickCheck::with_gen(StdGen::new(OsRng::new().unwrap(), 129))
+            .quickcheck(prop as fn(i32) -> bool);
+        QuickCheck::new()
+            .gen(StdGen::new(OsRng::new().unwrap(), 129))
             .quickcheck(prop as fn(i32) -> bool);
     }
 }
