@@ -59,17 +59,9 @@ impl QuickCheck<StdGen<rand::ThreadRng>> {
     /// the max number of overall tests is set to `10000` and the generator
     /// is set to a `StdGen` with a default size of `100`.
     pub fn new() -> QuickCheck<StdGen<rand::ThreadRng>> {
-        let tests = qc_tests();
-        let max_tests = cmp::max(tests, qc_max_tests());
         let gen_size = qc_gen_size();
-        let min_tests_passed = qc_min_tests_passed();
 
-        QuickCheck {
-            tests: tests,
-            max_tests: max_tests,
-            min_tests_passed: min_tests_passed,
-            gen: StdGen::new(rand::thread_rng(), gen_size),
-        }
+        QuickCheck::with_gen(StdGen::new(rand::thread_rng(), gen_size))
     }
 }
 
@@ -83,6 +75,20 @@ impl<G: Gen> QuickCheck<G> {
     pub fn tests(mut self, tests: u64) -> QuickCheck<G> {
         self.tests = tests;
         self
+    }
+
+    /// Create a new instance of `QuickCheck` using the given generator.
+    pub fn with_gen(generator: G) -> QuickCheck<G> {
+        let tests = qc_tests();
+        let max_tests = cmp::max(tests, qc_max_tests());
+        let min_tests_passed = qc_min_tests_passed();
+
+        QuickCheck {
+            tests: tests,
+            max_tests: max_tests,
+            min_tests_passed: min_tests_passed,
+            gen: generator,
+        }
     }
 
     /// Set the maximum number of tests to run.
@@ -405,7 +411,7 @@ impl<A: Arbitrary + Debug> AShow for A {}
 #[cfg(test)]
 mod test {
     use {QuickCheck, StdGen};
-    use rand;
+    use rand::{self, OsRng};
 
     #[test]
     fn shrinking_regression_issue_126() {
@@ -426,5 +432,13 @@ mod test {
         QuickCheck::new()
             .gen(StdGen::new(rand::thread_rng(), 129))
             .quickcheck(t as fn(i8) -> bool);
+    }
+
+    #[test]
+    fn different_generator() {
+        fn prop(_: i32) -> bool { true }
+        let rng = OsRng::new().unwrap();
+        QuickCheck::with_gen(StdGen::new(rng, 129))
+            .quickcheck(prop as fn(i32) -> bool);
     }
 }
