@@ -102,9 +102,11 @@ impl<G: Gen> QuickCheck<G> {
     }
 
     /// Set the random number generator to be used by QuickCheck.
-    pub fn gen(mut self, gen: G) -> QuickCheck<G> {
-        self.gen = gen;
-        self
+    pub fn gen<N: Gen>(self, gen: N) -> QuickCheck<N> {
+        // unfortunately this is necessary because using QuickCheck{ ..self, gen }
+        // wouldn't work due to mismatched types.
+        let QuickCheck{ tests, max_tests, min_tests_passed, .. } = self;
+        QuickCheck { tests, max_tests, min_tests_passed, gen }
     }
 
     /// Set the minimum number of tests that needs to pass.
