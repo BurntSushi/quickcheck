@@ -72,7 +72,7 @@ macro_rules! quickcheck {
 
 #[cfg(feature = "use_logging")]
 fn env_logger_init() -> Result<(), log::SetLoggerError> {
-    env_logger::init()
+    env_logger::try_init()
 }
 
 #[cfg(not(feature = "use_logging"))]
