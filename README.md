@@ -129,6 +129,8 @@ Crate features:
   channel.
 - `"use_logging"`: (Enabled by default.) Enables the log messages governed
   `RUST_LOG`.
+- `"regex"`: (Enabled by default.) Enables the use of regexes with
+  `env_logger`.
 
 
 ### Alternative Rust crates for property testing
