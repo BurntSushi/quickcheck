@@ -14,7 +14,7 @@ macro_rules! bench_shrink {
             #[bench]
             fn $fn_name(b: &mut Bencher) {
                 // Use a deterministic generator to benchmark on the same data
-                let mut gen = StdGen::new(IsaacRng::new_unseeded(), 100);
+                let mut gen = StdGen::new(IsaacRng::new_from_u64(0), 100);
                 let value: $type = Arbitrary::arbitrary(&mut gen);
 
                 b.iter(|| {
