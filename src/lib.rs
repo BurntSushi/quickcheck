@@ -12,7 +12,7 @@
 extern crate env_logger;
 #[cfg(feature = "use_logging")]
 #[macro_use] extern crate log;
-extern crate rand;
+pub extern crate rand;
 
 pub use arbitrary::{
     Arbitrary, Gen, StdGen,
