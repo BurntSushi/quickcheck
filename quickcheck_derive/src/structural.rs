@@ -32,14 +32,28 @@ pub fn derive_struct(item: &DeriveInput, variant: &VariantData) -> (Tokens, Toke
             }
         },
         VariantData::Tuple(ref fields) => {
-            let field_names = (0..fields.len()).map(Ident::new).map(|i| quote!(self.#i));
-            let alpha_names = &alpha_names(fields.len());
+            let field_names = (0..fields.len())
+                .map(Ident::new)
+                .map(|i| quote!(self.#i))
+                .collect::<Vec<_>>();
+            let field_names = &field_names;
+            let alphas = &alpha_names(fields.len());
+            let alphas = &alphas;
+
+            let tuple_pattern = match alphas.len() {
+                0 => quote!(()),
+                1 => {
+                    let alpha = &alphas[0];
+                    quote!(#alpha)
+                },
+                _ => quote!((#(#alphas),*)),
+            };
 
             quote! {
                 // TODO This isn't a *great* way to do this until we get
                 // generics over tuples, to be able to implement shrinking
                 // for tuples of all sizes.
-                Box::new((#(#field_names),*).shrink().map(|(#(#alpha_names),*)| #name(#(#alpha_names),*)))
+                Box::new((#(#field_names),*).shrink().map(|#tuple_pattern| #name(#(#alphas),*)))
             }
         },
         VariantData::Unit => quote!(quickcheck::empty_shrinker()),
