@@ -30,13 +30,20 @@ pub fn derive(input: TokenStream) -> TokenStream {
         impl ::quickcheck::Arbitrary for #impl_generics #name #ty_generics #where_clause {
             #[allow(unused_mut, unused_variables)]
             fn arbitrary<G: ::quickcheck::Gen>(_g: &mut G) -> Self {
-                // TODO Find a way to use "self" instead of "this".
-                let valid = |this: &Self| { #valid };
+                trait Valid {
+                    fn valid(&self) -> bool;
+                }
+                impl Valid for #impl_generics #name #ty_generics #where_clause {
+                    fn valid(&self) -> bool {
+                        #valid
+                    }
+                }
+                
                 let mut gen = move || { #arbitrary };
 
                 loop {
                     let out = gen();
-                    if valid(&out) {
+                    if out.valid() {
                         return out;
                     }
                 }

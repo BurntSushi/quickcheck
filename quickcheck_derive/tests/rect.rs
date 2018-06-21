@@ -4,8 +4,8 @@ extern crate quickcheck;
 extern crate quickcheck_derive;
 
 #[derive(Arbitrary, Clone, Debug)]
-#[arbitrary(constraint = "this.left.checked_add(this.width).is_some()")]
-#[arbitrary(constraint = "this.top.checked_add(this.height).is_some()")]
+#[arbitrary(constraint = "self.left.checked_add(self.width).is_some()")]
+#[arbitrary(constraint = "self.top.checked_add(self.height).is_some()")]
 pub struct Rect {
     left: u8,
     top: u8,

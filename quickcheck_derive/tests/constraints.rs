@@ -4,7 +4,7 @@ extern crate quickcheck;
 extern crate quickcheck_derive;
 
 #[derive(Arbitrary, Clone, Debug)]
-#[arbitrary(constraint = "this.alpha == this.bravo.is_positive()")]
+#[arbitrary(constraint = "self.alpha == self.bravo.is_positive()")]
 struct TestStruct {
     alpha: bool,
     bravo: isize,
