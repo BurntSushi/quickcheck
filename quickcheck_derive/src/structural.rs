@@ -20,6 +20,18 @@ pub fn derive_struct(item: &DeriveInput, variant: &VariantData) -> (Tokens, Toke
                     let alpha = &alphas[0];
                     quote!(#alpha)
                 },
+                length if length > 8 => {
+                    let mut iter = alphas.chunks(8);
+                    let chunk = iter.next().unwrap();
+                    let mut q = quote!((#(#chunk),*));
+                    loop {
+                        match iter.next() {
+                            Some ([single]) => q = quote!((#single, #(#q))),
+                            Some (chunk) => q = quote!((#(#chunk),*) #(#q)),
+                            None => break q,
+                        }
+                    }
+                },
                 _ => quote!((#(#alphas),*)),
             };
 
