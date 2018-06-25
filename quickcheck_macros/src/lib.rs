@@ -53,11 +53,11 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
                           annot_item: Annotatable) -> Annotatable {
     let item = annot_item.expect_item();
     match item.node {
-        ItemKind::Fn(ref decl, unsafety, _constness, abi, _, _) => {
+        ItemKind::Fn(ref decl, header, _, _) => {
             let prop_ident = cx.expr_ident(span, item.ident);
             let prop_ty = cx.ty(span, TyKind::BareFn(P(ast::BareFnTy {
-                unsafety: unsafety,
-                abi: abi,
+                unsafety: header.unsafety,
+                abi: header.abi,
                 generic_params: vec![],
                 decl: decl.clone().map(|mut decl| {
                     for arg in decl.inputs.iter_mut() {
