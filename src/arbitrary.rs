@@ -19,7 +19,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use rand::Rng;
+use rand::{Rng, RngCore, Error};
 
 /// `Gen` wraps a `rand::Rng` with parameters to control the distribution of
 /// random values.
@@ -51,13 +51,14 @@ impl<R: Rng> StdGen<R> {
     }
 }
 
-impl<R: Rng> Rng for StdGen<R> {
+impl<R: Rng> RngCore for StdGen<R> {
     fn next_u32(&mut self) -> u32 { self.rng.next_u32() }
 
     // some RNGs implement these more efficiently than the default, so
     // we might as well defer to them.
     fn next_u64(&mut self) -> u64 { self.rng.next_u64() }
     fn fill_bytes(&mut self, dest: &mut [u8]) { self.rng.fill_bytes(dest) }
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Error> { Ok(self.fill_bytes(dest))}
 }
 
 impl<R: Rng> Gen for StdGen<R> {
