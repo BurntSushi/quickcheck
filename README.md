@@ -14,6 +14,7 @@ Haskell](http://hackage.haskell.org/package/QuickCheck).)
 
 [![Build status](https://api.travis-ci.org/BurntSushi/quickcheck.svg)](https://travis-ci.org/BurntSushi/quickcheck)
 [![](http://meritbadge.herokuapp.com/quickcheck)](https://crates.io/crates/quickcheck)
+![Minimum rustc version](https://img.shields.io/badge/rustc-1.20+-yellow.svg)
 
 Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
