@@ -14,30 +14,21 @@ pub fn derive_struct(item: &DeriveInput, variant: &VariantData) -> (Tokens, Toke
             let alphas = alpha_names(fields.len());
             let alphas = &alphas;
 
-            let tuple_pattern = match alphas.len() {
-                0 => quote!(()),
+            let (cheese, tuple_pattern) = match alphas.len() {
+                0 => (quote!((#(self.#field_names),*)), quote!(())),
                 1 => {
                     let alpha = &alphas[0];
-                    quote!(#alpha)
+                    (quote!((#(self.#field_names),*)), quote!(#alpha))
                 },
                 length if length > 8 => {
-                    let mut iter = alphas.chunks(8);
-                    let chunk = iter.next().unwrap();
-                    let mut q = quote!((#(#chunk),*));
-                    loop {
-                        match iter.next() {
-                            Some ([single]) => q = quote!((#single, #(#q))),
-                            Some (chunk) => q = quote!((#(#chunk),*) #(#q)),
-                            None => break q,
-                        }
-                    }
+                    (quote!(tuplify!(#(self.#field_names),*)), quote!(tuplify!(#(#alphas),*)))
                 },
-                _ => quote!((#(#alphas),*)),
+                _ => (quote!((#(self.#field_names),*)), quote!((#(#alphas),*))),
             };
 
             quote! {
                 Box::new(
-                    (#(self.#field_names),*).shrink().map(|#tuple_pattern| #name {
+                    #cheese.shrink().map(|#tuple_pattern| #name {
                         #(#field_names: #alphas),*
                     })
                 )

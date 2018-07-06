@@ -82,6 +82,39 @@ macro_rules! info {
     ($($_ignore:tt)*) => { () };
 }
 
+#[macro_export]
+macro_rules! tuplify {
+    (@as_expr $e:expr) => { $e };
+    
+    (@parse { } -> { $($output:tt)* }) => {
+        tuplify!(@as_expr $($output)* )
+    };
+
+    (@parse { $($tuple_item:expr)*, $($tail:tt)* } -> { }) => {
+        tuplify!(@parse { $($tail)* } -> { $($tuple_item)* })
+    };
+    
+    (@parse { $($tuple_item:expr)*, $($tail:tt)* } -> { $($output:tt)* }) => {
+        tuplify!(@parse { $($tail)* } -> { ($($output)*, $($tuple_item)*) })
+    };
+
+    (@parse { $($tuple_item:expr)* } -> { $($output:tt)* }) => {
+        tuplify!(@parse { } -> { ($($output)*, $($tuple_item)*) })
+    };
+
+    (@parse { $t:tt $($ts:tt)* } -> { $($output:tt)* }) => {
+        tuplify!(@parse { $($ts)* } -> { $($output)* })
+    };
+
+    ($($tail:tt)*) => (tuplify!(@parse { $($tail)* } -> { }));
+}
+
+#[test]
+fn tuplifiy_test() {
+    assert_eq!(((((1,2),3),4)), tuplify!(1,2,3,4));
+}
+
+
 
 mod arbitrary;
 mod tester;
