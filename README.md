@@ -343,7 +343,7 @@ test, you won't ever notice when a failure happens.
 
 Another approach is to just ask quickcheck to run properties more
 times. You can do this either via the
-[tests()](http://vim.wikia.com/wiki/Append_output_of_an_external_command)
+[tests()](https://docs.rs/quickcheck/0.6.2/quickcheck/struct.QuickCheck.html#method.tests)
 method, or via the `QUICKCHECK_TESTS` environment variable.
 This will cause quickcheck to run for a much longer time. Unlike,
 the loop approach this will take a bounded amount of time, which
