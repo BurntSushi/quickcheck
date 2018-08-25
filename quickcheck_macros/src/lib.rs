@@ -12,7 +12,7 @@ extern crate rustc_plugin;
 
 use syntax::ast;
 use syntax::ast::{Ident, ItemKind, PatKind, StmtKind, Stmt, TyKind};
-use syntax::codemap;
+use syntax::source_map;
 use syntax::ext::base::{ExtCtxt, MultiModifier, Annotatable};
 use syntax::ext::build::AstBuilder;
 use syntax::ptr::P;
@@ -48,7 +48,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
 /// }
 /// ```
 fn expand_meta_quickcheck(cx: &mut ExtCtxt,
-                          span: codemap::Span,
+                          span: source_map::Span,
                           _: &ast::MetaItem,
                           annot_item: Annotatable) -> Annotatable {
     let item = annot_item.expect_item();
@@ -85,7 +85,7 @@ fn expand_meta_quickcheck(cx: &mut ExtCtxt,
 }
 
 fn wrap_item(cx: &mut ExtCtxt,
-             span: codemap::Span,
+             span: source_map::Span,
              item: &ast::Item,
              inner_ident: P<ast::Expr>) -> Annotatable {
     // Copy original function without attributes
