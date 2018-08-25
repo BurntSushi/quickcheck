@@ -4,8 +4,6 @@
 //! For detailed examples, please see the
 //! [README](https://github.com/BurntSushi/quickcheck).
 
-#![allow(deprecated)] // for connect -> join in 1.3
-
 #![cfg_attr(feature = "i128", feature(i128_type, i128))]
 
 #[cfg(feature = "use_logging")]

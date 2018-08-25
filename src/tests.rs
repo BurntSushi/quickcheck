@@ -1,9 +1,12 @@
 use std::cmp::Ord;
-use rand;
-use super::{QuickCheck, StdGen, TestResult, quickcheck};
 use std::collections::{HashSet, HashMap};
-use std::hash::{BuildHasherDefault, SipHasher};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::BuildHasherDefault;
 use std::path::PathBuf;
+
+use rand;
+
+use super::{QuickCheck, StdGen, TestResult, quickcheck};
 
 #[test]
 fn prop_oob() {
@@ -256,13 +259,13 @@ quickcheck! {
     }
 
     fn substitute_hashset(
-        _set: HashSet<u8, BuildHasherDefault<SipHasher>>
+        _set: HashSet<u8, BuildHasherDefault<DefaultHasher>>
     ) -> bool {
         true
     }
 
     fn substitute_hashmap(
-        _map: HashMap<u8, u8, BuildHasherDefault<SipHasher>>
+        _map: HashMap<u8, u8, BuildHasherDefault<DefaultHasher>>
     ) -> bool {
         true
     }

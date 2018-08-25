@@ -543,6 +543,7 @@ impl Arbitrary for PathBuf {
         let here = env::current_dir()
             .unwrap_or(PathBuf::from("/test/directory"));
         let temp = env::temp_dir();
+        #[allow(deprecated)]
         let home = env::home_dir()
             .unwrap_or(PathBuf::from("/home/user"));
         let choices = &[
