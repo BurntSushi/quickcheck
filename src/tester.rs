@@ -270,12 +270,12 @@ impl TestResult {
         match self.err {
             None => {
                 format!("[quickcheck] TEST FAILED. Arguments: ({})",
-                        self.arguments.connect(", "))
+                        self.arguments.join(", "))
             }
             Some(ref err) => {
                 format!("[quickcheck] TEST FAILED (runtime error). \
                          Arguments: ({})\nError: {}",
-                        self.arguments.connect(", "), err)
+                        self.arguments.join(", "), err)
             }
         }
     }
