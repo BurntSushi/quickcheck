@@ -14,7 +14,7 @@ use std::net::{
     IpAddr, Ipv4Addr, Ipv6Addr,
     SocketAddr, SocketAddrV4, SocketAddrV6,
 };
-use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
+use std::ops::{Range, RangeInclusive, RangeFrom, RangeTo, RangeToInclusive, RangeFull};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -859,6 +859,17 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for Range<T> {
     }
 }
 
+impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeInclusive<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> RangeInclusive<T> {
+        Arbitrary::arbitrary(g) ..= Arbitrary::arbitrary(g)
+    }
+    fn shrink(&self) -> Box<Iterator<Item=RangeInclusive<T>>> {
+        Box::new(
+            (self.start().clone(), self.end().clone())
+            .shrink().map(|(s, e)| s ..= e))
+    }
+}
+
 impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeFrom<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> RangeFrom<T> {
         Arbitrary::arbitrary(g) ..
@@ -874,6 +885,15 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeTo<T> {
     }
     fn shrink(&self) -> Box<Iterator<Item=RangeTo<T>>> {
         Box::new(self.end.clone().shrink().map(|end| ..end))
+    }
+}
+
+impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeToInclusive<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> RangeToInclusive<T> {
+        ..= Arbitrary::arbitrary(g)
+    }
+    fn shrink(&self) -> Box<Iterator<Item=RangeToInclusive<T>>> {
+        Box::new(self.end.clone().shrink().map(|end| ..= end))
     }
 }
 
@@ -1279,6 +1299,8 @@ mod test {
         ordered_eq(3.., vec![0.., 2..]);
         ordered_eq(..3, vec![..0, ..2]);
         ordered_eq(.., vec![]);
+        ordered_eq(3..=5, vec![0..=5, 2..=5, 3..=0, 3..=3, 3..=4]);
+        ordered_eq(..=3, vec![..=0, ..=2]);
     }
 
     #[test]
