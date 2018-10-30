@@ -10,6 +10,7 @@ readme = "README.md"
 keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
 categories = ["development-tools::testing"]
 license = "Unlicense/MIT"
+exclude = ["/.travis.yml", "/Makefile", "/ctags.rust", "/session.vim"]
 
 [features]
 default = ["regex", "use_logging"]
