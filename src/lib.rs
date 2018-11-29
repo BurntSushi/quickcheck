@@ -97,9 +97,30 @@ macro_rules! tuplify {
     };
 }
 
+#[macro_export]
+macro_rules! tuplify_pattern {
+    () => {
+        ()
+    };
+
+    ($p:pat) => {
+        $p
+    };
+
+    ($tuple_pattern:pat, $($tail:pat),+) => {
+        ($tuple_pattern, tuplify_pattern!($($tail),+))
+    };
+}
+
 #[test]
 fn tuplifiy_test() {
     assert_eq!((1, (2, (3, 4))), tuplify!(1,2,3,4));
+}
+
+#[test]
+fn tuplify_pattern_test() {
+    let tuplify_pattern!(a, b, c) = tuplify!(1, 2, 3);
+    assert_eq!((a, b, c), (1, 2, 3));
 }
 
 
