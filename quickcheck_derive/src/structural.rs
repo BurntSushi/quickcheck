@@ -21,7 +21,10 @@ pub fn derive_struct(item: &DeriveInput, variant: &VariantData) -> (Tokens, Toke
                     (quote!((#(self.#field_names),*)), quote!(#alpha))
                 },
                 length if length > 8 => {
-                    (quote!(tuplify!(#(self.#field_names),*)), quote!(tuplify!(#(#alphas),*)))
+                    (
+                        quote!(tuplify!(#(self.#field_names),*)),
+                        quote!(tuplify_pattern!(#(#alphas),*))
+                    )
                 },
                 _ => (quote!((#(self.#field_names),*)), quote!((#(#alphas),*))),
             };
