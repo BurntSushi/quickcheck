@@ -77,10 +77,14 @@ pub struct StdThreadGen(StdGen<rand::rngs::ThreadRng>);
 impl StdThreadGen {
     /// Returns a new thread-local RNG.
     ///
-    /// The `size` parameter controls the size of random values generated. For
-    /// example, it specifies the maximum length of a randomly generated vector
-    /// and also will specify the maximum magnitude of a randomly generated
-    /// number.
+    /// The `size` parameter is a hint for consumers of the RNG, i.e.
+    /// implementations of `Arbitrary`, as to the desired size of the generated
+    /// test data. The exact interpretation or influence of the size parameter is
+    /// up to the implementation of `arbitrary` for a type: Some may ignore it,
+    /// some may treat it as a hard limit and some may treat it as a preference
+    /// for a weighted distribution of values. In cases where memory usage is
+    /// a non-constant function of the size parameter, it is generally
+    /// considered a hard limit, e.g. for data structures.
     pub fn new(size: usize) -> StdThreadGen {
         StdThreadGen(StdGen { rng: rand::thread_rng(), size: size })
     }
@@ -731,11 +735,29 @@ macro_rules! unsigned_arbitrary {
     ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
+                /// Generate an integer in the interval
+                ///
+                /// `[0,min(size, max_value)]`
+                ///
+                /// with probability greater 0.5, whereby `size` is the size
+                /// parameter of the generator and `max_value` is the largest
+                /// value of the integral type.  In general, special cases like
+                /// 0 and `max_value` are more likely to occur than any other
+                /// value.
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    #![allow(trivial_numeric_casts)]
-                    let s = g.size() as $ty;
-                    use std::cmp::{min, max};
-                    g.gen_range(0, max(1, min(s, $ty::max_value())))
+                    use std::cmp::min;
+                    let maxval = $ty::max_value();
+                    let upper  = min(g.size() + 1, maxval as usize) as $ty;
+                    assert!(0 < upper, "size overflow");
+                    match g.gen_range(0, 100) {
+                        /* 75% */ 0  ... 74 => g.gen_range(0, upper),
+                        /* 24% */ 75 ... 98 => if upper < maxval {
+                            g.gen_range(upper, maxval)
+                        } else { // upper == maxval
+                            g.gen_range(0, upper)
+                        }
+                        /* 1% */ _99 => *[0, maxval].choose(g).unwrap()
+                    }
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>> {
                     unsigned_shrinker!($ty);
@@ -800,15 +822,34 @@ macro_rules! signed_arbitrary {
     ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
+                /// Generate an integer in the interval
+                ///
+                /// `[max(min_value,-size),min(max_value,size)]`
+                ///
+                /// with probability greater 0.5, whereby `size` is the size
+                /// parameter of the generator and `min_value` and `max_value`
+                /// are the smallest respectively largest value of the signed
+                /// integral type. In general, special cases like 0, `min_value`
+                /// and `max_value` are more likely to occur than any other
+                /// value.
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    use std::cmp::{min,max};
-                    let upper = min(g.size(), $ty::max_value() as usize);
-                    let lower = if upper > $ty::max_value() as usize {
-                        $ty::min_value()
-                    } else {
-                        -(upper as $ty)
-                    };
-                    g.gen_range(lower, max(1, upper as $ty))
+                    use std::cmp::min;
+                    let minval = $ty::min_value();
+                    let maxval = $ty::max_value();
+                    let lower  = -(min(g.size(), maxval as usize) as $ty);
+                    let upper  = min(g.size() + 1, maxval as usize) as $ty;
+                    assert!(0 < upper, "size overflow");
+                    assert!(minval < lower && lower < upper);
+                    match g.gen_range(0, 100) {
+                        /* 11% */ 0  ... 11 => g.gen_range(minval, lower),
+                        /* 75% */ 12 ... 86 => g.gen_range(lower, upper),
+                        /* 11% */ 87 ... 98 => if upper < maxval {
+                            g.gen_range(upper, maxval)
+                        } else { // upper == maxval
+                            g.gen_range(lower, upper)
+                        }
+                        /* 1% */ _99 => *[minval, 0, maxval].choose(g).unwrap()
+                    }
                 }
                 fn shrink(&self) -> Box<Iterator<Item=$ty>> {
                     signed_shrinker!($ty);
@@ -958,31 +999,54 @@ mod test {
 
     #[test]
     fn arby_unit() {
-        assert_eq!(arby::<()>(), ());
+        assert_eq!(arby::<()>(5), ());
     }
 
     #[test]
-    fn arby_int() {
-        rep(&mut || { let n: isize = arby(); assert!(n >= -5 && n <= 5); } );
+    fn arby_ints() {
+        arby_signed::<isize>();
+        arby_signed::<i8>();
+        arby_signed::<i16>();
+        arby_signed::<i32>();
+        arby_signed::<i64>();
+        arby_signed::<i128>();
     }
 
     #[test]
-    fn arby_uint() {
-        rep(&mut || { let n: usize = arby(); assert!(n <= 5); } );
+    fn arby_uints() {
+        arby_unsigned::<usize>();
+        arby_unsigned::<u8>();
+        arby_unsigned::<u16>();
+        arby_unsigned::<u32>();
+        arby_unsigned::<u64>();
+        arby_unsigned::<u128>();
     }
 
-    fn arby<A: super::Arbitrary>() -> A {
-        super::Arbitrary::arbitrary(&mut gen())
+    fn arby_unsigned<A>() where A: Arbitrary + Ord + Copy + From<u8> {
+        arby_bias::<_,A>(100, |x| *x <= A::from(100u8));
     }
 
-    fn gen() -> super::StdGen<rand::rngs::ThreadRng> {
-        super::StdGen::new(rand::thread_rng(), 5)
+    fn arby_signed<A>() where A: Arbitrary + Ord + Copy + From<i8> {
+        arby_bias(100, |x| A::from(-100i8) <= *x && *x <= A::from(100i8));
     }
 
-    fn rep<F>(f: &mut F) where F : FnMut() -> () {
-        for _ in 0..100 {
-            f()
-        }
+    // Given a size parameter, check that a distribution of values is
+    // biased towards those for which the given function yields `true`.
+    fn arby_bias<F, A>(size: usize, f: F)
+        where F: Fn(&A) -> bool,
+              A: Arbitrary
+    {
+        let vs = (0..100).map(|_| arby::<A>(size)).collect::<Vec<_>>();
+        let (ins, outs): (Vec<_>, _) = vs.into_iter().partition(|x| f(x));
+        assert!(ins.len() > 50 && outs.len() > 0);
+    }
+
+    fn arby<A: Arbitrary>(size: usize) -> A {
+        Arbitrary::arbitrary(&mut gen(size))
+    }
+
+    fn gen(size: usize) -> super::StdGen<rand::rngs::ThreadRng> {
+        super::StdGen::new(rand::thread_rng(), size)
     }
 
     // Shrink testing.
