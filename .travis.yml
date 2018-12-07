@@ -12,7 +12,5 @@ script:
       cargo build --verbose --manifest-path quickcheck_macros/Cargo.toml;
       cargo test --verbose --manifest-path quickcheck_macros/Cargo.toml;
     fi
-  - if [ "$TRAVIS_RUST_VERSION" != "1.12.0" ]; then
-      cargo build --verbose --manifest-path quickcheck_derive/Cargo.toml;
-      cargo test --verbose --manifest-path quickcheck_derive/Cargo.toml;
-    fi
+  - cargo build --verbose --manifest-path quickcheck_derive/Cargo.toml;
+  - cargo test --verbose --manifest-path quickcheck_derive/Cargo.toml;
