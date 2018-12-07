@@ -3,10 +3,8 @@ use std::panic;
 use std::env;
 use std::cmp;
 
-use rand;
-
 use tester::Status::{Discard, Fail, Pass};
-use {Arbitrary, Gen, StdGen};
+use {Arbitrary, Gen, StdThreadGen};
 
 /// The main QuickCheck type for setting configuration and running QuickCheck.
 pub struct QuickCheck<G> {
@@ -48,7 +46,7 @@ fn qc_min_tests_passed() -> u64 {
     }
 }
 
-impl QuickCheck<StdGen<rand::ThreadRng>> {
+impl QuickCheck<StdThreadGen> {
     /// Creates a new QuickCheck value.
     ///
     /// This can be used to run QuickCheck on things that implement
@@ -57,11 +55,10 @@ impl QuickCheck<StdGen<rand::ThreadRng>> {
     ///
     /// By default, the maximum number of passed tests is set to `100`,
     /// the max number of overall tests is set to `10000` and the generator
-    /// is set to a `StdGen` with a default size of `100`.
-    pub fn new() -> QuickCheck<StdGen<rand::ThreadRng>> {
+    /// is set to a `StdThreadGen` with a default size of `100`.
+    pub fn new() -> QuickCheck<StdThreadGen> {
         let gen_size = qc_gen_size();
-
-        QuickCheck::with_gen(StdGen::new(rand::thread_rng(), gen_size))
+        QuickCheck::with_gen(StdThreadGen::new(gen_size))
     }
 }
 
@@ -273,12 +270,12 @@ impl TestResult {
         match self.err {
             None => {
                 format!("[quickcheck] TEST FAILED. Arguments: ({})",
-                        self.arguments.connect(", "))
+                        self.arguments.join(", "))
             }
             Some(ref err) => {
                 format!("[quickcheck] TEST FAILED (runtime error). \
                          Arguments: ({})\nError: {}",
-                        self.arguments.connect(", "), err)
+                        self.arguments.join(", "), err)
             }
         }
     }

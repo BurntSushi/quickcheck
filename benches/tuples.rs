@@ -5,7 +5,8 @@ extern crate rand;
 extern crate test;
 
 use quickcheck::{Arbitrary, StdGen};
-use rand::isaac::IsaacRng;
+use rand::prng::hc128::Hc128Rng;
+use rand::SeedableRng;
 use test::Bencher;
 
 macro_rules! bench_shrink {
@@ -14,7 +15,7 @@ macro_rules! bench_shrink {
             #[bench]
             fn $fn_name(b: &mut Bencher) {
                 // Use a deterministic generator to benchmark on the same data
-                let mut gen = StdGen::new(IsaacRng::new_unseeded(), 100);
+                let mut gen = StdGen::new(Hc128Rng::from_seed([0u8; 32]), 100);
                 let value: $type = Arbitrary::arbitrary(&mut gen);
 
                 b.iter(|| {

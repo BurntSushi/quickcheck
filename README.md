@@ -12,7 +12,7 @@ the input space quickly. (It should be the same strategy used in
 [Koen Claessen's QuickCheck for
 Haskell](http://hackage.haskell.org/package/QuickCheck).)
 
-[![Build status](https://api.travis-ci.org/BurntSushi/quickcheck.svg)](https://travis-ci.org/BurntSushi/quickcheck)
+[![Build status](https://travis-ci.org/BurntSushi/quickcheck.svg?branch=master)](https://travis-ci.org/BurntSushi/quickcheck)
 [![](http://meritbadge.herokuapp.com/quickcheck)](https://crates.io/crates/quickcheck)
 
 Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
@@ -343,7 +343,7 @@ test, you won't ever notice when a failure happens.
 
 Another approach is to just ask quickcheck to run properties more
 times. You can do this either via the
-[tests()](http://vim.wikia.com/wiki/Append_output_of_an_external_command)
+[tests()](https://docs.rs/quickcheck/0.6.2/quickcheck/struct.QuickCheck.html#method.tests)
 method, or via the `QUICKCHECK_TESTS` environment variable.
 This will cause quickcheck to run for a much longer time. Unlike,
 the loop approach this will take a bounded amount of time, which

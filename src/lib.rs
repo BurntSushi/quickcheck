@@ -4,21 +4,21 @@
 //! For detailed examples, please see the
 //! [README](https://github.com/BurntSushi/quickcheck).
 
-#![allow(deprecated)] // for connect -> join in 1.3
-
 #![cfg_attr(feature = "i128", feature(i128_type, i128))]
 
 #[cfg(feature = "use_logging")]
 extern crate env_logger;
 #[cfg(feature = "use_logging")]
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate rand;
+extern crate rand_core;
 
 pub use arbitrary::{
-    Arbitrary, Gen, StdGen,
+    Arbitrary, Gen, StdGen, StdThreadGen,
     empty_shrinker, single_shrinker,
 };
-pub use rand::Rng;
+pub use rand_core::RngCore;
 pub use tester::{QuickCheck, Testable, TestResult, quickcheck};
 
 /// A macro for writing quickcheck tests.

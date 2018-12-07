@@ -19,14 +19,14 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use rand::Rng;
+use rand::{self, Rng, RngCore};
 
-/// `Gen` wraps a `rand::Rng` with parameters to control the distribution of
+/// `Gen` wraps a `rand::RngCore` with parameters to control the distribution of
 /// random values.
 ///
 /// A value with type satisfying the `Gen` trait can be constructed with the
 /// `gen` function in this crate.
-pub trait Gen : Rng {
+pub trait Gen : RngCore {
     fn size(&self) -> usize;
 }
 
@@ -39,29 +39,66 @@ pub struct StdGen<R> {
     size: usize,
 }
 
-/// Returns a `StdGen` with the given configuration using any random number
-/// generator.
-///
-/// The `size` parameter controls the size of random values generated.
-/// For example, it specifies the maximum length of a randomly generated vector
-/// and also will specify the maximum magnitude of a randomly generated number.
-impl<R: Rng> StdGen<R> {
+impl<R: RngCore> StdGen<R> {
+    /// Returns a `StdGen` with the given configuration using any random number
+    /// generator.
+    ///
+    /// The `size` parameter controls the size of random values generated. For
+    /// example, it specifies the maximum length of a randomly generated vector
+    /// and also will specify the maximum magnitude of a randomly generated
+    /// number.
     pub fn new(rng: R, size: usize) -> StdGen<R> {
         StdGen { rng: rng, size: size }
     }
 }
 
-impl<R: Rng> Rng for StdGen<R> {
+impl<R: RngCore> RngCore for StdGen<R> {
     fn next_u32(&mut self) -> u32 { self.rng.next_u32() }
 
     // some RNGs implement these more efficiently than the default, so
     // we might as well defer to them.
     fn next_u64(&mut self) -> u64 { self.rng.next_u64() }
     fn fill_bytes(&mut self, dest: &mut [u8]) { self.rng.fill_bytes(dest) }
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        self.rng.try_fill_bytes(dest)
+    }
 }
 
-impl<R: Rng> Gen for StdGen<R> {
+impl<R: RngCore> Gen for StdGen<R> {
     fn size(&self) -> usize { self.size }
+}
+
+/// StdThreadGen is an RNG in thread-local memory.
+///
+/// This is the default RNG used by quickcheck.
+pub struct StdThreadGen(StdGen<rand::rngs::ThreadRng>);
+
+impl StdThreadGen {
+    /// Returns a new thread-local RNG.
+    ///
+    /// The `size` parameter controls the size of random values generated. For
+    /// example, it specifies the maximum length of a randomly generated vector
+    /// and also will specify the maximum magnitude of a randomly generated
+    /// number.
+    pub fn new(size: usize) -> StdThreadGen {
+        StdThreadGen(StdGen { rng: rand::thread_rng(), size: size })
+    }
+}
+
+impl RngCore for StdThreadGen {
+    fn next_u32(&mut self) -> u32 { self.0.next_u32() }
+
+    // some RNGs implement these more efficiently than the default, so
+    // we might as well defer to them.
+    fn next_u64(&mut self) -> u64 { self.0.next_u64() }
+    fn fill_bytes(&mut self, dest: &mut [u8]) { self.0.fill_bytes(dest) }
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        self.0.try_fill_bytes(dest)
+    }
+}
+
+impl Gen for StdThreadGen {
+    fn size(&self) -> usize { self.0.size }
 }
 
 /// Creates a shrinker with zero elements.
@@ -510,6 +547,7 @@ impl Arbitrary for PathBuf {
         let here = env::current_dir()
             .unwrap_or(PathBuf::from("/test/directory"));
         let temp = env::temp_dir();
+        #[allow(deprecated)]
         let home = env::home_dir()
             .unwrap_or(PathBuf::from("/home/user"));
         let choices = &[

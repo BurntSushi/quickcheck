@@ -1,6 +1,6 @@
 [package]
 name = "quickcheck"
-version = "0.6.2"  #:version
+version = "0.7.2"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "Automatic property based testing with shrinking."
 documentation = "http://burntsushi.net/rustdoc/quickcheck/"
@@ -10,6 +10,7 @@ readme = "README.md"
 keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
 categories = ["development-tools::testing"]
 license = "Unlicense/MIT"
+exclude = ["/.travis.yml", "/Makefile", "/ctags.rust", "/session.vim"]
 
 [features]
 default = ["regex", "use_logging"]
@@ -24,4 +25,5 @@ name = "quickcheck"
 [dependencies]
 env_logger = { version = "0.5", default-features = false, optional = true }
 log = { version = "0.4", optional = true }
-rand = "0.4"
+rand = "0.5"
+rand_core = "0.2.1"

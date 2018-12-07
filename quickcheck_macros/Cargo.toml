@@ -1,6 +1,6 @@
 [package]
 name = "quickcheck_macros"
-version = "0.6.2"  #:version
+version = "0.7.0"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "A macro attribute for quickcheck."
 documentation = "http://burntsushi.net/rustdoc/quickcheck/"
@@ -9,16 +9,13 @@ repository = "https://github.com/BurntSushi/quickcheck"
 readme = "../README.md"
 keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
 license = "Unlicense/MIT"
+autotests = false
 
 [lib]
 name = "quickcheck_macros"
 path = "src/lib.rs"
 plugin = true
 
-[[test]]
-name = "attribute"
-path = "examples/attribute.rs"
-
 [dependencies.quickcheck]
 path = ".."
-version = "0.6"
+version = "0.7.1"
