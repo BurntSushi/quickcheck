@@ -138,7 +138,7 @@ Crate features:
 The [`proptest`](https://docs.rs/proptest) crate is inspired by the
 [Hypothesis](http://hypothesis.works) framework for Python.
 You can read a comparison between `proptest` and `quickcheck`
-[here](https://docs.rs/proptest/*/proptest/#differences-between-quickcheck-and-proptest)
+[here](https://github.com/AltSysrq/proptest/blob/master/README.md#differences-between-quickcheck-and-proptest)
 and
 [here](https://github.com/AltSysrq/proptest/issues/15#issuecomment-348382287).
 In particular, `proptest` improves on the concept of shrinking. So if you've
