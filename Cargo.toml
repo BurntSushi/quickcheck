@@ -19,7 +19,6 @@ members = ["quickcheck_macros"]
 default = ["regex", "use_logging"]
 unstable = []
 use_logging = ["log", "env_logger"]
-i128 = ["rand/i128_support"]
 regex = ["env_logger/regex"]
 
 [lib]

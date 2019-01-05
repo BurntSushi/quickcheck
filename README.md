@@ -124,13 +124,17 @@ witnesses for failures.
 
 Crate features:
 
-- `"i128"`: Enables Arbitrary implementations for 128-bit integers.
 - `"unstable"`: Enables Arbitrary implementations that require the Rust nightly
   channel.
 - `"use_logging"`: (Enabled by default.) Enables the log messages governed
   `RUST_LOG`.
 - `"regex"`: (Enabled by default.) Enables the use of regexes with
   `env_logger`.
+
+Prior to quickcheck 0.8, this crate had an `i128` feature for enabling support
+for 128-bit integers. As of quickcheck 0.8, whose minimium supported Rust
+version is Rust 1.30.0, this feature is now provided by default and thus no
+longer available.
 
 
 ### Alternative Rust crates for property testing
