@@ -17,7 +17,7 @@ use std::net::{
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{UNIX_EPOCH, Duration, SystemTime};
 
 use rand::{self, Rng, RngCore};
 use rand::seq::SliceRandom;
@@ -917,31 +917,25 @@ impl<A: Arbitrary + Sync> Arbitrary for Arc<A> {
     }
 }
 
-#[cfg(feature = "unstable")]
-mod unstable_impls {
-    use {Arbitrary, Gen};
-    use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-    impl Arbitrary for SystemTime {
-        fn arbitrary<G: Gen>(gen: &mut G) -> Self {
-            let after_epoch = bool::arbitrary(gen);
-            let duration = Duration::arbitrary(gen);
-            if after_epoch {
-                UNIX_EPOCH + duration
-            } else {
-                UNIX_EPOCH - duration
-            }
+impl Arbitrary for SystemTime {
+    fn arbitrary<G: Gen>(gen: &mut G) -> Self {
+        let after_epoch = bool::arbitrary(gen);
+        let duration = Duration::arbitrary(gen);
+        if after_epoch {
+            UNIX_EPOCH + duration
+        } else {
+            UNIX_EPOCH - duration
         }
+    }
 
-        fn shrink(&self) -> Box<Iterator<Item=Self>> {
-            let duration = match self.duration_since(UNIX_EPOCH) {
-                Ok(duration) => duration,
-                Err(e) => e.duration(),
-            };
-            Box::new(duration.shrink().flat_map(|d| {
-                vec![UNIX_EPOCH + d, UNIX_EPOCH - d]
-            }))
-        }
+    fn shrink(&self) -> Box<Iterator<Item=Self>> {
+        let duration = match self.duration_since(UNIX_EPOCH) {
+            Ok(duration) => duration,
+            Err(e) => e.duration(),
+        };
+        Box::new(duration.shrink().flat_map(|d| {
+            vec![UNIX_EPOCH + d, UNIX_EPOCH - d]
+        }))
     }
 }
 
