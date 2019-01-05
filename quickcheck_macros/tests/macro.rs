@@ -1,11 +1,10 @@
-#![feature(plugin)]
-
 #![allow(non_upper_case_globals)]
-#![plugin(quickcheck_macros)]
 
 extern crate quickcheck;
+extern crate quickcheck_macros;
 
 use quickcheck::TestResult;
+use quickcheck_macros::quickcheck;
 
 #[quickcheck]
 fn min(x: isize, y: isize) -> TestResult {

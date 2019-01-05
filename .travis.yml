@@ -1,6 +1,6 @@
 language: rust
 rust:
-  - 1.22.0
+  - 1.24.1
   - stable
   - beta
   - nightly
@@ -8,7 +8,7 @@ script:
   - cargo build --verbose
   - cargo test --verbose
   - cargo doc
-  - if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
+  - if [ "$TRAVIS_RUST_VERSION" != "1.24.1" ]; then
       cargo build --verbose --manifest-path quickcheck_macros/Cargo.toml;
       cargo test --verbose --manifest-path quickcheck_macros/Cargo.toml;
     fi
