@@ -20,6 +20,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use rand::{self, Rng, RngCore};
+use rand::seq::SliceRandom;
 
 /// `Gen` wraps a `rand::RngCore` with parameters to control the distribution of
 /// random values.
@@ -555,7 +556,7 @@ impl Arbitrary for PathBuf {
             PathBuf::from("../../.."),
             PathBuf::new(),
         ];
-        let mut p = g.choose(choices).unwrap().clone();
+        let mut p = choices.choose(g).unwrap().clone();
         p.extend(Vec::<OsString>::arbitrary(g).iter());
         p
     }
@@ -633,7 +634,7 @@ impl Arbitrary for char {
             }
             60...84 => {
                 // Characters often used in programming languages
-                *g.choose(&[
+                [
                     ' ', ' ', ' ',
                     '\t',
                     '\n',
@@ -641,11 +642,11 @@ impl Arbitrary for char {
                     '_', '-', '=', '+','[', ']', '{', '}', ':', ';', '\'', '"',
                     '\\', '|',',','<','>','.','/','?',
                     '0', '1','2','3','4','5','6','7','8','9',
-                ]).unwrap()
+                ].choose(g).unwrap().to_owned()
             }
             85...89 => {
                 // Tricky Unicode, part 1
-                *g.choose(&[
+                [
                     '\u{0149}', // a deprecated character
                     '\u{fff0}', // some of "Other, format" category:
                     '\u{fff1}','\u{fff2}','\u{fff3}','\u{fff4}','\u{fff5}',
@@ -667,7 +668,7 @@ impl Arbitrary for char {
                     '\u{1680}',
                     // other space characters are already covered by two next
                     // branches
-                ]).unwrap()
+                ].choose(g).unwrap().to_owned()
             }
             90...94 => {
                 // Tricky unicode, part 2
@@ -980,7 +981,7 @@ mod test {
         super::Arbitrary::arbitrary(&mut gen())
     }
 
-    fn gen() -> super::StdGen<rand::ThreadRng> {
+    fn gen() -> super::StdGen<rand::rngs::ThreadRng> {
         super::StdGen::new(rand::thread_rng(), 5)
     }
 

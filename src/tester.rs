@@ -410,7 +410,7 @@ impl<A: Arbitrary + Debug> AShow for A {}
 #[cfg(test)]
 mod test {
     use {QuickCheck, StdGen};
-    use rand::{self, OsRng};
+    use rand::{self, rngs::OsRng};
 
     #[test]
     fn shrinking_regression_issue_126() {
