@@ -92,7 +92,7 @@ mod tests {
 
 ```toml
 [dependencies]
-quickcheck = "0.6"
+quickcheck = "0.7"
 ```
 
 If you're only using `quickcheck` in your test code, then you can add it as a
@@ -100,15 +100,15 @@ development dependency instead:
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.6"
+quickcheck = "0.7"
 ```
 
 If you want to use the `#[quickcheck]` attribute, then add `quickcheck_macros`
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.6"
-quickcheck_macros = "0.6"
+quickcheck = "0.7"
+quickcheck_macros = "0.7"
 ```
 
 and only enable the `quickcheck_macros` plugin for the test build
@@ -234,7 +234,7 @@ quickcheck(prop as fn(Vec<isize>) -> TestResult);
 So now our property returns a `TestResult`, which allows us to encode a bit
 more information. There are a few more
 [convenience functions defined for the `TestResult`
-type](http://docs.rs/quickcheck/0.6.0/quickcheck/struct.TestResult.html).
+type](http://docs.rs/quickcheck/0.7/quickcheck/struct.TestResult.html).
 For example, we can't just return a `bool`, so we convert a `bool` value to a
 `TestResult`.
 
@@ -343,7 +343,7 @@ test, you won't ever notice when a failure happens.
 
 Another approach is to just ask quickcheck to run properties more
 times. You can do this either via the
-[tests()](https://docs.rs/quickcheck/0.6.2/quickcheck/struct.QuickCheck.html#method.tests)
+[tests()](https://docs.rs/quickcheck/0.7/quickcheck/struct.QuickCheck.html#method.tests)
 method, or via the `QUICKCHECK_TESTS` environment variable.
 This will cause quickcheck to run for a much longer time. Unlike,
 the loop approach this will take a bounded amount of time, which
