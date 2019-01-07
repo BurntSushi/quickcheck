@@ -1,118 +1,84 @@
-//! This crate provides the `#[quickcheck]` attribute. Its use is
-//! documented in the `quickcheck` crate.
+extern crate proc_macro;
+extern crate proc_macro2;
+extern crate quote;
+extern crate syn;
 
-#![crate_name = "quickcheck_macros"]
-#![crate_type = "dylib"]
-#![doc(html_root_url = "http://burntsushi.net/rustdoc/quickcheck")]
+use std::mem;
 
-#![feature(plugin_registrar, rustc_private)]
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::{
+    parse::{Parse, Parser},
+    spanned::Spanned,
+    parse_quote,
+};
 
-extern crate syntax;
-extern crate rustc_plugin;
 
-use syntax::ast;
-use syntax::ast::{Ident, ItemKind, PatKind, StmtKind, Stmt, TyKind};
-use syntax::source_map;
-use syntax::ext::base::{ExtCtxt, MultiModifier, Annotatable};
-use syntax::ext::build::AstBuilder;
-use syntax::ptr::P;
-use syntax::symbol::Symbol;
+#[proc_macro_attribute]
+pub fn quickcheck(_args: TokenStream, input: TokenStream) -> TokenStream {
+    let output = match syn::Item::parse.parse(input.clone()) {
+        Ok(syn::Item::Fn(mut item_fn)) => {
+            let mut inputs = syn::punctuated::Punctuated::new();
+            let mut errors = Vec::new();
 
-use rustc_plugin::Registry;
+            item_fn.decl.inputs.iter().for_each(|input| match *input {
+                syn::FnArg::Captured(syn::ArgCaptured { ref ty, .. }) => {
+                    inputs.push(parse_quote!(_: #ty));
+                },
+                _ => {
+                    errors.push(syn::parse::Error::new(
+                        input.span(),
+                        "unsupported kind of function argument",
+                    ))
+                },
+            });
 
-/// For the `#[quickcheck]` attribute. Do not use.
-#[plugin_registrar]
-#[doc(hidden)]
-pub fn plugin_registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(Symbol::intern("quickcheck"),
-                                  MultiModifier(Box::new(expand_meta_quickcheck)));
-}
+            if errors.is_empty() {
+                let attrs = mem::replace(&mut item_fn.attrs, Vec::new());
+                let name = &item_fn.ident;
+                let fn_type = syn::TypeBareFn {
+                    lifetimes: None,
+                    unsafety: item_fn.unsafety.clone(),
+                    abi: item_fn.abi.clone(),
+                    fn_token: <syn::Token![fn]>::default(),
+                    paren_token: syn::token::Paren::default(),
+                    inputs,
+                    variadic: item_fn.decl.variadic.clone(),
+                    output: item_fn.decl.output.clone(),
+                };
 
-/// Expands the `#[quickcheck]` attribute.
-///
-/// Expands:
-/// ```
-/// #[quickcheck]
-/// fn check_something(_: usize) -> bool {
-///     true
-/// }
-/// ```
-/// to:
-/// ```
-/// #[test]
-/// fn check_something() {
-///     fn check_something(_: usize) -> bool {
-///         true
-///     }
-///     ::quickcheck::quickcheck(check_something as fn(usize) -> bool)
-/// }
-/// ```
-fn expand_meta_quickcheck(cx: &mut ExtCtxt,
-                          span: source_map::Span,
-                          _: &ast::MetaItem,
-                          annot_item: Annotatable) -> Annotatable {
-    let item = annot_item.expect_item();
-    match item.node {
-        ItemKind::Fn(ref decl, header, _, _) => {
-            let prop_ident = cx.expr_ident(span, item.ident);
-            let prop_ty = cx.ty(span, TyKind::BareFn(P(ast::BareFnTy {
-                unsafety: header.unsafety,
-                abi: header.abi,
-                generic_params: vec![],
-                decl: decl.clone().map(|mut decl| {
-                    for arg in decl.inputs.iter_mut() {
-                        arg.pat = arg.pat.clone().map(|mut pat| {
-                            pat.node = PatKind::Wild;
-                            pat
-                        });
+                quote! {
+                    #[test]
+                    #(#attrs)*
+                    fn #name() {
+                        #item_fn
+                       ::quickcheck::quickcheck(#name as #fn_type)
                     }
-                    decl
-                }),
-            })));
-            let inner_ident = cx.expr_cast(span, prop_ident, prop_ty);
-            return wrap_item(cx, span, &*item, inner_ident);
+                }
+            } else {
+                errors.iter().map(syn::parse::Error::to_compile_error).collect()
+            }
         },
-        ItemKind::Static(..) => {
-            let inner_ident = cx.expr_ident(span, item.ident);
-            return wrap_item(cx, span, &*item, inner_ident);
+        Ok(syn::Item::Static(mut item_static)) => {
+            let attrs = mem::replace(&mut item_static.attrs, Vec::new());
+            let name = &item_static.ident;
+
+            quote! {
+                #[test]
+                #(#attrs)*
+                fn #name() {
+                    #item_static
+                    ::quickcheck::quickcheck(#name)
+                }
+            }
         },
         _ => {
-            cx.span_err(
-                span, "#[quickcheck] only supported on statics and functions");
+            let span = proc_macro2::TokenStream::from(input).span();
+            let msg = "#[quickcheck] is only supported on statics and functions";
+
+            syn::parse::Error::new(span, msg).to_compile_error()
         }
-    }
-    Annotatable::Item(item)
-}
-
-fn wrap_item(cx: &mut ExtCtxt,
-             span: source_map::Span,
-             item: &ast::Item,
-             inner_ident: P<ast::Expr>) -> Annotatable {
-    // Copy original function without attributes
-    let prop = P(ast::Item {attrs: Vec::new(), ..item.clone()});
-    // ::quickcheck::quickcheck
-    let check_ident = Ident::from_str("quickcheck");
-    let check_path = vec!(check_ident, check_ident);
-    // Wrap original function in new outer function,
-    // calling ::quickcheck::quickcheck()
-    let fn_decl = Stmt {
-        id: ast::DUMMY_NODE_ID,
-        node: StmtKind::Item(prop),
-        span: span,
     };
-    let check_call = Stmt {
-        id: ast::DUMMY_NODE_ID,
-        node: StmtKind::Expr(cx.expr_call_global(span, check_path, vec![inner_ident])),
-        span: span,
-    };
-    let body = cx.block(span, vec![fn_decl, check_call]);
-    let test = cx.item_fn(span, item.ident, vec![], cx.ty(span, TyKind::Tup(vec![])), body);
 
-    // Copy attributes from original function
-    let mut attrs = item.attrs.clone();
-    // Add #[test] attribute
-    attrs.push(cx.attribute(
-        span, cx.meta_word(span, Symbol::intern("test"))));
-    // Attach the attributes to the outer function
-    Annotatable::Item(P(ast::Item {attrs: attrs, ..(*test).clone()}))
+    output.into()
 }

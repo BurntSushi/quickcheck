@@ -92,7 +92,7 @@ mod tests {
 
 ```toml
 [dependencies]
-quickcheck = "0.6"
+quickcheck = "0.8"
 ```
 
 If you're only using `quickcheck` in your test code, then you can add it as a
@@ -100,21 +100,15 @@ development dependency instead:
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.6"
+quickcheck = "0.8"
 ```
 
 If you want to use the `#[quickcheck]` attribute, then add `quickcheck_macros`
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.6"
-quickcheck_macros = "0.6"
-```
-
-and only enable the `quickcheck_macros` plugin for the test build
-```rust
-#![cfg_attr(test, feature(plugin))]
-#![cfg_attr(test, plugin(quickcheck_macros))]
+quickcheck = "0.8"
+quickcheck_macros = "0.8"
 ```
 
 N.B. When using `quickcheck` (either directly or via the attributes),
@@ -124,7 +118,6 @@ witnesses for failures.
 
 Crate features:
 
-- `"i128"`: Enables Arbitrary implementations for 128-bit integers.
 - `"unstable"`: Enables Arbitrary implementations that require the Rust nightly
   channel.
 - `"use_logging"`: (Enabled by default.) Enables the log messages governed
@@ -132,13 +125,18 @@ Crate features:
 - `"regex"`: (Enabled by default.) Enables the use of regexes with
   `env_logger`.
 
+Prior to quickcheck 0.8, this crate had an `i128` feature for enabling support
+for 128-bit integers. As of quickcheck 0.8, whose minimium supported Rust
+version is Rust 1.30.0, this feature is now provided by default and thus no
+longer available.
+
 
 ### Alternative Rust crates for property testing
 
 The [`proptest`](https://docs.rs/proptest) crate is inspired by the
 [Hypothesis](http://hypothesis.works) framework for Python.
 You can read a comparison between `proptest` and `quickcheck`
-[here](https://docs.rs/proptest/*/proptest/#differences-between-quickcheck-and-proptest)
+[here](https://github.com/AltSysrq/proptest/blob/master/README.md#differences-between-quickcheck-and-proptest)
 and
 [here](https://github.com/AltSysrq/proptest/issues/15#issuecomment-348382287).
 In particular, `proptest` improves on the concept of shrinking. So if you've
@@ -234,7 +232,7 @@ quickcheck(prop as fn(Vec<isize>) -> TestResult);
 So now our property returns a `TestResult`, which allows us to encode a bit
 more information. There are a few more
 [convenience functions defined for the `TestResult`
-type](http://docs.rs/quickcheck/0.6.0/quickcheck/struct.TestResult.html).
+type](http://docs.rs/quickcheck/0.8/quickcheck/struct.TestResult.html).
 For example, we can't just return a `bool`, so we convert a `bool` value to a
 `TestResult`.
 
@@ -343,7 +341,7 @@ test, you won't ever notice when a failure happens.
 
 Another approach is to just ask quickcheck to run properties more
 times. You can do this either via the
-[tests()](https://docs.rs/quickcheck/0.6.2/quickcheck/struct.QuickCheck.html#method.tests)
+[tests()](https://docs.rs/quickcheck/0.8/quickcheck/struct.QuickCheck.html#method.tests)
 method, or via the `QUICKCHECK_TESTS` environment variable.
 This will cause quickcheck to run for a much longer time. Unlike,
 the loop approach this will take a bounded amount of time, which

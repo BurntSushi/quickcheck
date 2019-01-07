@@ -17,9 +17,10 @@ use std::net::{
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{UNIX_EPOCH, Duration, SystemTime};
 
 use rand::{self, Rng, RngCore};
+use rand::seq::SliceRandom;
 
 /// `Gen` wraps a `rand::RngCore` with parameters to control the distribution of
 /// random values.
@@ -559,7 +560,7 @@ impl Arbitrary for PathBuf {
             PathBuf::from("../../.."),
             PathBuf::new(),
         ];
-        let mut p = g.choose(choices).unwrap().clone();
+        let mut p = choices.choose(g).unwrap().clone();
         p.extend(Vec::<OsString>::arbitrary(g).iter());
         p
     }
@@ -637,7 +638,7 @@ impl Arbitrary for char {
             }
             60...84 => {
                 // Characters often used in programming languages
-                *g.choose(&[
+                [
                     ' ', ' ', ' ',
                     '\t',
                     '\n',
@@ -645,11 +646,11 @@ impl Arbitrary for char {
                     '_', '-', '=', '+','[', ']', '{', '}', ':', ';', '\'', '"',
                     '\\', '|',',','<','>','.','/','?',
                     '0', '1','2','3','4','5','6','7','8','9',
-                ]).unwrap()
+                ].choose(g).unwrap().to_owned()
             }
             85...89 => {
                 // Tricky Unicode, part 1
-                *g.choose(&[
+                [
                     '\u{0149}', // a deprecated character
                     '\u{fff0}', // some of "Other, format" category:
                     '\u{fff1}','\u{fff2}','\u{fff3}','\u{fff4}','\u{fff5}',
@@ -671,7 +672,7 @@ impl Arbitrary for char {
                     '\u{1680}',
                     // other space characters are already covered by two next
                     // branches
-                ]).unwrap()
+                ].choose(g).unwrap().to_owned()
             }
             90...94 => {
                 // Tricky unicode, part 2
@@ -752,7 +753,7 @@ macro_rules! unsigned_arbitrary {
 unsigned_arbitrary! {
     usize, u8, u16, u32, u64
 }
-#[cfg(feature = "i128")]
+
 unsigned_arbitrary! {
     u128
 }
@@ -825,7 +826,7 @@ macro_rules! signed_arbitrary {
 signed_arbitrary! {
     isize, i8, i16, i32, i64
 }
-#[cfg(feature = "i128")]
+
 signed_arbitrary! {
     i128
 }
@@ -920,31 +921,25 @@ impl<A: Arbitrary + Sync> Arbitrary for Arc<A> {
     }
 }
 
-#[cfg(feature = "unstable")]
-mod unstable_impls {
-    use {Arbitrary, Gen};
-    use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-    impl Arbitrary for SystemTime {
-        fn arbitrary<G: Gen>(gen: &mut G) -> Self {
-            let after_epoch = bool::arbitrary(gen);
-            let duration = Duration::arbitrary(gen);
-            if after_epoch {
-                UNIX_EPOCH + duration
-            } else {
-                UNIX_EPOCH - duration
-            }
+impl Arbitrary for SystemTime {
+    fn arbitrary<G: Gen>(gen: &mut G) -> Self {
+        let after_epoch = bool::arbitrary(gen);
+        let duration = Duration::arbitrary(gen);
+        if after_epoch {
+            UNIX_EPOCH + duration
+        } else {
+            UNIX_EPOCH - duration
         }
+    }
 
-        fn shrink(&self) -> Box<Iterator<Item=Self>> {
-            let duration = match self.duration_since(UNIX_EPOCH) {
-                Ok(duration) => duration,
-                Err(e) => e.duration(),
-            };
-            Box::new(duration.shrink().flat_map(|d| {
-                vec![UNIX_EPOCH + d, UNIX_EPOCH - d]
-            }))
-        }
+    fn shrink(&self) -> Box<Iterator<Item=Self>> {
+        let duration = match self.duration_since(UNIX_EPOCH) {
+            Ok(duration) => duration,
+            Err(e) => e.duration(),
+        };
+        Box::new(duration.shrink().flat_map(|d| {
+            vec![UNIX_EPOCH + d, UNIX_EPOCH - d]
+        }))
     }
 }
 
@@ -984,7 +979,7 @@ mod test {
         super::Arbitrary::arbitrary(&mut gen())
     }
 
-    fn gen() -> super::StdGen<rand::ThreadRng> {
+    fn gen() -> super::StdGen<rand::rngs::ThreadRng> {
         super::StdGen::new(rand::thread_rng(), 5)
     }
 
@@ -1081,7 +1076,6 @@ mod test {
         eq(0i64, vec![]);
     }
 
-    #[cfg(feature="i128")]
     #[test]
     fn ints128() {
         eq(5i128, vec![0, 3, 4]);
@@ -1119,7 +1113,6 @@ mod test {
         eq(0u64, vec![]);
     }
 
-    #[cfg(feature = "i128")]
     #[test]
     fn uints128() {
         eq(5u128, vec![0, 3, 4]);
