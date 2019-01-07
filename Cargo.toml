@@ -13,7 +13,7 @@ license = "Unlicense/MIT"
 exclude = ["/.travis.yml", "/Makefile", "/ctags.rust", "/session.vim"]
 
 [workspace]
-members = ["quickcheck_macros"]
+members = ["quickcheck_macros", "quickcheck_derive"]
 
 [features]
 default = ["regex", "use_logging"]
