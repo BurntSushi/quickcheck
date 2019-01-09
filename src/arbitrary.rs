@@ -195,7 +195,7 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
 }
 
 macro_rules! impl_arb_for_single_tuple {
-    ($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)*) => {
+    ($(($type_param:ident, $tuple_index:tt),)*) => {
         impl<$($type_param),*> Arbitrary for ($($type_param,)*)
             where $($type_param: Arbitrary,)*
         {
@@ -208,88 +208,41 @@ macro_rules! impl_arb_for_single_tuple {
             }
 
             fn shrink(&self) -> Box<Iterator<Item=($($type_param,)*)>> {
+                let iter = ::std::iter::empty();
                 $(
-                    let $cloned_for_index = self.clone();
+                    let cloned = self.clone();
+                    let iter = iter.chain(self.$tuple_index.shrink().map(move |shr_value| {
+                        let mut result = cloned.clone();
+                        result.$tuple_index = shr_value;
+                        result
+                    }));
                 )*
-
-                Box::new(
-                    ::std::iter::empty()
-                    $(
-                        .chain(self.$tuple_index.shrink().map(move |shr_value| {
-                            let mut result = $cloned_for_index.clone();
-                            result.$tuple_index = shr_value;
-                            result
-                        }))
-                    )*
-                )
+                Box::new(iter)
             }
         }
     };
 }
 
-macro_rules! impl_arb_for_single_tuple_with_reversed_args {
-    (@internal [$($output:tt,)*]) => {
-        impl_arb_for_single_tuple!($($output,)*);
-    };
-    (@internal [$($output:tt,)*] $first:tt, $($rest:tt,)*) => {
-        impl_arb_for_single_tuple_with_reversed_args!(@internal [$first, $($output,)*] $($rest,)*);
-    };
-    (($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)+),) => {
-        impl_arb_for_single_tuple_with_reversed_args!(@internal
-            []
-            $(($type_param, $tuple_index, $cloned_for_index),)+
-        );
-    };
-}
-
-macro_rules! impl_arb_for_tuples_with_reversed_args {
-    (@internal [$($output:tt,)*]) => {
-        $(
-            impl_arb_for_single_tuple_with_reversed_args!($output,);
-        )*
-    };
-    (@internal [$($output:tt,)*] $first:tt, $($rest:tt,)*) => {
-        impl_arb_for_tuples_with_reversed_args!(@internal
-            [($first, $($rest,)*), $($output,)*]
-            $($rest,)*
-        );
-    };
-    ($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)*) => {
-        impl_arb_for_tuples_with_reversed_args!(@internal
-            []
-            $(($type_param, $tuple_index, $cloned_for_index),)*
-        );
-    };
-}
-
 macro_rules! impl_arb_for_tuples {
-    (@internal [$($reversed_args:tt,)*]) => {
-        impl_arb_for_tuples_with_reversed_args!($($reversed_args,)*);
+    (@internal [$($acc:tt,)*]) => { };
+    (@internal [$($acc:tt,)*] ($type_param:ident, $tuple_index:tt), $($rest:tt,)*) => {
+        impl_arb_for_single_tuple!($($acc,)* ($type_param, $tuple_index),);
+        impl_arb_for_tuples!(@internal [$($acc,)* ($type_param, $tuple_index),] $($rest,)*);
     };
-    (@internal
-        [$($reversed_args:tt,)*]
-        ($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),
-        $($rest:tt,)*
-    ) => {
-        impl_arb_for_tuples!(@internal
-            [($type_param, $tuple_index, $cloned_for_index), $($reversed_args,)*]
-            $($rest,)*
-        );
-    };
-    ($(($type_param:ident, $tuple_index:tt, $cloned_for_index:ident),)*) => {
-        impl_arb_for_tuples!(@internal [] $(($type_param, $tuple_index, $cloned_for_index),)*);
+    ($(($type_param:ident, $tuple_index:tt),)*) => {
+        impl_arb_for_tuples!(@internal [] $(($type_param, $tuple_index),)*);
     };
 }
 
 impl_arb_for_tuples! {
-    (A, 0, cloned_for_0),
-    (B, 1, cloned_for_1),
-    (C, 2, cloned_for_2),
-    (D, 3, cloned_for_3),
-    (E, 4, cloned_for_4),
-    (F, 5, cloned_for_5),
-    (G, 6, cloned_for_6),
-    (H, 7, cloned_for_7),
+    (A, 0),
+    (B, 1),
+    (C, 2),
+    (D, 3),
+    (E, 4),
+    (F, 5),
+    (G, 6),
+    (H, 7),
 }
 
 impl<A: Arbitrary> Arbitrary for Vec<A> {
