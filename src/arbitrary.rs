@@ -245,6 +245,53 @@ impl_arb_for_tuples! {
     (H, 7),
 }
 
+macro_rules! impl_arb_for_single_array {
+    ($array_size:expr; $($index:expr,)*) => {
+        impl<T: Arbitrary> Arbitrary for [T; $array_size] {
+            #[allow(unused_variables)] // for [T; 0]
+            fn arbitrary<GEN: Gen>(g: &mut GEN) -> [T; $array_size] {
+                [
+                    $(
+                        {
+                            let _ = $index;
+                            T::arbitrary(g)
+                        },
+                    )*
+                ]
+            }
+
+            fn shrink(&self) -> Box<Iterator<Item=[T; $array_size]>> {
+                let iter = ::std::iter::empty();
+                $(
+                    let cloned = self.clone();
+                    let iter = iter.chain(self[$index].shrink().map(move |shr_value| {
+                        let mut result = cloned.clone();
+                        result[$index] = shr_value;
+                        result
+                    }));
+                )*
+                Box::new(iter)
+            }
+        }
+    }
+}
+
+macro_rules! impl_arb_for_arrays {
+    (@internal [$($acc:expr,)*]) => { };
+    (@internal [$($acc:expr,)*] $array_size:expr, $($rest:expr,)*) => {
+        impl_arb_for_single_array!($array_size; $($acc,)*);
+        impl_arb_for_arrays!(@internal [$($acc,)* $array_size,] $($rest,)*);
+    };
+    ($($array_size:expr,)*) => {
+        impl_arb_for_arrays!(@internal [] $($array_size,)*);
+    }
+}
+
+impl_arb_for_arrays!(
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+);
+
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> Vec<A> {
         let size = { let s = g.size(); g.gen_range(0, s) };
@@ -987,6 +1034,40 @@ mod test {
         eq((true, false, false, false), vec![(false, false, false, false)]);
         eq((true, true, false, false),
             vec![(false, true, false, false), (true, false, false, false)]);
+    }
+
+    #[test]
+    fn arrays_0() {
+        eq([] as [bool; 0], vec![]);
+    }
+
+    #[test]
+    fn arrays_1() {
+        eq([false], vec![]);
+        eq([true], vec![[false]]);
+    }
+
+    #[test]
+    fn arrays_2() {
+        eq([false, false], vec![]);
+        eq([true, false], vec![[false, false]]);
+        eq([true, true], vec![[false, true], [true, false]]);
+    }
+
+    #[test]
+    fn arrays_3() {
+        eq([false, false, false], vec![]);
+        eq([true, false, false], vec![[false, false, false]]);
+        eq([true, true, false],
+           vec![[false, true, false], [true, false, false]]);
+    }
+
+    #[test]
+    fn arrays_4() {
+        eq([false, false, false, false], vec![]);
+        eq([true, false, false, false], vec![[false, false, false, false]]);
+        eq([true, true, false, false],
+            vec![[false, true, false, false], [true, false, false, false]]);
     }
 
     #[test]
