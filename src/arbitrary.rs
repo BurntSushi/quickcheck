@@ -245,6 +245,7 @@ impl_arb_for_tuples! {
     (H, 7),
 }
 
+#[cfg(feature = "arrays")]
 macro_rules! impl_arb_for_single_array {
     ($array_size:expr; $($index:expr,)*) => {
         impl<T: Arbitrary> Arbitrary for [T; $array_size] {
@@ -276,6 +277,7 @@ macro_rules! impl_arb_for_single_array {
     }
 }
 
+#[cfg(feature = "arrays")]
 macro_rules! impl_arb_for_arrays {
     (@internal [$($acc:expr,)*]) => { };
     (@internal [$($acc:expr,)*] $array_size:expr, $($rest:expr,)*) => {
@@ -287,6 +289,7 @@ macro_rules! impl_arb_for_arrays {
     }
 }
 
+#[cfg(feature = "arrays")]
 impl_arb_for_arrays!(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
     17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
@@ -1037,17 +1040,20 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "arrays")]
     fn arrays_0() {
         eq([] as [bool; 0], vec![]);
     }
 
     #[test]
+    #[cfg(feature = "arrays")]
     fn arrays_1() {
         eq([false], vec![]);
         eq([true], vec![[false]]);
     }
 
     #[test]
+    #[cfg(feature = "arrays")]
     fn arrays_2() {
         eq([false, false], vec![]);
         eq([true, false], vec![[false, false]]);
@@ -1055,6 +1061,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "arrays")]
     fn arrays_3() {
         eq([false, false, false], vec![]);
         eq([true, false, false], vec![[false, false, false]]);
@@ -1063,6 +1070,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "arrays")]
     fn arrays_4() {
         eq([false, false, false, false], vec![]);
         eq([true, false, false, false], vec![[false, false, false, false]]);
