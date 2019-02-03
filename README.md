@@ -51,22 +51,23 @@ mod tests {
 }
 ```
 
-This example uses the `quickcheck!` macro, which is available on stable Rust.
+This example uses the `quickcheck!` macro, which is backwards compatible with
+old versions of Rust.
 
-### The `#[quickcheck]` attribute (requires Rust nightly)
+### The `#[quickcheck]` attribute (requires Rust 1.30 or later)
 
 To make it easier to write QuickCheck tests, the `#[quickcheck]` attribute
 will convert a property function into a `#[test]` function.
 
-To use the `#[quickcheck]` attribute, you must enable the `plugin` feature and
-import the `quickcheck_macros` crate as a syntax extension:
+To use the `#[quickcheck]` attribute, you must import the `quickcheck` macro
+from the `quickcheck_macros` crate:
 
 ```rust
-#![feature(plugin)]
-#![plugin(quickcheck_macros)]
-
 #[cfg(test)]
 extern crate quickcheck;
+#[cfg(test)]
+#[macro_use(quickcheck)]
+extern crate quickcheck_macros;
 
 #[cfg(test)]
 mod tests {
