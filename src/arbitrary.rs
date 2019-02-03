@@ -14,6 +14,7 @@ use std::net::{
     IpAddr, Ipv4Addr, Ipv6Addr,
     SocketAddr, SocketAddrV4, SocketAddrV6,
 };
+use std::num::Wrapping;
 use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -802,6 +803,15 @@ impl Arbitrary for f64 {
     }
 }
 
+impl<T: Arbitrary> Arbitrary for Wrapping<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> Wrapping<T> {
+        Wrapping(T::arbitrary(g))
+    }
+    fn shrink(&self) -> Box<Iterator<Item=Wrapping<T>>> {
+        Box::new(self.0.shrink().map(|inner| Wrapping(inner)))
+    }
+}
+
 impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for Range<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> Range<T> {
         Arbitrary::arbitrary(g) .. Arbitrary::arbitrary(g)
@@ -906,6 +916,7 @@ mod test {
     };
     use std::fmt::Debug;
     use std::hash::Hash;
+    use std::num::Wrapping;
     use std::path::PathBuf;
     use super::Arbitrary;
 
@@ -1107,6 +1118,13 @@ mod test {
         eq(2.0, vec![0.0, 1.0]);
         eq(-2.0, vec![0.0, 2.0, -1.0]);
         eq(1.5, vec![0.0]);
+    }
+
+    #[test]
+    fn wrapping_ints32() {
+        eq(Wrapping(5i32), vec![Wrapping(0), Wrapping(3), Wrapping(4)]);
+        eq(Wrapping(-5i32), vec![Wrapping(5), Wrapping(0), Wrapping(-3), Wrapping(-4)]);
+        eq(Wrapping(0i32), vec![]);
     }
 
     #[test]
