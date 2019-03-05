@@ -82,8 +82,7 @@ pub fn derive_enum(item: &DeriveInput, variants: &[Variant]) -> (Tokens, Tokens)
     let shrink_variants = variants.iter().map(|v| enum_shrink_variant(name, v));
 
     let arbitrary = quote! {
-        extern crate rand;
-        match rand::Rng::gen_range(_g, 0, #variant_count) {
+        match ::quickcheck::Rng::gen_range(_g, 0, #variant_count) {
             #(#arbitrary_variants,)*
             _ => unreachable!(),
         }

@@ -20,7 +20,8 @@ pub use arbitrary::{
     Arbitrary, Gen, StdGen, StdThreadGen,
     empty_shrinker, single_shrinker,
 };
-pub use rand_core::RngCore;
+pub use rand::RngCore;
+pub use rand::Rng;
 pub use tester::{QuickCheck, Testable, TestResult, quickcheck};
 
 /// A macro for writing quickcheck tests.
