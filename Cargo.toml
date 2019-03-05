@@ -20,6 +20,7 @@ default = ["regex", "use_logging"]
 unstable = []
 use_logging = ["log", "env_logger"]
 regex = ["env_logger/regex"]
+derive = ["quickcheck_derive"]
 
 [lib]
 name = "quickcheck"
@@ -29,3 +30,4 @@ env_logger = { version = "0.5", default-features = false, optional = true }
 log = { version = "0.4", optional = true }
 rand = "0.6.3"
 rand_core = "0.3.0"
+quickcheck_derive = { path = "quickcheck_derive", version = "0.1.2", optional = true }

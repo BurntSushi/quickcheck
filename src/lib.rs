@@ -13,6 +13,8 @@ extern crate env_logger;
 extern crate log;
 extern crate rand;
 extern crate rand_core;
+#[cfg(feature = "derive")]
+extern crate quickcheck_derive;
 
 pub use arbitrary::{
     Arbitrary, Gen, StdGen, StdThreadGen,

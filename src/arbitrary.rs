@@ -22,6 +22,9 @@ use std::time::{UNIX_EPOCH, Duration, SystemTime};
 use rand::{self, Rng, RngCore};
 use rand::seq::SliceRandom;
 
+#[cfg(feature = "derive")]
+pub use quickcheck_derive::Arbitrary;
+
 /// `Gen` wraps a `rand::RngCore` with parameters to control the distribution of
 /// random values.
 ///

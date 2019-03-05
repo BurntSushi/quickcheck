@@ -1,5 +1,9 @@
 [package]
-authors = ["Nathaniel Ringo <remexre@gmail.com>"]
+authors = [
+  "Nathaniel Ringo <remexre@gmail.com>",
+  "Felix Chapman <aelred717@gmail.com>",
+  "Michael Howell <michael@notriddle.com>"
+]
 description = "#[derive(Arbitrary, Clone)]"
 license = "MIT"
 name = "quickcheck_derive"
