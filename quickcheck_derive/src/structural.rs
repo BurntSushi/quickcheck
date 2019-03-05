@@ -22,11 +22,16 @@ pub fn derive_struct(item: &DeriveInput, variant: &VariantData) -> (Tokens, Toke
                 },
                 length if length > 8 => {
                     (
-                        quote!(tuplify!(#(self.#field_names),*)),
+                        quote!({let k = self.clone(); tuplify!(#(k.#field_names),*)}),
                         quote!(tuplify_pattern!(#(#alphas),*))
                     )
                 },
-                _ => (quote!((#(self.#field_names),*)), quote!((#(#alphas),*))),
+                _ => {
+                    (
+                        quote!({let k = self.clone(); (#(k.#field_names),*)}),
+                        quote!((#(#alphas),*))
+                    )
+                },
             };
 
             quote! {
