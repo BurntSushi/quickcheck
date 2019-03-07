@@ -22,11 +22,16 @@ pub fn derive_struct(item: &DeriveInput, variant: &VariantData) -> (Tokens, Toke
                 },
                 length if length > 8 => {
                     (
-                        quote!(tuplify!(#(self.#field_names),*)),
+                        quote!({let k = self.clone(); tuplify!(#(k.#field_names),*)}),
                         quote!(tuplify_pattern!(#(#alphas),*))
                     )
                 },
-                _ => (quote!((#(self.#field_names),*)), quote!((#(#alphas),*))),
+                _ => {
+                    (
+                        quote!({let k = self.clone(); (#(k.#field_names),*)}),
+                        quote!((#(#alphas),*))
+                    )
+                },
             };
 
             quote! {
@@ -82,8 +87,7 @@ pub fn derive_enum(item: &DeriveInput, variants: &[Variant]) -> (Tokens, Tokens)
     let shrink_variants = variants.iter().map(|v| enum_shrink_variant(name, v));
 
     let arbitrary = quote! {
-        extern crate rand;
-        match rand::Rng::gen_range(_g, 0, #variant_count) {
+        match ::quickcheck::Rng::gen_range(_g, 0, #variant_count) {
             #(#arbitrary_variants,)*
             _ => unreachable!(),
         }

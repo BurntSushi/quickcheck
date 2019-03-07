@@ -1,5 +1,9 @@
 [package]
-authors = ["Nathaniel Ringo <remexre@gmail.com>"]
+authors = [
+  "Nathaniel Ringo <remexre@gmail.com>",
+  "Felix Chapman <aelred717@gmail.com>",
+  "Michael Howell <michael@notriddle.com>"
+]
 description = "#[derive(Arbitrary, Clone)]"
 license = "MIT"
 name = "quickcheck_derive"
@@ -8,7 +12,6 @@ version = "0.1.2"
 [dependencies]
 quote = "^0.3.15"
 syn = "^0.11.11"
-rand = "0.5"
 
 [dev-dependencies.quickcheck]
 path = ".."
