@@ -312,6 +312,16 @@ impl Testable for TestResult {
     fn result<G: Gen>(&self, _: &mut G) -> TestResult { self.clone() }
 }
 
+impl Testable for Option<bool> {
+    fn result<G: Gen>(&self, _: &mut G) -> TestResult {
+        match self {
+            Some(true) => TestResult::passed(),
+            Some(false) => TestResult::failed(),
+            None => TestResult::discard()
+        }
+    }
+}
+
 impl<A, E> Testable for Result<A, E>
         where A: Testable, E: Debug + Send + 'static {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
