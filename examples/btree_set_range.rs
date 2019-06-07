@@ -2,19 +2,38 @@ extern crate quickcheck;
 
 use quickcheck::{quickcheck, TestResult};
 use std::collections::BTreeSet;
-use std::ops::{Bound, RangeBounds};
+use std::ops::Bound::{self, *};
 
 /// Covers every `std::ops::Range*` plus variants with exclusive start.
 type RangeAny<T> = (Bound<T>, Bound<T>);
 
+/// Mimic `RangeBounds::contains`, stabilized in Rust 1.35.
+trait RangeBounds<T> {
+    fn contains(&self, &T) -> bool;
+}
+impl<T: PartialOrd> RangeBounds<T> for RangeAny<T> {
+    fn contains(&self, item: &T) -> bool {
+        (match &self.0 {
+            Included(start) => start <= item,
+            Excluded(start) => start < item,
+            Unbounded => true,
+        }) && (match &self.1 {
+            Included(end) => item <= end,
+            Excluded(end) => item < end,
+            Unbounded => true,
+        })
+    }
+}
+
 /// Checks conditions where `BTreeSet::range` panics:
 /// - Panics if range start > end.
 /// - Panics if range start == end and both bounds are Excluded.
-fn panics(range: RangeAny<i32>) -> bool {
-    use Bound::{Excluded as Ex, Included as In, Unbounded};
-    match range {
-        (Ex(s), Ex(e)) => s >= e,
-        (In(s), Ex(e)) | (Ex(s), In(e)) | (In(s), In(e)) => s > e,
+fn panics<T: PartialOrd>(range: RangeAny<T>) -> bool {
+    match (&range.0, &range.1) {
+        (Excluded(start), Excluded(end)) => start >= end,
+        (Included(start), Excluded(end))
+        | (Excluded(start), Included(end))
+        | (Included(start), Included(end)) => start > end,
         (Unbounded, _) | (_, Unbounded) => false,
     }
 }
