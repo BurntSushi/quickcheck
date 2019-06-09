@@ -15,7 +15,7 @@ use std::net::{
     SocketAddr, SocketAddrV4, SocketAddrV6,
 };
 use std::num::Wrapping;
-use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
+use std::ops::{Bound, Range, RangeFrom, RangeTo, RangeFull};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{UNIX_EPOCH, Duration, SystemTime};
@@ -812,6 +812,23 @@ impl<T: Arbitrary> Arbitrary for Wrapping<T> {
     }
 }
 
+impl<T: Arbitrary> Arbitrary for Bound<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> Bound<T> {
+        match g.gen_range(0, 3) {
+            0 => Bound::Included(T::arbitrary(g)),
+            1 => Bound::Excluded(T::arbitrary(g)),
+            _ => Bound::Unbounded,
+        }
+    }
+    fn shrink(&self) -> Box<Iterator<Item=Bound<T>>> {
+        match *self {
+            Bound::Included(ref x) => Box::new(x.shrink().map(Bound::Included)),
+            Bound::Excluded(ref x) => Box::new(x.shrink().map(Bound::Excluded)),
+            Bound::Unbounded => empty_shrinker(),
+        }
+    }
+}
+
 impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for Range<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> Range<T> {
         Arbitrary::arbitrary(g) .. Arbitrary::arbitrary(g)
@@ -1232,6 +1249,16 @@ mod test {
     fn ordered_eq<A: Arbitrary + Eq + Debug>(s: A, v: Vec<A>) {
         let (left, right) = (s.shrink().collect::<Vec<A>>(), v);
         assert_eq!(left, right);
+    }
+
+    #[test]
+    fn bounds() {
+        use std::ops::Bound::*;
+        for i in -5..=5 {
+            ordered_eq(Included(i), i.shrink().map(Included).collect());
+            ordered_eq(Excluded(i), i.shrink().map(Excluded).collect());
+        }
+        eq(Unbounded::<i32>, vec![]);
     }
 
     #[test]
