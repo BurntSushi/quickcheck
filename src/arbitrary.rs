@@ -104,12 +104,12 @@ impl Gen for StdThreadGen {
 }
 
 /// Creates a shrinker with zero elements.
-pub fn empty_shrinker<A: 'static>() -> Box<Iterator<Item=A>> {
+pub fn empty_shrinker<A: 'static>() -> Box<dyn Iterator<Item=A>> {
     Box::new(empty())
 }
 
 /// Creates a shrinker with a single element.
-pub fn single_shrinker<A: 'static>(value: A) -> Box<Iterator<Item=A>> {
+pub fn single_shrinker<A: 'static>(value: A) -> Box<dyn Iterator<Item=A>> {
     Box::new(once(value))
 }
 
@@ -128,7 +128,7 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<Iterator<Item=A>> {
 pub trait Arbitrary : Clone + Send + 'static {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
 
-    fn shrink(&self) -> Box<Iterator<Item=Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Self>> {
         empty_shrinker()
     }
 }
@@ -140,7 +140,7 @@ impl Arbitrary for () {
 impl Arbitrary for bool {
     fn arbitrary<G: Gen>(g: &mut G) -> bool { g.gen() }
 
-    fn shrink(&self) -> Box<Iterator<Item=bool>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=bool>> {
         if *self {
             single_shrinker(false)
         }
@@ -159,7 +159,7 @@ impl<A: Arbitrary> Arbitrary for Option<A> {
         }
     }
 
-    fn shrink(&self)  -> Box<Iterator<Item=Option<A>>> {
+    fn shrink(&self)  -> Box<dyn Iterator<Item=Option<A>>> {
         match *self {
             None => empty_shrinker(),
             Some(ref x) => {
@@ -179,7 +179,7 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=Result<A, B>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Result<A, B>>> {
         match *self {
             Ok(ref x) => {
                 let xs = x.shrink();
@@ -208,7 +208,7 @@ macro_rules! impl_arb_for_single_tuple {
                 )
             }
 
-            fn shrink(&self) -> Box<Iterator<Item=($($type_param,)*)>> {
+            fn shrink(&self) -> Box<dyn Iterator<Item=($($type_param,)*)>> {
                 let iter = ::std::iter::empty();
                 $(
                     let cloned = self.clone();
@@ -252,7 +252,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
         (0..size).map(|_| Arbitrary::arbitrary(g)).collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=Vec<A>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Vec<A>>> {
         VecShrinker::new(self.clone())
     }
 }
@@ -266,12 +266,12 @@ struct VecShrinker<A> {
     offset: usize,
     /// The shrinker for the element at `offset` once shrinking of individual
     /// elements are attempted
-    element_shrinker: Box<Iterator<Item=A>>
+    element_shrinker: Box<dyn Iterator<Item=A>>
 }
 
 impl <A: Arbitrary> VecShrinker<A> {
 
-    fn new(seed: Vec<A>) -> Box<Iterator<Item=Vec<A>>> {
+    fn new(seed: Vec<A>) -> Box<dyn Iterator<Item=Vec<A>>> {
         let es = match seed.get(0) {
             Some(e) => e.shrink(),
             None => return empty_shrinker()
@@ -358,7 +358,7 @@ impl<K: Arbitrary + Ord, V: Arbitrary> Arbitrary for BTreeMap<K, V> {
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=BTreeMap<K, V>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=BTreeMap<K, V>>> {
         let vec: Vec<(K, V)> = self.clone().into_iter().collect();
         Box::new(vec.shrink()
                     .map(|v| v.into_iter().collect::<BTreeMap<K, V>>()))
@@ -375,7 +375,7 @@ impl<
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Self>> {
         let vec: Vec<(K, V)> = self.clone().into_iter().collect();
         Box::new(vec.shrink()
                     .map(|v| v.into_iter().collect::<Self>()))
@@ -388,7 +388,7 @@ impl<T: Arbitrary + Ord> Arbitrary for BTreeSet<T> {
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=BTreeSet<T>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=BTreeSet<T>>> {
         let vec: Vec<T> = self.clone().into_iter().collect();
         Box::new(vec.shrink().map(|v| v.into_iter().collect::<BTreeSet<T>>()))
     }
@@ -400,7 +400,7 @@ impl<T: Arbitrary + Ord> Arbitrary for BinaryHeap<T> {
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=BinaryHeap<T>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=BinaryHeap<T>>> {
         let vec: Vec<T> = self.clone().into_iter().collect();
         Box::new(vec.shrink()
                     .map(|v| v.into_iter().collect::<BinaryHeap<T>>()))
@@ -416,7 +416,7 @@ impl<
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Self>> {
         let vec: Vec<T> = self.clone().into_iter().collect();
         Box::new(vec.shrink().map(|v| v.into_iter().collect::<Self>()))
     }
@@ -428,7 +428,7 @@ impl<T: Arbitrary> Arbitrary for LinkedList<T> {
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=LinkedList<T>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=LinkedList<T>>> {
         let vec: Vec<T> = self.clone().into_iter().collect();
         Box::new(vec.shrink()
                     .map(|v| v.into_iter().collect::<LinkedList<T>>()))
@@ -441,7 +441,7 @@ impl<T: Arbitrary> Arbitrary for VecDeque<T> {
         vec.into_iter().collect()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=VecDeque<T>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=VecDeque<T>>> {
         let vec: Vec<T> = self.clone().into_iter().collect();
         Box::new(vec.shrink()
                     .map(|v| v.into_iter().collect::<VecDeque<T>>()))
@@ -515,7 +515,7 @@ impl Arbitrary for PathBuf {
         p
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=PathBuf>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=PathBuf>> {
         let mut shrunk = vec![];
         let mut popped = self.clone();
         if popped.pop() {
@@ -546,7 +546,7 @@ impl Arbitrary for OsString {
         OsString::from(String::arbitrary(g))
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=OsString>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=OsString>> {
         let mystring: String = self.clone().into_string().unwrap();
         Box::new(mystring.shrink().map(|s| OsString::from(s)))
     }
@@ -562,7 +562,7 @@ impl Arbitrary for String {
         s
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=String>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=String>> {
         // Shrink a string by shrinking a vector of its characters.
         let chars: Vec<char> = self.chars().collect();
         Box::new(chars.shrink().map(|x| x.into_iter().collect::<String>()))
@@ -573,11 +573,11 @@ impl Arbitrary for char {
     fn arbitrary<G: Gen>(g: &mut G) -> char {
         let mode = g.gen_range(0, 100);
         match mode {
-            0...49 => {
+            0..=49 => {
                 // ASCII + some control characters
                 g.gen_range(0,0xB0) as u8 as char
             }
-            50...59 => {
+            50..=59 => {
                 // Unicode BMP characters
                 loop {
                     if let Some(x) = char::from_u32(g.gen_range(0, 0x10000)) {
@@ -586,7 +586,7 @@ impl Arbitrary for char {
                     // ignore surrogate pairs
                 }
             }
-            60...84 => {
+            60..=84 => {
                 // Characters often used in programming languages
                 [
                     ' ', ' ', ' ',
@@ -598,7 +598,7 @@ impl Arbitrary for char {
                     '0', '1','2','3','4','5','6','7','8','9',
                 ].choose(g).unwrap().to_owned()
             }
-            85...89 => {
+            85..=89 => {
                 // Tricky Unicode, part 1
                 [
                     '\u{0149}', // a deprecated character
@@ -624,11 +624,11 @@ impl Arbitrary for char {
                     // branches
                 ].choose(g).unwrap().to_owned()
             }
-            90...94 => {
+            90..=94 => {
                 // Tricky unicode, part 2
                 char::from_u32(g.gen_range(0x2000, 0x2070)).unwrap()
             }
-            95...99 => {
+            95..=99 => {
                 // Completely arbitrary characters
                 g.gen()
             }
@@ -636,7 +636,7 @@ impl Arbitrary for char {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=char>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=char>> {
         Box::new((*self as u32).shrink().filter_map(char::from_u32))
     }
 }
@@ -651,7 +651,7 @@ macro_rules! unsigned_shrinker {
             }
 
             impl UnsignedShrinker {
-                pub fn new(x: $ty) -> Box<Iterator<Item=$ty>> {
+                pub fn new(x: $ty) -> Box<dyn Iterator<Item=$ty>> {
                     if x == 0 {
                         super::empty_shrinker()
                     } else {
@@ -691,7 +691,7 @@ macro_rules! unsigned_arbitrary {
                     use std::cmp::{min, max};
                     g.gen_range(0, max(1, min(s, $ty::max_value())))
                 }
-                fn shrink(&self) -> Box<Iterator<Item=$ty>> {
+                fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
                     unsigned_shrinker!($ty);
                     shrinker::UnsignedShrinker::new(*self)
                 }
@@ -717,7 +717,7 @@ macro_rules! signed_shrinker {
             }
 
             impl SignedShrinker {
-                pub fn new(x: $ty) -> Box<Iterator<Item=$ty>> {
+                pub fn new(x: $ty) -> Box<dyn Iterator<Item=$ty>> {
                     if x == 0 {
                         super::empty_shrinker()
                     } else {
@@ -764,7 +764,7 @@ macro_rules! signed_arbitrary {
                     };
                     g.gen_range(lower, max(1, upper as $ty))
                 }
-                fn shrink(&self) -> Box<Iterator<Item=$ty>> {
+                fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
                     signed_shrinker!($ty);
                     shrinker::SignedShrinker::new(*self)
                 }
@@ -785,7 +785,7 @@ impl Arbitrary for f32 {
     fn arbitrary<G: Gen>(g: &mut G) -> f32 {
         let s = g.size(); g.gen_range(-(s as f32), s as f32)
     }
-    fn shrink(&self) -> Box<Iterator<Item=f32>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=f32>> {
         signed_shrinker!(i32);
         let it = shrinker::SignedShrinker::new(*self as i32);
         Box::new(it.map(|x| x as f32))
@@ -796,7 +796,7 @@ impl Arbitrary for f64 {
     fn arbitrary<G: Gen>(g: &mut G) -> f64 {
         let s = g.size(); g.gen_range(-(s as f64), s as f64)
     }
-    fn shrink(&self) -> Box<Iterator<Item=f64>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=f64>> {
         signed_shrinker!(i64);
         let it = shrinker::SignedShrinker::new(*self as i64);
         Box::new(it.map(|x| x as f64))
@@ -807,7 +807,7 @@ impl<T: Arbitrary> Arbitrary for Wrapping<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> Wrapping<T> {
         Wrapping(T::arbitrary(g))
     }
-    fn shrink(&self) -> Box<Iterator<Item=Wrapping<T>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Wrapping<T>>> {
         Box::new(self.0.shrink().map(|inner| Wrapping(inner)))
     }
 }
@@ -820,7 +820,7 @@ impl<T: Arbitrary> Arbitrary for Bound<T> {
             _ => Bound::Unbounded,
         }
     }
-    fn shrink(&self) -> Box<Iterator<Item=Bound<T>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Bound<T>>> {
         match *self {
             Bound::Included(ref x) => Box::new(x.shrink().map(Bound::Included)),
             Bound::Excluded(ref x) => Box::new(x.shrink().map(Bound::Excluded)),
@@ -833,7 +833,7 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for Range<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> Range<T> {
         Arbitrary::arbitrary(g) .. Arbitrary::arbitrary(g)
     }
-    fn shrink(&self) -> Box<Iterator<Item=Range<T>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Range<T>>> {
         Box::new(
             (self.start.clone(), self.end.clone())
             .shrink().map(|(s, e)| s .. e))
@@ -844,7 +844,7 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeFrom<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> RangeFrom<T> {
         Arbitrary::arbitrary(g) ..
     }
-    fn shrink(&self) -> Box<Iterator<Item=RangeFrom<T>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=RangeFrom<T>>> {
         Box::new(self.start.clone().shrink().map(|start| start ..))
     }
 }
@@ -853,7 +853,7 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeTo<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> RangeTo<T> {
         .. Arbitrary::arbitrary(g)
     }
-    fn shrink(&self) -> Box<Iterator<Item=RangeTo<T>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=RangeTo<T>>> {
         Box::new(self.end.clone().shrink().map(|end| ..end))
     }
 }
@@ -869,7 +869,7 @@ impl Arbitrary for Duration {
         Duration::new(seconds, nanoseconds)
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Self>> {
         Box::new((self.as_secs(), self.subsec_nanos()).shrink()
             .map(|(secs, nanos)| {
                 Duration::new(secs, nanos % 1_000_000)
@@ -882,7 +882,7 @@ impl<A: Arbitrary> Arbitrary for Box<A> {
         Box::new(A::arbitrary(g))
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=Box<A>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Box<A>>> {
         Box::new((**self).shrink().map(Box::new))
     }
 }
@@ -892,7 +892,7 @@ impl<A: Arbitrary + Sync> Arbitrary for Arc<A> {
         Arc::new(A::arbitrary(g))
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=Arc<A>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Arc<A>>> {
         Box::new((**self).shrink().map(Arc::new))
     }
 }
@@ -908,7 +908,7 @@ impl Arbitrary for SystemTime {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=Self>> {
         let duration = match self.duration_since(UNIX_EPOCH) {
             Ok(duration) => duration,
             Err(e) => e.duration(),

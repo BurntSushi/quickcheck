@@ -323,7 +323,7 @@ impl<A, E> Testable for Result<A, E>
 }
 
 /// Return a vector of the debug formatting of each item in `args`
-fn debug_reprs(args: &[&Debug]) -> Vec<String> {
+fn debug_reprs(args: &[&dyn Debug]) -> Vec<String> {
     args.iter().map(|x| format!("{:?}", x)).collect()
 }
 
