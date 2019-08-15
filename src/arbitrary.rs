@@ -15,6 +15,7 @@ use std::net::{
     SocketAddr, SocketAddrV4, SocketAddrV6,
 };
 use std::num::Wrapping;
+use std::num::{NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128};
 use std::ops::{Bound, Range, RangeFrom, RangeTo, RangeFull};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -792,6 +793,80 @@ impl Arbitrary for f32 {
     }
 }
 
+macro_rules! unsigned_non_zero_shrinker {
+    ($ty:tt) => {
+        mod shrinker {
+            pub struct UnsignedNonZeroShrinker {
+                x: $ty,
+                i: $ty,
+            }
+
+            impl UnsignedNonZeroShrinker {
+                pub fn new(x: $ty) -> Box<dyn Iterator<Item = $ty>> {
+                    debug_assert!(x > 0);
+
+                    if x == 1 {
+                        super::empty_shrinker()
+                    } else {
+                        Box::new(std::iter::once(1).chain(
+                            UnsignedNonZeroShrinker { x: x, i: x / 2 }
+                        ))
+                    }
+                }
+
+            }
+
+            impl Iterator for UnsignedNonZeroShrinker {
+                type Item = $ty;
+
+                fn next(&mut self) -> Option<$ty> {
+                    if self.x - self.i < self.x {
+                        let result = Some(self.x - self.i);
+                        self.i = self.i / 2;
+                        result
+                    } else {
+                        None
+                    }
+                }
+            }
+
+        }
+    }
+}
+
+macro_rules! unsigned_non_zero_arbitrary {
+    ($($ty:tt => $inner:tt),*) => {
+        $(
+            impl Arbitrary for $ty {
+                fn arbitrary<G: Gen>(g: &mut G) -> $ty {
+                    #![allow(trivial_numeric_casts)]
+                    let s = g.size() as $inner;
+                    use std::cmp::{min, max};
+                    let non_zero = g.gen_range(1, max(2, min(s, $inner::max_value())));
+                    debug_assert!(non_zero != 0);
+                    $ty::new(non_zero).expect("non-zero value contsturction failed")
+                }
+
+                fn shrink(&self) -> Box<dyn Iterator<Item = $ty>> {
+                    unsigned_non_zero_shrinker!($inner);
+                    Box::new(shrinker::UnsignedNonZeroShrinker::new(self.get())
+                        .map($ty::new)
+                        .map(Option::unwrap))
+                }
+            }
+        )*
+    }
+}
+
+unsigned_non_zero_arbitrary! {
+    NonZeroUsize => usize,
+    NonZeroU8    => u8,
+    NonZeroU16   => u16,
+    NonZeroU32   => u32,
+    NonZeroU64   => u64,
+    NonZeroU128  => u128
+}
+
 impl Arbitrary for f64 {
     fn arbitrary<G: Gen>(g: &mut G) -> f64 {
         let s = g.size(); g.gen_range(-(s as f64), s as f64)
@@ -1242,7 +1317,7 @@ mod test {
     fn shrunk<A: Arbitrary + Eq + Hash>(s: A) -> HashSet<A> {
         set(s.shrink().collect())
     }
-    fn set<A: Eq + Hash>(xs: Vec<A>) -> HashSet<A> {
+    fn set<A: Hash + Eq, I: IntoIterator<Item = A>>(xs: I) -> HashSet<A> {
         xs.into_iter().collect()
     }
 
