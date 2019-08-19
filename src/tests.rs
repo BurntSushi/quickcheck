@@ -129,19 +129,20 @@ fn is_prime(n: usize) -> bool {
 #[test]
 #[should_panic]
 fn sieve_not_prime() {
-    fn prop_all_prime(n: usize) -> bool {
-        sieve(n).into_iter().all(is_prime)
+    fn prop_all_prime(n: u8) -> bool {
+        sieve(n as usize).into_iter().all(is_prime)
     }
-    quickcheck(prop_all_prime as fn(usize) -> bool);
+    quickcheck(prop_all_prime as fn(u8) -> bool);
 }
 
 #[test]
 #[should_panic]
 fn sieve_not_all_primes() {
-    fn prop_prime_iff_in_the_sieve(n: usize) -> bool {
+    fn prop_prime_iff_in_the_sieve(n: u8) -> bool {
+        let n = n as usize;
         sieve(n) == (0..(n + 1)).filter(|&i| is_prime(i)).collect::<Vec<_>>()
     }
-    quickcheck(prop_prime_iff_in_the_sieve as fn(usize) -> bool);
+    quickcheck(prop_prime_iff_in_the_sieve as fn(u8) -> bool);
 }
 
 #[test]

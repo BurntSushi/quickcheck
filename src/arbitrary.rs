@@ -681,15 +681,23 @@ macro_rules! unsigned_shrinker {
     }
 }
 
+macro_rules! unsigned_problem_values {
+    ($t:ty) => {
+        [<$t>::min_value(), 1, <$t>::max_value()]
+    };
+}
+
 macro_rules! unsigned_arbitrary {
     ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    #![allow(trivial_numeric_casts)]
-                    let s = g.size() as $ty;
-                    use std::cmp::{min, max};
-                    g.gen_range(0, max(1, min(s, $ty::max_value())))
+                    match g.gen_range(0,10) {
+                        0 => {
+                            *unsigned_problem_values!($ty).choose(g).unwrap()
+                        },
+                        _ => g.gen_range($ty::min_value(), $ty::max_value())
+                    }
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
                     unsigned_shrinker!($ty);
@@ -701,11 +709,7 @@ macro_rules! unsigned_arbitrary {
 }
 
 unsigned_arbitrary! {
-    usize, u8, u16, u32, u64
-}
-
-unsigned_arbitrary! {
-    u128
+    usize, u8, u16, u32, u64, u128
 }
 
 macro_rules! signed_shrinker {
@@ -750,19 +754,23 @@ macro_rules! signed_shrinker {
     }
 }
 
+macro_rules! signed_problem_values {
+    ($t:ty) => {
+        [<$t>::min_value(), 0, <$t>::max_value()]
+    };
+}
+
 macro_rules! signed_arbitrary {
     ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    use std::cmp::{min,max};
-                    let upper = min(g.size(), $ty::max_value() as usize);
-                    let lower = if upper > $ty::max_value() as usize {
-                        $ty::min_value()
-                    } else {
-                        -(upper as $ty)
-                    };
-                    g.gen_range(lower, max(1, upper as $ty))
+                    match g.gen_range(0,10) {
+                        0 => {
+                            *signed_problem_values!($ty).choose(g).unwrap()
+                        },
+                        _ => g.gen_range($ty::min_value(), $ty::max_value())
+                    }
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
                     signed_shrinker!($ty);
@@ -774,11 +782,7 @@ macro_rules! signed_arbitrary {
 }
 
 signed_arbitrary! {
-    isize, i8, i16, i32, i64
-}
-
-signed_arbitrary! {
-    i128
+    isize, i8, i16, i32, i64, i128
 }
 
 impl Arbitrary for f32 {
@@ -936,34 +940,58 @@ mod test {
     use std::num::Wrapping;
     use std::path::PathBuf;
     use super::Arbitrary;
+    use super::StdGen;
 
     #[test]
     fn arby_unit() {
         assert_eq!(arby::<()>(), ());
     }
 
+    macro_rules! arby_int {
+        ($($t:ty),+) => {$(
+            let mut gen = super::StdGen::new(rand::thread_rng(), 100);
+            // 1/10 chance of hitting problematic value * 10000 random values
+            // => ~1000 problematic values
+            // => probability of failure ~ (2/3)^(1000) ~ 10e-170
+            let arbys:Vec<$t> = (0..10000)
+                .map(|_|{Arbitrary::arbitrary(& mut gen)})
+                .collect();
+            if !arbys.iter().any(|&x| x==<$t>::max_value()) {
+                panic!("Arbitrary does not generate max value")
+            }
+            if !arbys.iter().any(|&x| x==<$t>::min_value()) {
+                panic!("Arbitrary does not generate min value")
+            }
+            //filter out problematic values
+            let arbys:Vec<$t> = arbys
+                .into_iter()
+                .filter(|x| unsigned_problem_values!($t).iter().any(|y| y==x))
+                .collect();
+            // 9/10 chance of hitting non-problematic value * 10000 random values
+            // => ~9000 values
+            // => probability of failure ~ (19/20)^(9000) ~ 10e-200
+            if  <$t>::max_value()/20 * 19 > *arbys.iter().max().unwrap_or(&0) {
+                panic!("Arbitrary did not generate within 5% of maximum value")
+            }
+            if <$t>::min_value() + <$t>::max_value()/20 
+                < *arbys.iter().min().unwrap_or(&<$t>::max_value()) {
+                panic!("Arbitrary did not generate within 5% of minimum value")
+            }
+        )*};
+    }
+
     #[test]
     fn arby_int() {
-        rep(&mut || { let n: isize = arby(); assert!(n >= -5 && n <= 5); } );
+        arby_int!(i8, i16, i32, i64, isize, i128);
     }
 
     #[test]
     fn arby_uint() {
-        rep(&mut || { let n: usize = arby(); assert!(n <= 5); } );
+        arby_int!(u8, u16, u32, u64, usize, u128);
     }
 
-    fn arby<A: super::Arbitrary>() -> A {
-        super::Arbitrary::arbitrary(&mut gen())
-    }
-
-    fn gen() -> super::StdGen<rand::rngs::ThreadRng> {
-        super::StdGen::new(rand::thread_rng(), 5)
-    }
-
-    fn rep<F>(f: &mut F) where F : FnMut() -> () {
-        for _ in 0..100 {
-            f()
-        }
+    fn arby<A: Arbitrary>() -> A {
+        Arbitrary::arbitrary(&mut StdGen::new(rand::thread_rng(), 5))
     }
 
     // Shrink testing.
