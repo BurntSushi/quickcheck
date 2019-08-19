@@ -24,16 +24,14 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use rand::seq::SliceRandom;
 use rand::{self, Rng, RngCore};
 
-/// `Gen` wraps a `rand::RngCore` with parameters to control the distribution of
+/// `Gen` wraps a `rand::RngCore` with parameters to control the range of
 /// random values.
 ///
 /// A value with type satisfying the `Gen` trait can be constructed with the
 /// `gen` function in this crate.
 pub trait Gen: RngCore {
-    /// Returns the `size` parameter used by this `Gen`, which controls the size
-    /// of random values generated. For example, it specifies the maximum length
-    /// of a randomly generated vector and also will specify the maximum
-    /// magnitude of a randomly generated number.
+    /// Controls the range of values of certain types created with this Gen.
+    /// For an explaination of which types behave how, see `Arbitrary`
     fn size(&self) -> usize;
 }
 
@@ -51,9 +49,9 @@ impl<R: RngCore> StdGen<R> {
     /// generator.
     ///
     /// The `size` parameter controls the size of random values generated. For
-    /// example, it specifies the maximum length of a randomly generated vector
-    /// and also will specify the maximum magnitude of a randomly generated
-    /// number.
+    /// example, it specifies the maximum length of a randomly generated
+    /// vector, but not the maximum magnitude of a randomly generated number.
+    /// For further explaination, see `Arbitrary`.
     pub fn new(rng: R, size: usize) -> StdGen<R> {
         StdGen { rng: rng, size: size }
     }
@@ -91,10 +89,10 @@ pub struct StdThreadGen(StdGen<rand::rngs::ThreadRng>);
 impl StdThreadGen {
     /// Returns a new thread-local RNG.
     ///
-    /// The `size` parameter controls the size of random values generated. For
-    /// example, it specifies the maximum length of a randomly generated vector
-    /// and also will specify the maximum magnitude of a randomly generated
-    /// number.
+    /// The `size` parameter controls the size of random values generated.
+    /// For example, it specifies the maximum length of a randomly generated
+    /// vector, but not the maximum magnitude of a randomly generated number.
+    /// For further explaination, see `Arbitrary`.
     pub fn new(size: usize) -> StdThreadGen {
         StdThreadGen(StdGen { rng: rand::thread_rng(), size: size })
     }
@@ -138,7 +136,12 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<dyn Iterator<Item = A>> {
 /// shrunk.
 ///
 /// Aside from shrinking, `Arbitrary` is different from the `std::Rand` trait
-/// in that it uses a `Gen` to control the distribution of random values.
+/// in that it respects `Gen::size()` for certain types. For example,
+/// `Vec::arbitrary()` respects `Gen::size()` to decide the maximum `len()`
+/// of the vector. This behavior is necessary due to practical speed and size
+/// limitations. Conversely, `i32::arbitrary()` ignores `size()`, as all `i32`
+/// values require `O(1)` memory and operations between `i32`s require `O(1)`
+/// time (with the exception of exponentiation).
 ///
 /// As of now, all types that implement `Arbitrary` must also implement
 /// `Clone`. (I'm not sure if this is a permanent restriction.)
@@ -232,11 +235,13 @@ macro_rules! impl_arb_for_single_tuple {
                 let iter = ::std::iter::empty();
                 $(
                     let cloned = self.clone();
-                    let iter = iter.chain(self.$tuple_index.shrink().map(move |shr_value| {
-                        let mut result = cloned.clone();
-                        result.$tuple_index = shr_value;
-                        result
-                    }));
+                    let iter = iter.chain(
+                        self.$tuple_index.shrink().map(move |shr_value| {
+                            let mut result = cloned.clone();
+                            result.$tuple_index = shr_value;
+                            result
+                        })
+                    );
                 )*
                 Box::new(iter)
             }
@@ -749,15 +754,23 @@ macro_rules! unsigned_shrinker {
     };
 }
 
+macro_rules! unsigned_problem_values {
+    ($t:ty) => {
+        [<$t>::min_value(), 1, <$t>::max_value()]
+    };
+}
+
 macro_rules! unsigned_arbitrary {
     ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    #![allow(trivial_numeric_casts)]
-                    let s = g.size() as $ty;
-                    use std::cmp::{min, max};
-                    g.gen_range(0, max(1, min(s, $ty::max_value())))
+                    match g.gen_range(0, 10) {
+                        0 => {
+                            *unsigned_problem_values!($ty).choose(g).unwrap()
+                        },
+                        _ => g.gen()
+                    }
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
                     unsigned_shrinker!($ty);
@@ -769,11 +782,7 @@ macro_rules! unsigned_arbitrary {
 }
 
 unsigned_arbitrary! {
-    usize, u8, u16, u32, u64
-}
-
-unsigned_arbitrary! {
-    u128
+    usize, u8, u16, u32, u64, u128
 }
 
 macro_rules! signed_shrinker {
@@ -815,19 +824,23 @@ macro_rules! signed_shrinker {
     };
 }
 
+macro_rules! signed_problem_values {
+    ($t:ty) => {
+        [<$t>::min_value(), 0, <$t>::max_value()]
+    };
+}
+
 macro_rules! signed_arbitrary {
     ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    use std::cmp::{min,max};
-                    let upper = min(g.size(), $ty::max_value() as usize);
-                    let lower = if upper > $ty::max_value() as usize {
-                        $ty::min_value()
-                    } else {
-                        -(upper as $ty)
-                    };
-                    g.gen_range(lower, max(1, upper as $ty))
+                    match g.gen_range(0, 10) {
+                        0 => {
+                            *signed_problem_values!($ty).choose(g).unwrap()
+                        },
+                        _ => g.gen()
+                    }
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
                     signed_shrinker!($ty);
@@ -839,24 +852,42 @@ macro_rules! signed_arbitrary {
 }
 
 signed_arbitrary! {
-    isize, i8, i16, i32, i64
+    isize, i8, i16, i32, i64, i128
 }
 
-signed_arbitrary! {
-    i128
+macro_rules! float_problem_values {
+    ($path:path) => {{
+        // hack. see: https://github.com/rust-lang/rust/issues/48067
+        use $path as p;
+        [p::NAN, p::NEG_INFINITY, p::MIN, -0., 0., p::MAX, p::INFINITY]
+    }};
 }
 
-impl Arbitrary for f32 {
-    fn arbitrary<G: Gen>(g: &mut G) -> f32 {
-        let s = g.size();
-        g.gen_range(-(s as f32), s as f32)
-    }
-    fn shrink(&self) -> Box<dyn Iterator<Item = f32>> {
-        signed_shrinker!(i32);
-        let it = shrinker::SignedShrinker::new(*self as i32);
-        Box::new(it.map(|x| x as f32))
-    }
+macro_rules! float_arbitrary {
+    ($($t:ty, $path:path, $shrinkable:ty),+) => {$(
+        impl Arbitrary for $t {
+            fn arbitrary<G: Gen>(g: &mut G) -> $t {
+                match g.gen_range(0, 10) {
+                    0 => *float_problem_values!($path).choose(g).unwrap(),
+                    _ => {
+                        use $path as p;
+                        let exp = g.gen_range(0., p::MAX_EXP as i16 as $t);
+                        let mantissa = g.gen_range(1., 2.);
+                        let sign = *[-1., 1.].choose(g).unwrap();
+                        sign * mantissa * exp.exp2()
+                    }
+                }
+            }
+            fn shrink(&self) -> Box<dyn Iterator<Item = $t>> {
+                signed_shrinker!($shrinkable);
+                let it = shrinker::SignedShrinker::new(*self as $shrinkable);
+                Box::new(it.map(|x| x as $t))
+            }
+        }
+    )*};
 }
+
+float_arbitrary!(f32, std::f32, i32, f64, std::f64, i64);
 
 macro_rules! unsigned_non_zero_shrinker {
     ($ty:tt) => {
@@ -904,12 +935,11 @@ macro_rules! unsigned_non_zero_arbitrary {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary<G: Gen>(g: &mut G) -> $ty {
-                    #![allow(trivial_numeric_casts)]
-                    let s = g.size() as $inner;
-                    use std::cmp::{min, max};
-                    let non_zero = g.gen_range(1, max(2, min(s, $inner::max_value())));
-                    debug_assert!(non_zero != 0);
-                    $ty::new(non_zero).expect("non-zero value contsturction failed")
+                    let mut v: $inner = g.gen();
+                    if v == 0 {
+                        v += 1;
+                    }
+                    $ty::new(v).expect("non-zero value contsturction failed")
                 }
 
                 fn shrink(&self) -> Box<dyn Iterator<Item = $ty>> {
@@ -930,18 +960,6 @@ unsigned_non_zero_arbitrary! {
     NonZeroU32   => u32,
     NonZeroU64   => u64,
     NonZeroU128  => u128
-}
-
-impl Arbitrary for f64 {
-    fn arbitrary<G: Gen>(g: &mut G) -> f64 {
-        let s = g.size();
-        g.gen_range(-(s as f64), s as f64)
-    }
-    fn shrink(&self) -> Box<dyn Iterator<Item = f64>> {
-        signed_shrinker!(i64);
-        let it = shrinker::SignedShrinker::new(*self as i64);
-        Box::new(it.map(|x| x as f64))
-    }
 }
 
 impl<T: Arbitrary> Arbitrary for Wrapping<T> {
@@ -1033,8 +1051,8 @@ impl Arbitrary for RangeFull {
 
 impl Arbitrary for Duration {
     fn arbitrary<G: Gen>(gen: &mut G) -> Self {
-        let seconds = u64::arbitrary(gen);
-        let nanoseconds = u32::arbitrary(gen) % 1_000_000;
+        let seconds = gen.gen_range(0, gen.size() as u64);
+        let nanoseconds = gen.gen_range(0, 1_000_000);
         Duration::new(seconds, nanoseconds)
     }
 
@@ -1094,6 +1112,7 @@ impl Arbitrary for SystemTime {
 #[cfg(test)]
 mod test {
     use super::Arbitrary;
+    use super::StdGen;
     use rand;
     use std::collections::{
         BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque,
@@ -1108,37 +1127,87 @@ mod test {
         assert_eq!(arby::<()>(), ());
     }
 
+    macro_rules! arby_int {
+        ( $signed:expr, $($t:ty),+) => {$(
+            let mut arbys = (0..1_000_000).map(|_| arby::<$t>());
+            let mut problems = if $signed {
+                    signed_problem_values!($t).iter()
+                } else {
+                    unsigned_problem_values!($t).iter()
+                };
+            assert!(problems.all(|p| arbys.any(|arby| arby == *p)),
+                "Arbitrary does not generate all problematic values");
+            let max = <$t>::max_value();
+            let mid = (max + <$t>::min_value()) / 2;
+            // split full range of $t into chunks
+            // Arbitrary must return some value in each chunk
+            let double_chunks: $t = 9;
+            let chunks = double_chunks * 2;  // chunks must be even
+            let lim: Box<dyn Iterator<Item=$t>> = if $signed {
+                Box::new((0..=chunks)
+                        .map(|idx| idx - chunks / 2)
+                        .map(|x| mid + max / (chunks / 2) * x))
+            } else {
+                Box::new((0..=chunks).map(|idx| max / chunks * idx))
+            };
+            let mut lim = lim.peekable();
+            while let (Some(low), Some(&high)) = (lim.next(), lim.peek()) {
+                assert!(arbys.any(|arby| low <= arby && arby <= high),
+                    "Arbitrary doesn't generate numbers in {}..={}", low, high)
+            }
+        )*};
+    }
+
     #[test]
     fn arby_int() {
-        rep(&mut || {
-            let n: isize = arby();
-            assert!(n >= -5 && n <= 5);
-        });
+        arby_int!(true, i8, i16, i32, i64, isize, i128);
     }
 
     #[test]
     fn arby_uint() {
-        rep(&mut || {
-            let n: usize = arby();
-            assert!(n <= 5);
-        });
+        arby_int!(false, u8, u16, u32, u64, usize, u128);
     }
 
-    fn arby<A: super::Arbitrary>() -> A {
-        super::Arbitrary::arbitrary(&mut gen())
+    macro_rules! arby_float {
+        ($($t:ty, $path:path),+) => {$({
+            use $path as p;
+            let mut arbys = (0..1_000_000).map(|_| arby::<$t>());
+            //NaN != NaN
+            assert!(arbys.any(|f| f.is_nan()),
+                "Arbitrary does not generate the problematic value NaN"
+            );
+            for p in float_problem_values!($path).iter().filter(|f| !f.is_nan()) {
+                assert!(arbys.any(|arby| arby == *p),
+                    "Arbitrary does not generate the problematic value {}",
+                    p
+                );
+            }
+            // split full range of $t into chunks
+            // Arbitrary must return some value in each chunk
+            let double_chunks: i8 = 9;
+            let chunks = double_chunks * 2;  // chunks must be even
+            let lim = (-double_chunks..=double_chunks)
+                        .map(|idx| <$t>::from(idx))
+                        .map(|idx| p::MAX/(<$t>::from(chunks/2)) * idx);
+            let mut lim = lim.peekable();
+            while let (Some(low), Some(&high)) = (lim.next(), lim.peek()) {
+                assert!(
+                    arbys.any(|arby| low <= arby && arby <= high),
+                    "Arbitrary doesn't generate numbers in {:e}..={:e}",
+                    low,
+                    high,
+                )
+            }
+        })*};
     }
 
-    fn gen() -> super::StdGen<rand::rngs::ThreadRng> {
-        super::StdGen::new(rand::thread_rng(), 5)
+    #[test]
+    fn arby_float() {
+        arby_float!(f32, std::f32, f64, std::f64);
     }
 
-    fn rep<F>(f: &mut F)
-    where
-        F: FnMut() -> (),
-    {
-        for _ in 0..100 {
-            f()
-        }
+    fn arby<A: Arbitrary>() -> A {
+        Arbitrary::arbitrary(&mut StdGen::new(rand::thread_rng(), 5))
     }
 
     // Shrink testing.
