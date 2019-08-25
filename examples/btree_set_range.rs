@@ -44,7 +44,9 @@ fn check_range(set: BTreeSet<i32>, range: RangeAny<i32>) -> TestResult {
         TestResult::discard()
     } else {
         let xs: BTreeSet<_> = set.range(range).cloned().collect();
-        TestResult::from_bool(set.iter().all(|x| range.contains(x) == xs.contains(x)))
+        TestResult::from_bool(
+            set.iter().all(|x| range.contains(x) == xs.contains(x)),
+        )
     }
 }
 

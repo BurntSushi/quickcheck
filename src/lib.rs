@@ -15,11 +15,10 @@ extern crate rand;
 extern crate rand_core;
 
 pub use arbitrary::{
-    Arbitrary, Gen, StdGen, StdThreadGen,
-    empty_shrinker, single_shrinker,
+    empty_shrinker, single_shrinker, Arbitrary, Gen, StdGen, StdThreadGen,
 };
 pub use rand_core::RngCore;
-pub use tester::{QuickCheck, Testable, TestResult, quickcheck};
+pub use tester::{quickcheck, QuickCheck, TestResult, Testable};
 
 /// A macro for writing quickcheck tests.
 ///
@@ -76,12 +75,13 @@ fn env_logger_init() -> Result<(), log::SetLoggerError> {
 }
 
 #[cfg(not(feature = "use_logging"))]
-fn env_logger_init() { }
+fn env_logger_init() {}
 #[cfg(not(feature = "use_logging"))]
 macro_rules! info {
-    ($($_ignore:tt)*) => { () };
+    ($($_ignore:tt)*) => {
+        ()
+    };
 }
-
 
 mod arbitrary;
 mod tester;

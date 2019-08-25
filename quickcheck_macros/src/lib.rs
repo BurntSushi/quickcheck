@@ -9,10 +9,9 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
     parse::{Parse, Parser},
-    spanned::Spanned,
     parse_quote,
+    spanned::Spanned,
 };
-
 
 #[proc_macro_attribute]
 pub fn quickcheck(_args: TokenStream, input: TokenStream) -> TokenStream {
@@ -24,13 +23,11 @@ pub fn quickcheck(_args: TokenStream, input: TokenStream) -> TokenStream {
             item_fn.decl.inputs.iter().for_each(|input| match *input {
                 syn::FnArg::Captured(syn::ArgCaptured { ref ty, .. }) => {
                     inputs.push(parse_quote!(_: #ty));
-                },
-                _ => {
-                    errors.push(syn::parse::Error::new(
-                        input.span(),
-                        "unsupported kind of function argument",
-                    ))
-                },
+                }
+                _ => errors.push(syn::parse::Error::new(
+                    input.span(),
+                    "unsupported kind of function argument",
+                )),
             });
 
             if errors.is_empty() {
@@ -56,9 +53,12 @@ pub fn quickcheck(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
                 }
             } else {
-                errors.iter().map(syn::parse::Error::to_compile_error).collect()
+                errors
+                    .iter()
+                    .map(syn::parse::Error::to_compile_error)
+                    .collect()
             }
-        },
+        }
         Ok(syn::Item::Static(mut item_static)) => {
             let attrs = mem::replace(&mut item_static.attrs, Vec::new());
             let name = &item_static.ident;
@@ -71,10 +71,11 @@ pub fn quickcheck(_args: TokenStream, input: TokenStream) -> TokenStream {
                     ::quickcheck::quickcheck(#name)
                 }
             }
-        },
+        }
         _ => {
             let span = proc_macro2::TokenStream::from(input).span();
-            let msg = "#[quickcheck] is only supported on statics and functions";
+            let msg =
+                "#[quickcheck] is only supported on statics and functions";
 
             syn::parse::Error::new(span, msg).to_compile_error()
         }

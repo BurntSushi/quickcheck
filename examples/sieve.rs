@@ -7,23 +7,24 @@ fn sieve(n: usize) -> Vec<usize> {
         return vec![];
     }
 
-    let mut marked = vec![false; n+1];
+    let mut marked = vec![false; n + 1];
     marked[0] = true;
     marked[1] = true;
     marked[2] = true;
     for p in 2..n {
-        for i in (2*p..n).filter(|&n| n % p == 0) {
+        for i in (2 * p..n).filter(|&n| n % p == 0) {
             marked[i] = true;
         }
     }
-    marked.iter()
-          .enumerate()
-          .filter_map(|(i, &m)| if m { None } else { Some(i) })
-          .collect()
+    marked
+        .iter()
+        .enumerate()
+        .filter_map(|(i, &m)| if m { None } else { Some(i) })
+        .collect()
 }
 
 fn is_prime(n: usize) -> bool {
-    n != 0 && n != 1 && (2..).take_while(|i| i*i <= n).all(|i| n % i != 0)
+    n != 0 && n != 1 && (2..).take_while(|i| i * i <= n).all(|i| n % i != 0)
 }
 
 fn main() {

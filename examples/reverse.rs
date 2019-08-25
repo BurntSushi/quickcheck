@@ -3,7 +3,7 @@ extern crate quickcheck;
 use quickcheck::quickcheck;
 
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
-    let mut rev = vec!();
+    let mut rev = vec![];
     for x in xs {
         rev.insert(0, x.clone())
     }
