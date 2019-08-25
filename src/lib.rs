@@ -14,11 +14,11 @@ extern crate log;
 extern crate rand;
 extern crate rand_core;
 
-pub use arbitrary::{
+pub use crate::arbitrary::{
     empty_shrinker, single_shrinker, Arbitrary, Gen, StdGen, StdThreadGen,
 };
+pub use crate::tester::{quickcheck, QuickCheck, TestResult, Testable};
 pub use rand_core::RngCore;
-pub use tester::{quickcheck, QuickCheck, TestResult, Testable};
 
 /// A macro for writing quickcheck tests.
 ///

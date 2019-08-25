@@ -3,8 +3,8 @@ use std::env;
 use std::fmt::Debug;
 use std::panic;
 
-use tester::Status::{Discard, Fail, Pass};
-use {Arbitrary, Gen, StdThreadGen};
+use crate::tester::Status::{Discard, Fail, Pass};
+use crate::{Arbitrary, Gen, StdThreadGen};
 
 /// The main QuickCheck type for setting configuration and running QuickCheck.
 pub struct QuickCheck<G> {
@@ -171,7 +171,7 @@ impl<G: Gen> QuickCheck<G> {
         A: Testable,
     {
         // Ignore log init failures, implying it has already been done.
-        let _ = ::env_logger_init();
+        let _ = crate::env_logger_init();
 
         let n_tests_passed = match self.quicktest(f) {
             Ok(n_tests_passed) => n_tests_passed,
@@ -306,7 +306,7 @@ impl TestResult {
 ///
 /// It's unlikely that you'll have to implement this trait yourself.
 pub trait Testable: Send + 'static {
-    fn result<G: Gen>(&self, &mut G) -> TestResult;
+    fn result<G: Gen>(&self, _: &mut G) -> TestResult;
 }
 
 impl Testable for bool {
@@ -431,8 +431,8 @@ impl<A: Arbitrary + Debug> AShow for A {}
 
 #[cfg(test)]
 mod test {
+    use crate::{QuickCheck, StdGen};
     use rand::{self, rngs::OsRng};
-    use {QuickCheck, StdGen};
 
     #[test]
     fn shrinking_regression_issue_126() {
