@@ -948,46 +948,49 @@ mod test {
     }
 
     macro_rules! arby_int {
-        ($($t:ty),+) => {$(
-            let mut gen = super::StdGen::new(rand::thread_rng(), 100);
-            // 1/10 chance of hitting problematic value * 10000 random values
-            // => ~1000 problematic values
-            // => probability of failure ~ (2/3)^(1000) ~ 10e-170
-            let arbys:Vec<$t> = (0..10000)
-                .map(|_|{Arbitrary::arbitrary(& mut gen)})
+        ( $signed:expr, $($t:ty),+) => {$(
+            let arbys: Vec<$t> = (0..10000).map(|_| arby::<$t>()).collect();
+            let problem_values = if $signed { 
+                    signed_problem_values!($t)
+                } else {
+                    unsigned_problem_values!($t)
+                };
+            if !problem_values.iter().all(|x| arbys.iter().any(|y| y==x)) {
+                panic!("Arbitrary does not generate all problematic values")
+            }
+            //filter out problematic values, leaving randomly generated ones
+            let arbys: Vec<$t> = arbys.into_iter()
+                .filter(|x| problem_values.iter().any(|y| y!=x))
                 .collect();
-            if !arbys.iter().any(|&x| x==<$t>::max_value()) {
-                panic!("Arbitrary does not generate max value")
-            }
-            if !arbys.iter().any(|&x| x==<$t>::min_value()) {
-                panic!("Arbitrary does not generate min value")
-            }
-            //filter out problematic values
-            let arbys:Vec<$t> = arbys
-                .into_iter()
-                .filter(|x| unsigned_problem_values!($t).iter().any(|y| y==x))
-                .collect();
-            // 9/10 chance of hitting non-problematic value * 10000 random values
-            // => ~9000 values
-            // => probability of failure ~ (19/20)^(9000) ~ 10e-200
-            if  <$t>::max_value()/20 * 19 > *arbys.iter().max().unwrap_or(&0) {
-                panic!("Arbitrary did not generate within 5% of maximum value")
-            }
-            if <$t>::min_value() + <$t>::max_value()/20 
-                < *arbys.iter().min().unwrap_or(&<$t>::max_value()) {
-                panic!("Arbitrary did not generate within 5% of minimum value")
+            let (min, max) = (<$t>::min_value(), <$t>::max_value());
+            let mid = (max + min) / 2;
+            // split full range of $t into chunks 
+            // Arbitrary must generate one value in each chunk
+            let chunks_2: $t = 9;
+            let chunks = chunks_2 * 2; //chunks must be an even number
+            let iter: Box<dyn Iterator<Item=$t>> = if $signed {
+                Box::new((0..=chunks).map(|x| x - chunks / 2)
+                        .map(|x| mid + max / (chunks / 2) * x)
+                    )
+            } else {
+                Box::new((0..=chunks).map(|x| max / chunks * x))
+            };
+            let mut iter = iter.peekable();
+            while let (Some(lower), Some(upper)) = (iter.next(), iter.peek()) {
+                assert!(arbys.iter().find(|x| (lower..*upper).contains(x)).is_some(),
+                    "Arbitrary doesn't generate integers in {}..{}", lower, upper)
             }
         )*};
     }
 
     #[test]
     fn arby_int() {
-        arby_int!(i8, i16, i32, i64, isize, i128);
+        arby_int!(true, i8, i16, i32, i64, isize, i128);
     }
 
     #[test]
     fn arby_uint() {
-        arby_int!(u8, u16, u32, u64, usize, u128);
+        arby_int!(false, u8, u16, u32, u64, usize, u128);
     }
 
     fn arby<A: Arbitrary>() -> A {
