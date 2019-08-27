@@ -1,3 +1,5 @@
+# QuickCheck
+
 QuickCheck is a way to do property based testing using randomly generated
 input. This crate comes with the ability to randomly generate and shrink
 integers, floats, tuples, booleans, lists, strings, options and results.
@@ -358,6 +360,42 @@ programmers are not usually great at intuiting corner cases,
 and the whole idea of property checking is to take that burden
 off the programmer. Despite the theoretical discomfort, this
 approach can turn out to be practical.
+
+### Generating Structs
+
+It is very simple to generate structs in QuickCheck. Consider the following
+example, where the struct `Point` is defined:
+
+```rust
+struct Point {
+    x: i32,
+    y: i32,
+}
+```
+
+In order to generate a random `Point` instance, you need to implement
+the trait `Arbitrary` for the struct `Point`:
+
+```rust
+use quickcheck::{Arbitrary, Gen};
+// Important: Without this import the method gen() of Gen is not available then.
+use rand::Rng;
+
+impl Arbitrary for Point {
+    fn arbitrary<G: Gen>(g: &mut G) -> Point {
+        Point {
+            x: g.gen(),
+            y: g.gen(),
+        }
+    }
+}
+```
+
+**Notice:**
+If the compiler still cannot find the `Rnd` instance for the given type,
+which the `G.gen()` should generate, there may be a dependency problem
+in your project. In order to fix the problem, add the rand library into
+your `Cargo.toml` with the exactly same version which the QuickCheck uses.
 
 ### Case study: The Sieve of Eratosthenes
 
