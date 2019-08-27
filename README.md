@@ -1,3 +1,5 @@
+quickcheck
+==========
 QuickCheck is a way to do property based testing using randomly generated
 input. This crate comes with the ability to randomly generate and shrink
 integers, floats, tuples, booleans, lists, strings, options and results.
@@ -358,6 +360,35 @@ programmers are not usually great at intuiting corner cases,
 and the whole idea of property checking is to take that burden
 off the programmer. Despite the theoretical discomfort, this
 approach can turn out to be practical.
+
+### Generating Structs
+
+It is very simple to generate structs in QuickCheck. Consider the following
+example, where the struct `Point` is defined:
+
+```rust
+struct Point {
+    x: i32,
+    y: i32,
+}
+```
+
+In order to generate a random `Point` instance, you need to implement
+the trait `Arbitrary` for the struct `Point`:
+
+```rust
+use quickcheck::{Arbitrary, Gen};
+
+impl Arbitrary for Point {
+    fn arbitrary<G: Gen>(g: &mut G) -> Point {
+        Point {
+            x: i32::arbitrary(g),
+            y: i32::arbitrary(g),
+        }
+    }
+}
+```
+
 
 ### Case study: The Sieve of Eratosthenes
 
