@@ -1,10 +1,10 @@
+use std::cmp;
+use std::env;
 use std::fmt::Debug;
 use std::panic;
-use std::env;
-use std::cmp;
 
-use tester::Status::{Discard, Fail, Pass};
-use {Arbitrary, Gen, StdThreadGen};
+use crate::tester::Status::{Discard, Fail, Pass};
+use crate::{Arbitrary, Gen, StdThreadGen};
 
 /// The main QuickCheck type for setting configuration and running QuickCheck.
 pub struct QuickCheck<G> {
@@ -102,7 +102,7 @@ impl<G: Gen> QuickCheck<G> {
     pub fn gen<N: Gen>(self, gen: N) -> QuickCheck<N> {
         // unfortunately this is necessary because using QuickCheck{ ..self, gen }
         // wouldn't work due to mismatched types.
-        let QuickCheck{ tests, max_tests, min_tests_passed, .. } = self;
+        let QuickCheck { tests, max_tests, min_tests_passed, .. } = self;
         QuickCheck { tests, max_tests, min_tests_passed, gen }
     }
 
@@ -110,10 +110,7 @@ impl<G: Gen> QuickCheck<G> {
     ///
     /// This actually refers to the minimum number of *valid* *passed* tests
     /// that needs to pass for the property to be considered successful.
-    pub fn min_tests_passed(
-        mut self,
-        min_tests_passed: u64,
-    ) -> QuickCheck<G> {
+    pub fn min_tests_passed(mut self, min_tests_passed: u64) -> QuickCheck<G> {
         self.min_tests_passed = min_tests_passed;
         self
     }
@@ -126,11 +123,13 @@ impl<G: Gen> QuickCheck<G> {
     /// (If you're using Rust's unit testing infrastructure, then you'll
     /// want to use the `quickcheck` method, which will `panic!` on failure.)
     pub fn quicktest<A>(&mut self, f: A) -> Result<u64, TestResult>
-                    where A: Testable {
+    where
+        A: Testable,
+    {
         let mut n_tests_passed = 0;
         for _ in 0..self.max_tests {
             if n_tests_passed >= self.tests {
-                break
+                break;
             }
             match f.result(&mut self.gen) {
                 TestResult { status: Pass, .. } => n_tests_passed += 1,
@@ -167,9 +166,12 @@ impl<G: Gen> QuickCheck<G> {
     ///     QuickCheck::new().quickcheck(revrev as fn(Vec<usize>) -> bool);
     /// }
     /// ```
-    pub fn quickcheck<A>(&mut self, f: A) where A: Testable {
+    pub fn quickcheck<A>(&mut self, f: A)
+    where
+        A: Testable,
+    {
         // Ignore log init failures, implying it has already been done.
-        let _ = ::env_logger_init();
+        let _ = crate::env_logger_init();
 
         let n_tests_passed = match self.quicktest(f) {
             Ok(n_tests_passed) => n_tests_passed,
@@ -181,16 +183,18 @@ impl<G: Gen> QuickCheck<G> {
         } else {
             panic!(
                 "(Unable to generate enough tests, {} not discarded.)",
-                n_tests_passed)
+                n_tests_passed
+            )
         }
-
     }
 }
 
 /// Convenience function for running QuickCheck.
 ///
 /// This is an alias for `QuickCheck::new().quickcheck(f)`.
-pub fn quickcheck<A: Testable>(f: A) { QuickCheck::new().quickcheck(f) }
+pub fn quickcheck<A: Testable>(f: A) {
+    QuickCheck::new().quickcheck(f)
+}
 
 /// Describes the status of a single instance of a test.
 ///
@@ -204,14 +208,22 @@ pub struct TestResult {
 
 /// Whether a test has passed, failed or been discarded.
 #[derive(Clone, Debug)]
-enum Status { Pass, Fail, Discard }
+enum Status {
+    Pass,
+    Fail,
+    Discard,
+}
 
 impl TestResult {
     /// Produces a test result that indicates the current test has passed.
-    pub fn passed() -> TestResult { TestResult::from_bool(true) }
+    pub fn passed() -> TestResult {
+        TestResult::from_bool(true)
+    }
 
     /// Produces a test result that indicates the current test has failed.
-    pub fn failed() -> TestResult { TestResult::from_bool(false) }
+    pub fn failed() -> TestResult {
+        TestResult::from_bool(false)
+    }
 
     /// Produces a test result that indicates failure from a runtime error.
     pub fn error<S: Into<String>>(msg: S) -> TestResult {
@@ -225,11 +237,7 @@ impl TestResult {
     /// When a test is discarded, `quickcheck` will replace it with a
     /// fresh one (up to a certain limit).
     pub fn discard() -> TestResult {
-        TestResult {
-            status: Discard,
-            arguments: vec![],
-            err: None,
-        }
+        TestResult { status: Discard, arguments: vec![], err: None }
     }
 
     /// Converts a `bool` to a `TestResult`. A `true` value indicates that
@@ -246,7 +254,11 @@ impl TestResult {
     /// Tests if a "procedure" fails when executed. The test passes only if
     /// `f` generates a task failure during its execution.
     pub fn must_fail<T, F>(f: F) -> TestResult
-            where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
+    where
+        F: FnOnce() -> T,
+        F: Send + 'static,
+        T: Send + 'static,
+    {
         let f = panic::AssertUnwindSafe(f);
         TestResult::from_bool(panic::catch_unwind(f).is_err())
     }
@@ -256,7 +268,7 @@ impl TestResult {
     pub fn is_failure(&self) -> bool {
         match self.status {
             Fail => true,
-            Pass|Discard => false,
+            Pass | Discard => false,
         }
     }
 
@@ -268,15 +280,16 @@ impl TestResult {
 
     fn failed_msg(&self) -> String {
         match self.err {
-            None => {
-                format!("[quickcheck] TEST FAILED. Arguments: ({})",
-                        self.arguments.join(", "))
-            }
-            Some(ref err) => {
-                format!("[quickcheck] TEST FAILED (runtime error). \
-                         Arguments: ({})\nError: {}",
-                        self.arguments.join(", "), err)
-            }
+            None => format!(
+                "[quickcheck] TEST FAILED. Arguments: ({})",
+                self.arguments.join(", ")
+            ),
+            Some(ref err) => format!(
+                "[quickcheck] TEST FAILED (runtime error). \
+                 Arguments: ({})\nError: {}",
+                self.arguments.join(", "),
+                err
+            ),
         }
     }
 }
@@ -292,8 +305,8 @@ impl TestResult {
 /// and potentially shrink those arguments if they produce a failure.
 ///
 /// It's unlikely that you'll have to implement this trait yourself.
-pub trait Testable : Send + 'static {
-    fn result<G: Gen>(&self, &mut G) -> TestResult;
+pub trait Testable: Send + 'static {
+    fn result<G: Gen>(&self, _: &mut G) -> TestResult;
 }
 
 impl Testable for bool {
@@ -309,11 +322,16 @@ impl Testable for () {
 }
 
 impl Testable for TestResult {
-    fn result<G: Gen>(&self, _: &mut G) -> TestResult { self.clone() }
+    fn result<G: Gen>(&self, _: &mut G) -> TestResult {
+        self.clone()
+    }
 }
 
 impl<A, E> Testable for Result<A, E>
-        where A: Testable, E: Debug + Send + 'static {
+where
+    A: Testable,
+    E: Debug + Send + 'static,
+{
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         match *self {
             Ok(ref r) => r.result(g),
@@ -323,7 +341,7 @@ impl<A, E> Testable for Result<A, E>
 }
 
 /// Return a vector of the debug formatting of each item in `args`
-fn debug_reprs(args: &[&Debug]) -> Vec<String> {
+fn debug_reprs(args: &[&dyn Debug]) -> Vec<String> {
     args.iter().map(|x| format!("{:?}", x)).collect()
 }
 
@@ -389,7 +407,11 @@ testable_fn!(A, B, C, D, E, F, G);
 testable_fn!(A, B, C, D, E, F, G, H);
 
 fn safe<T, F>(fun: F) -> Result<T, String>
-        where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
+where
+    F: FnOnce() -> T,
+    F: Send + 'static,
+    T: Send + 'static,
+{
     panic::catch_unwind(panic::AssertUnwindSafe(fun)).map_err(|any_err| {
         // Extract common types of panic payload:
         // panic and assert produce &str or String
@@ -404,21 +426,20 @@ fn safe<T, F>(fun: F) -> Result<T, String>
 }
 
 /// Convenient aliases.
-trait AShow : Arbitrary + Debug {}
+trait AShow: Arbitrary + Debug {}
 impl<A: Arbitrary + Debug> AShow for A {}
 
 #[cfg(test)]
 mod test {
-    use {QuickCheck, StdGen};
-    use rand::{self, OsRng};
+    use crate::{QuickCheck, StdGen};
+    use rand::{self, rngs::OsRng};
 
     #[test]
     fn shrinking_regression_issue_126() {
         fn thetest(vals: Vec<bool>) -> bool {
             vals.iter().filter(|&v| *v).count() < 2
         }
-        let failing_case =
-            QuickCheck::new()
+        let failing_case = QuickCheck::new()
             .quicktest(thetest as fn(vals: Vec<bool>) -> bool)
             .unwrap_err();
         let expected_argument = format!("{:?}", [true, true]);
@@ -427,7 +448,9 @@ mod test {
 
     #[test]
     fn size_for_small_types_issue_143() {
-        fn t(_: i8) -> bool { true }
+        fn t(_: i8) -> bool {
+            true
+        }
         QuickCheck::new()
             .gen(StdGen::new(rand::thread_rng(), 129))
             .quickcheck(t as fn(i8) -> bool);
@@ -435,11 +458,13 @@ mod test {
 
     #[test]
     fn different_generator() {
-        fn prop(_: i32) -> bool { true }
-        QuickCheck::with_gen(StdGen::new(OsRng::new().unwrap(), 129))
+        fn prop(_: i32) -> bool {
+            true
+        }
+        QuickCheck::with_gen(StdGen::new(OsRng, 129))
             .quickcheck(prop as fn(i32) -> bool);
         QuickCheck::new()
-            .gen(StdGen::new(OsRng::new().unwrap(), 129))
+            .gen(StdGen::new(OsRng, 129))
             .quickcheck(prop as fn(i32) -> bool);
     }
 }

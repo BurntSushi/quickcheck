@@ -14,12 +14,11 @@ extern crate log;
 extern crate rand;
 extern crate rand_core;
 
-pub use arbitrary::{
-    Arbitrary, Gen, StdGen, StdThreadGen,
-    empty_shrinker, single_shrinker,
+pub use crate::arbitrary::{
+    empty_shrinker, single_shrinker, Arbitrary, Gen, StdGen, StdThreadGen,
 };
+pub use crate::tester::{quickcheck, QuickCheck, TestResult, Testable};
 pub use rand_core::RngCore;
-pub use tester::{QuickCheck, Testable, TestResult, quickcheck};
 
 /// A macro for writing quickcheck tests.
 ///
@@ -54,7 +53,7 @@ macro_rules! quickcheck {
             }
         )*
     } => (
-        quickcheck! {
+        $crate::quickcheck! {
             @as_items
             $(
                 #[test]
@@ -76,12 +75,13 @@ fn env_logger_init() -> Result<(), log::SetLoggerError> {
 }
 
 #[cfg(not(feature = "use_logging"))]
-fn env_logger_init() { }
+fn env_logger_init() {}
 #[cfg(not(feature = "use_logging"))]
 macro_rules! info {
-    ($($_ignore:tt)*) => { () };
+    ($($_ignore:tt)*) => {
+        ()
+    };
 }
-
 
 mod arbitrary;
 mod tester;

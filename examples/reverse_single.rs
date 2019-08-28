@@ -1,9 +1,9 @@
 extern crate quickcheck;
 
-use quickcheck::{TestResult, quickcheck};
+use quickcheck::{quickcheck, TestResult};
 
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
-    let mut rev = vec!();
+    let mut rev = vec![];
     for x in xs {
         rev.insert(0, x.clone())
     }
@@ -13,7 +13,7 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
 fn main() {
     fn prop(xs: Vec<isize>) -> TestResult {
         if xs.len() != 1 {
-            return TestResult::discard()
+            return TestResult::discard();
         }
         TestResult::from_bool(xs == reverse(&*xs))
     }

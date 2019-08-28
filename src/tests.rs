@@ -1,12 +1,12 @@
 use std::cmp::Ord;
-use std::collections::{HashSet, HashMap};
 use std::collections::hash_map::DefaultHasher;
+use std::collections::{HashMap, HashSet};
 use std::hash::BuildHasherDefault;
 use std::path::PathBuf;
 
 use rand;
 
-use super::{QuickCheck, StdGen, TestResult, quickcheck};
+use super::{quickcheck, QuickCheck, StdGen, TestResult};
 
 #[test]
 fn prop_oob() {
@@ -15,8 +15,11 @@ fn prop_oob() {
         zero[0]
     }
     match QuickCheck::new().quicktest(prop as fn() -> bool) {
-        Ok(n) => panic!("prop_oob should fail with a runtime error \
-                         but instead it passed {} tests.", n),
+        Ok(n) => panic!(
+            "prop_oob should fail with a runtime error \
+             but instead it passed {} tests.",
+            n
+        ),
         _ => return,
     }
 }
@@ -50,10 +53,9 @@ fn reverse_single() {
     fn prop(xs: Vec<usize>) -> TestResult {
         if xs.len() != 1 {
             TestResult::discard()
-        }
-        else {
+        } else {
             TestResult::from_bool(
-                xs == xs.clone().into_iter().rev().collect::<Vec<_>>()
+                xs == xs.clone().into_iter().rev().collect::<Vec<_>>(),
             )
         }
     }
@@ -94,7 +96,7 @@ fn sort() {
         xs.sort_by(|x, y| x.cmp(y));
         for i in xs.windows(2) {
             if i[0] > i[1] {
-                return false
+                return false;
             }
         }
         true
@@ -107,23 +109,24 @@ fn sieve(n: usize) -> Vec<usize> {
         return vec![];
     }
 
-    let mut marked = vec![false; n+1];
+    let mut marked = vec![false; n + 1];
     marked[0] = true;
     marked[1] = true;
     marked[2] = true;
     for p in 2..n {
-        for i in (2*p..n).filter(|&n| n % p == 0) {
+        for i in (2 * p..n).filter(|&n| n % p == 0) {
             marked[i] = true;
         }
     }
-    marked.iter()
-          .enumerate()
-          .filter_map(|(i, &m)| if m { None } else { Some(i) })
-          .collect()
+    marked
+        .iter()
+        .enumerate()
+        .filter_map(|(i, &m)| if m { None } else { Some(i) })
+        .collect()
 }
 
 fn is_prime(n: usize) -> bool {
-    n != 0 && n != 1 && (2..).take_while(|i| i*i <= n).all(|i| n % i != 0)
+    n != 0 && n != 1 && (2..).take_while(|i| i * i <= n).all(|i| n % i != 0)
 }
 
 #[test]
@@ -146,7 +149,9 @@ fn sieve_not_all_primes() {
 
 #[test]
 fn testable_result() {
-    fn result() -> Result<bool, String> { Ok(true) }
+    fn result() -> Result<bool, String> {
+        Ok(true)
+    }
     quickcheck(result as fn() -> Result<bool, String>);
 }
 
@@ -164,13 +169,17 @@ fn testable_unit() {
 
 #[test]
 fn testable_unit_panic() {
-    fn panic() { panic!() }
+    fn panic() {
+        panic!()
+    }
     assert!(QuickCheck::new().quicktest(panic as fn()).is_err());
 }
 
 #[test]
 fn regression_issue_83() {
-    fn prop(_: u8) -> bool { true }
+    fn prop(_: u8) -> bool {
+        true
+    }
     QuickCheck::new()
         .gen(StdGen::new(rand::thread_rng(), 1024))
         .quickcheck(prop as fn(u8) -> bool)
@@ -178,7 +187,9 @@ fn regression_issue_83() {
 
 #[test]
 fn regression_issue_83_signed() {
-    fn prop(_: i8) -> bool { true }
+    fn prop(_: i8) -> bool {
+        true
+    }
     QuickCheck::new()
         .gen(StdGen::new(rand::thread_rng(), 1024))
         .quickcheck(prop as fn(i8) -> bool)
@@ -224,9 +235,13 @@ fn regression_issue_107_hang() {
 }
 
 #[test]
-#[should_panic(expected = "(Unable to generate enough tests, 0 not discarded.)")]
+#[should_panic(
+    expected = "(Unable to generate enough tests, 0 not discarded.)"
+)]
 fn all_tests_discarded_min_tests_passed_set() {
-    fn prop_discarded(_: u8) -> TestResult { TestResult::discard() }
+    fn prop_discarded(_: u8) -> TestResult {
+        TestResult::discard()
+    }
 
     QuickCheck::new()
         .tests(16)
@@ -236,10 +251,11 @@ fn all_tests_discarded_min_tests_passed_set() {
 
 #[test]
 fn all_tests_discarded_min_tests_passed_missing() {
-    fn prop_discarded(_: u8) -> TestResult { TestResult::discard() }
+    fn prop_discarded(_: u8) -> TestResult {
+        TestResult::discard()
+    }
 
-    QuickCheck::new()
-        .quickcheck(prop_discarded as fn(u8) -> TestResult)
+    QuickCheck::new().quickcheck(prop_discarded as fn(u8) -> TestResult)
 }
 
 quickcheck! {

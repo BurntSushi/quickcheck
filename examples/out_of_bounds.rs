@@ -1,6 +1,6 @@
 extern crate quickcheck;
 
-use quickcheck::{TestResult, quickcheck};
+use quickcheck::{quickcheck, TestResult};
 
 fn main() {
     fn prop(length: usize, index: usize) -> TestResult {
@@ -8,9 +8,7 @@ fn main() {
         if index < length {
             TestResult::discard()
         } else {
-            TestResult::must_fail(move || {
-                v[index]
-            })
+            TestResult::must_fail(move || v[index])
         }
     }
     quickcheck(prop as fn(usize, usize) -> TestResult);
