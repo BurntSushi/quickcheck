@@ -950,35 +950,32 @@ mod test {
     macro_rules! arby_int {
         ( $signed:expr, $($t:ty),+) => {$(
             let arbys: Vec<$t> = (0..10000).map(|_| arby::<$t>()).collect();
-            let problem_values = if $signed { 
-                    signed_problem_values!($t)
+            let mut problems = if $signed {
+                    signed_problem_values!($t).iter()
                 } else {
-                    unsigned_problem_values!($t)
+                    unsigned_problem_values!($t).iter()
                 };
-            if !problem_values.iter().all(|x| arbys.iter().any(|y| y==x)) {
-                panic!("Arbitrary does not generate all problematic values")
-            }
-            //filter out problematic values, leaving randomly generated ones
-            let arbys: Vec<$t> = arbys.into_iter()
-                .filter(|x| problem_values.iter().any(|y| y!=x))
-                .collect();
-            let (min, max) = (<$t>::min_value(), <$t>::max_value());
-            let mid = (max + min) / 2;
+            assert!(problems.all(|p| arbys.iter().any(|arby| arby == p)),
+                "Arbitrary does not generate all problematic values");
+            let max = <$t>::max_value();
+            let mid = (max + <$t>::min_value()) / 2;
             // split full range of $t into chunks 
-            // Arbitrary must generate one value in each chunk
-            let chunks_2: $t = 9;
-            let chunks = chunks_2 * 2; //chunks must be an even number
-            let iter: Box<dyn Iterator<Item=$t>> = if $signed {
-                Box::new((0..=chunks).map(|x| x - chunks / 2)
-                        .map(|x| mid + max / (chunks / 2) * x)
-                    )
+            // Arbitrary must return some value in each chunk
+            let double_chunks: $t = 9;
+            let chunks = double_chunks * 2;  // chunks must be even
+            let lim: Box<dyn Iterator<Item=$t>> = if $signed {
+                Box::new((0..=chunks)
+                        .map(|idx| idx - chunks / 2)
+                        .map(|x| mid + max / (chunks / 2) * x))
             } else {
-                Box::new((0..=chunks).map(|x| max / chunks * x))
+                Box::new((0..=chunks).map(|idx| max / chunks * idx))
             };
-            let mut iter = iter.peekable();
-            while let (Some(lower), Some(upper)) = (iter.next(), iter.peek()) {
-                assert!(arbys.iter().find(|x| (lower..*upper).contains(x)).is_some(),
-                    "Arbitrary doesn't generate integers in {}..{}", lower, upper)
+            let mut lim = lim.peekable();
+            while let (Some(low), Some(&high)) = (lim.next(), lim.peek()) {
+                assert!(arbys.iter()
+                        .find(|arby| (low..=high).contains(arby))
+                        .is_some(),
+                    "Arbitrary doesn't generate numbers in {}..={}", low, high)
             }
         )*};
     }
