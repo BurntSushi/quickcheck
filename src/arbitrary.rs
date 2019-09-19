@@ -868,8 +868,8 @@ impl Arbitrary for RangeFull {
 
 impl Arbitrary for Duration {
     fn arbitrary<G: Gen>(gen: &mut G) -> Self {
-        let seconds = u64::arbitrary(gen) % (gen.size() as u64) ;
-        let nanoseconds = u32::arbitrary(gen) % 1_000_000;
+        let seconds = gen.gen_range(0, gen.size() as u64);
+        let nanoseconds = gen.gen_range(0, 1_000_000);
         Duration::new(seconds, nanoseconds)
     }
 
