@@ -696,7 +696,7 @@ macro_rules! unsigned_arbitrary {
                         0 => {
                             *unsigned_problem_values!($ty).choose(g).unwrap()
                         },
-                        _ => g.gen_range($ty::min_value(), $ty::max_value())
+                        _ => g.gen()
                     }
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
@@ -769,7 +769,7 @@ macro_rules! signed_arbitrary {
                         0 => {
                             *signed_problem_values!($ty).choose(g).unwrap()
                         },
-                        _ => g.gen_range($ty::min_value(), $ty::max_value())
+                        _ => g.gen()
                     }
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
