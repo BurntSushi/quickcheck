@@ -232,6 +232,13 @@ impl TestResult {
         r
     }
 
+    /// Produces a test result that indicates failure from a runtime error.
+    pub fn error_with_args<S: Into<String>>(msg: S, arguments: Vec<String>) -> TestResult {
+        let mut r = TestResult::error(msg);
+        r.arguments = arguments;
+        r
+    }
+
     /// Produces a test result that instructs `quickcheck` to ignore it.
     /// This is useful for restricting the domain of your properties.
     /// When a test is discarded, `quickcheck` will replace it with a
@@ -278,16 +285,28 @@ impl TestResult {
         self.is_failure() && self.err.is_some()
     }
 
+    fn pretty_format(args: &Vec<String>) -> String {
+        let mut fmt = args.join(", ");
+        if fmt.len() > 80 {
+            fmt = String::with_capacity(80);
+            for (i, arg) in args.iter().enumerate() {
+                fmt.push_str("\n");
+                fmt.push_str(format!("\t{}: {}", i, arg).as_str());
+            }
+        }
+        fmt
+    }
+
     fn failed_msg(&self) -> String {
         match self.err {
             None => format!(
                 "[quickcheck] TEST FAILED. Arguments: ({})",
-                self.arguments.join(", ")
+                Self::pretty_format(&self.arguments)
             ),
             Some(ref err) => format!(
                 "[quickcheck] TEST FAILED (runtime error). \
                  Arguments: ({})\nError: {}",
-                self.arguments.join(", "),
+                Self::pretty_format(&self.arguments),
                 err
             ),
         }

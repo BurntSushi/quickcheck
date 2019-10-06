@@ -85,6 +85,7 @@ macro_rules! info {
 
 mod arbitrary;
 mod tester;
+mod statem;
 
 #[cfg(test)]
 mod tests;
