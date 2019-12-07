@@ -23,12 +23,14 @@ use std::time::{UNIX_EPOCH, Duration, SystemTime};
 use rand::{self, Rng, RngCore};
 use rand::seq::SliceRandom;
 
-/// `Gen` wraps a `rand::RngCore` with parameters to control the distribution of
+/// `Gen` wraps a `rand::RngCore` with parameters to control the range of
 /// random values.
 ///
 /// A value with type satisfying the `Gen` trait can be constructed with the
 /// `gen` function in this crate.
 pub trait Gen : RngCore {
+    /// Controls the range of values of certain types created with this Gen.
+    /// For an explaination of which types behave how, see Arbitrary
     fn size(&self) -> usize;
 }
 
@@ -46,9 +48,9 @@ impl<R: RngCore> StdGen<R> {
     /// generator.
     ///
     /// The `size` parameter controls the size of random values generated. For
-    /// example, it specifies the maximum length of a randomly generated vector
-    /// and also will specify the maximum magnitude of a randomly generated
-    /// number.
+    /// example, it specifies the maximum length of a randomly generated
+    /// vector, but not the maximum magnitude of a randomly generated number.
+    /// For further explaination, see Arbitrary.
     pub fn new(rng: R, size: usize) -> StdGen<R> {
         StdGen { rng: rng, size: size }
     }
@@ -79,9 +81,9 @@ impl StdThreadGen {
     /// Returns a new thread-local RNG.
     ///
     /// The `size` parameter controls the size of random values generated. For
-    /// example, it specifies the maximum length of a randomly generated vector
-    /// and also will specify the maximum magnitude of a randomly generated
-    /// number.
+    /// example, it specifies the maximum length of a randomly generated
+    /// vector, but not the maximum magnitude of a randomly generated number.
+    /// For further explaination, see Arbitrary.
     pub fn new(size: usize) -> StdThreadGen {
         StdThreadGen(StdGen { rng: rand::thread_rng(), size: size })
     }
@@ -117,7 +119,12 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<dyn Iterator<Item=A>> {
 /// shrunk.
 ///
 /// Aside from shrinking, `Arbitrary` is different from the `std::Rand` trait
-/// in that it uses a `Gen` to control the distribution of random values.
+/// in that it respects `Gen::size()` for certain types. For example,
+/// `Vec::arbitrary()` respects `Gen::size()` to decide the maximum `len()`
+/// of the vector. This behavior is necessary due to practical speed and size
+/// limitations. Conversely, `i32::arbitrary()` ignores `size()`, as all `i32`
+/// values require `O(1)` memory and operations between `i32`s require `O(1)`
+/// time (with the exception of exponentiation).
 ///
 /// As of now, all types that implement `Arbitrary` must also implement
 /// `Clone`. (I'm not sure if this is a permanent restriction.)
