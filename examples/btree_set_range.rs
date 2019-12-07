@@ -9,7 +9,7 @@ type RangeAny<T> = (Bound<T>, Bound<T>);
 
 /// Mimic `RangeBounds::contains`, stabilized in Rust 1.35.
 trait RangeBounds<T> {
-    fn contains(&self, &T) -> bool;
+    fn contains(&self, _: &T) -> bool;
 }
 impl<T: PartialOrd> RangeBounds<T> for RangeAny<T> {
     fn contains(&self, item: &T) -> bool {
@@ -44,7 +44,9 @@ fn check_range(set: BTreeSet<i32>, range: RangeAny<i32>) -> TestResult {
         TestResult::discard()
     } else {
         let xs: BTreeSet<_> = set.range(range).cloned().collect();
-        TestResult::from_bool(set.iter().all(|x| range.contains(x) == xs.contains(x)))
+        TestResult::from_bool(
+            set.iter().all(|x| range.contains(x) == xs.contains(x)),
+        )
     }
 }
 
