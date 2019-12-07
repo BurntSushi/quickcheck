@@ -1013,7 +1013,6 @@ mod test {
     use std::hash::Hash;
     use std::num::Wrapping;
     use std::path::PathBuf;
-    use super::Arbitrary;
     use super::StdGen;
 
     #[test]
@@ -1047,7 +1046,7 @@ mod test {
             let mut lim = lim.peekable();
             while let (Some(low), Some(&high)) = (lim.next(), lim.peek()) {
                 assert!(arbys.iter()
-                        .find(|arby| (low..=high).contains(arby))
+                        .find(|arby| low <= **arby && **arby <= high)
                         .is_some(),
                     "Arbitrary doesn't generate numbers in {}..={}", low, high)
             }
