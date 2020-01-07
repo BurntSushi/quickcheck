@@ -127,7 +127,7 @@ Crate features:
   `env_logger`.
 
 Prior to quickcheck 0.8, this crate had an `i128` feature for enabling support
-for 128-bit integers. As of quickcheck 0.8, whose minimium supported Rust
+for 128-bit integers. As of quickcheck 0.8, whose minimum supported Rust
 version is Rust 1.30.0, this feature is now provided by default and thus no
 longer available.
 
