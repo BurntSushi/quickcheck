@@ -20,8 +20,8 @@ pub fn quickcheck(_args: TokenStream, input: TokenStream) -> TokenStream {
             let mut inputs = syn::punctuated::Punctuated::new();
             let mut errors = Vec::new();
 
-            item_fn.decl.inputs.iter().for_each(|input| match *input {
-                syn::FnArg::Captured(syn::ArgCaptured { ref ty, .. }) => {
+            item_fn.sig.inputs.iter().for_each(|input| match *input {
+                syn::FnArg::Typed(syn::PatType { ref ty, .. }) => {
                     inputs.push(parse_quote!(_: #ty));
                 }
                 _ => errors.push(syn::parse::Error::new(
@@ -32,16 +32,16 @@ pub fn quickcheck(_args: TokenStream, input: TokenStream) -> TokenStream {
 
             if errors.is_empty() {
                 let attrs = mem::replace(&mut item_fn.attrs, Vec::new());
-                let name = &item_fn.ident;
+                let name = &item_fn.sig.ident;
                 let fn_type = syn::TypeBareFn {
                     lifetimes: None,
-                    unsafety: item_fn.unsafety.clone(),
-                    abi: item_fn.abi.clone(),
+                    unsafety: item_fn.sig.unsafety.clone(),
+                    abi: item_fn.sig.abi.clone(),
                     fn_token: <syn::Token![fn]>::default(),
                     paren_token: syn::token::Paren::default(),
                     inputs,
-                    variadic: item_fn.decl.variadic.clone(),
-                    output: item_fn.decl.output.clone(),
+                    variadic: item_fn.sig.variadic.clone(),
+                    output: item_fn.sig.output.clone(),
                 };
 
                 quote! {
