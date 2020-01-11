@@ -26,7 +26,7 @@ regex = ["env_logger/regex"]
 name = "quickcheck"
 
 [dependencies]
-env_logger = { version = "0.6.0", default-features = false, optional = true }
+env_logger = { version = "0.7.0", default-features = false, optional = true }
 log = { version = "0.4", optional = true }
 rand = "0.7"
 rand_core = "0.5"
