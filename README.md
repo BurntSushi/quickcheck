@@ -129,9 +129,27 @@ Crate features:
   `env_logger`.
 
 Prior to quickcheck 0.8, this crate had an `i128` feature for enabling support
-for 128-bit integers. As of quickcheck 0.8, whose minimum supported Rust
-version is Rust 1.30.0, this feature is now provided by default and thus no
-longer available.
+for 128-bit integers. As of quickcheck 0.8 this feature is now provided by
+default and thus no longer available.
+
+
+### Minimum Rust version policy
+
+This crate's minimum supported `rustc` version is `1.34.0`.
+
+The current policy is that the minimum Rust version required to use this crate
+can be increased in minor version updates. For example, if `crate 1.0` requires
+Rust 1.20.0, then `crate 1.0.z` for all values of `z` will also require Rust
+1.20.0 or newer. However, `crate 1.y` for `y > 0` may require a newer minimum
+version of Rust.
+
+In general, this crate will be conservative with respect to the minimum
+supported version of Rust.
+
+With all of that said, currently, `rand` is a public dependency of
+`quickcheck`. Therefore, the MSRV policy above only applies when it is more
+aggressive than `rand`'s MSRV policy. Otherwise, `quickcheck` will defer to
+`rand`'s MSRV policy.
 
 
 ### Alternative Rust crates for property testing
