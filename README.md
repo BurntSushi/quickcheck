@@ -14,7 +14,7 @@ the input space quickly. (It should be the same strategy used in
 [Koen Claessen's QuickCheck for
 Haskell](http://hackage.haskell.org/package/QuickCheck).)
 
-[![Build status](https://travis-ci.org/BurntSushi/quickcheck.svg?branch=master)](https://travis-ci.org/BurntSushi/quickcheck)
+[![Build status](https://github.com/BurntSushi/quickcheck/workflows/ci/badge.svg)](https://github.com/BurntSushi/quickcheck/actions)
 [![](http://meritbadge.herokuapp.com/quickcheck)](https://crates.io/crates/quickcheck)
 
 Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
