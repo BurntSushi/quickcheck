@@ -31,7 +31,7 @@ use rand::{self, Rng, RngCore};
 /// `gen` function in this crate.
 pub trait Gen: RngCore {
     /// Controls the range of values of certain types created with this Gen.
-    /// For an explaination of which types behave how, see Arbitrary
+    /// For an explaination of which types behave how, see `Arbitrary`
     fn size(&self) -> usize;
 }
 
