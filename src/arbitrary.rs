@@ -860,13 +860,11 @@ signed_arbitrary! {
 }
 
 macro_rules! float_problem_values {
-    ($path:path) => {
-        {
-            // hack. see: https://github.com/rust-lang/rust/issues/48067
-            use $path as p;
-            [p::NAN, p::NEG_INFINITY, p::MIN, 0., p::MAX, p::INFINITY]
-        }
-    };
+    ($path:path) => {{
+        // hack. see: https://github.com/rust-lang/rust/issues/48067
+        use $path as p;
+        [p::NAN, p::NEG_INFINITY, p::MIN, 0., p::MAX, p::INFINITY]
+    }};
 }
 
 macro_rules! float_arbitrary {
@@ -893,8 +891,7 @@ macro_rules! float_arbitrary {
     )*};
 }
 
-float_arbitrary!(f32, std::f32, i32, 
-                 f64, std::f64, i64);
+float_arbitrary!(f32, std::f32, i32, f64, std::f64, i64);
 
 macro_rules! unsigned_non_zero_shrinker {
     ($ty:tt) => {
@@ -1120,6 +1117,7 @@ impl Arbitrary for SystemTime {
 #[cfg(test)]
 mod test {
     use super::Arbitrary;
+    use super::StdGen;
     use rand;
     use std::collections::{
         BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque,
@@ -1128,7 +1126,6 @@ mod test {
     use std::hash::Hash;
     use std::num::Wrapping;
     use std::path::PathBuf;
-    use super::StdGen;
 
     #[test]
     fn arby_unit() {
@@ -1147,7 +1144,7 @@ mod test {
                 "Arbitrary does not generate all problematic values");
             let max = <$t>::max_value();
             let mid = (max + <$t>::min_value()) / 2;
-            // split full range of $t into chunks 
+            // split full range of $t into chunks
             // Arbitrary must return some value in each chunk
             let double_chunks: $t = 9;
             let chunks = double_chunks * 2;  // chunks must be even
