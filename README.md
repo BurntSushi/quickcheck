@@ -1,3 +1,5 @@
+quickcheck
+==========
 QuickCheck is a way to do property based testing using randomly generated
 input. This crate comes with the ability to randomly generate and shrink
 integers, floats, tuples, booleans, lists, strings, options and results.
@@ -10,18 +12,18 @@ counter-example.
 The shrinking strategies for lists and numbers use a binary search to cover
 the input space quickly. (It should be the same strategy used in
 [Koen Claessen's QuickCheck for
-Haskell](http://hackage.haskell.org/package/QuickCheck).)
+Haskell](https://hackage.haskell.org/package/QuickCheck).)
 
-[![Build status](https://travis-ci.org/BurntSushi/quickcheck.svg?branch=master)](https://travis-ci.org/BurntSushi/quickcheck)
+[![Build status](https://github.com/BurntSushi/quickcheck/workflows/ci/badge.svg)](https://github.com/BurntSushi/quickcheck/actions)
 [![](http://meritbadge.herokuapp.com/quickcheck)](https://crates.io/crates/quickcheck)
 
-Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
+Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
 
 
 ### Documentation
 
 The API is fully documented:
-[http://burntsushi.net/rustdoc/quickcheck/](http://burntsushi.net/rustdoc/quickcheck/).
+[https://docs.rs/quickcheck](https://docs.rs/quickcheck).
 
 
 ### Simple example
@@ -93,7 +95,7 @@ mod tests {
 
 ```toml
 [dependencies]
-quickcheck = "0.8"
+quickcheck = "0.9"
 ```
 
 If you're only using `quickcheck` in your test code, then you can add it as a
@@ -101,15 +103,15 @@ development dependency instead:
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.8"
+quickcheck = "0.9"
 ```
 
 If you want to use the `#[quickcheck]` attribute, then add `quickcheck_macros`
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.8"
-quickcheck_macros = "0.8"
+quickcheck = "0.9"
+quickcheck_macros = "0.9"
 ```
 
 N.B. When using `quickcheck` (either directly or via the attributes),
@@ -127,17 +129,35 @@ Crate features:
   `env_logger`.
 
 Prior to quickcheck 0.8, this crate had an `i128` feature for enabling support
-for 128-bit integers. As of quickcheck 0.8, whose minimium supported Rust
-version is Rust 1.30.0, this feature is now provided by default and thus no
-longer available.
+for 128-bit integers. As of quickcheck 0.8 this feature is now provided by
+default and thus no longer available.
+
+
+### Minimum Rust version policy
+
+This crate's minimum supported `rustc` version is `1.34.0`.
+
+The current policy is that the minimum Rust version required to use this crate
+can be increased in minor version updates. For example, if `crate 1.0` requires
+Rust 1.20.0, then `crate 1.0.z` for all values of `z` will also require Rust
+1.20.0 or newer. However, `crate 1.y` for `y > 0` may require a newer minimum
+version of Rust.
+
+In general, this crate will be conservative with respect to the minimum
+supported version of Rust.
+
+With all of that said, currently, `rand` is a public dependency of
+`quickcheck`. Therefore, the MSRV policy above only applies when it is more
+aggressive than `rand`'s MSRV policy. Otherwise, `quickcheck` will defer to
+`rand`'s MSRV policy.
 
 
 ### Alternative Rust crates for property testing
 
 The [`proptest`](https://docs.rs/proptest) crate is inspired by the
-[Hypothesis](http://hypothesis.works) framework for Python.
+[Hypothesis](https://hypothesis.works) framework for Python.
 You can read a comparison between `proptest` and `quickcheck`
-[here](https://github.com/AltSysrq/proptest/blob/master/README.md#differences-between-quickcheck-and-proptest)
+[here](https://github.com/AltSysrq/proptest/blob/master/proptest/README.md#differences-between-quickcheck-and-proptest)
 and
 [here](https://github.com/AltSysrq/proptest/issues/15#issuecomment-348382287).
 In particular, `proptest` improves on the concept of shrinking. So if you've
@@ -233,7 +253,7 @@ quickcheck(prop as fn(Vec<isize>) -> TestResult);
 So now our property returns a `TestResult`, which allows us to encode a bit
 more information. There are a few more
 [convenience functions defined for the `TestResult`
-type](http://docs.rs/quickcheck/0.8/quickcheck/struct.TestResult.html).
+type](http://docs.rs/quickcheck/*/quickcheck/struct.TestResult.html).
 For example, we can't just return a `bool`, so we convert a `bool` value to a
 `TestResult`.
 
@@ -246,8 +266,8 @@ condition is seldom met, it's possible that `quickcheck` will have to settle
 for running fewer tests than usual. By default, if `quickcheck` can't find
 `100` valid tests after trying `10,000` times, then it will give up.
 These parameters may be changed using
-[`QuickCheck::tests`](https://docs.rs/quickcheck/0.4.1/quickcheck/struct.QuickCheck.html#method.tests)
-and [`QuickCheck::max_tests`](https://docs.rs/quickcheck/0.4.1/quickcheck/struct.QuickCheck.html#method.max_tests),
+[`QuickCheck::tests`](https://docs.rs/quickcheck/*/quickcheck/struct.QuickCheck.html#method.tests)
+and [`QuickCheck::max_tests`](https://docs.rs/quickcheck/*/quickcheck/struct.QuickCheck.html#method.max_tests),
 or by setting the `QUICKCHECK_TESTS` and `QUICKCHECK_MAX_TESTS`
 environment variables.
 There is also `QUICKCHECK_MIN_TESTS_PASSED` which sets the minimum number of
@@ -342,7 +362,7 @@ test, you won't ever notice when a failure happens.
 
 Another approach is to just ask quickcheck to run properties more
 times. You can do this either via the
-[tests()](https://docs.rs/quickcheck/0.8/quickcheck/struct.QuickCheck.html#method.tests)
+[tests()](https://docs.rs/quickcheck/*/quickcheck/struct.QuickCheck.html#method.tests)
 method, or via the `QUICKCHECK_TESTS` environment variable.
 This will cause quickcheck to run for a much longer time. Unlike,
 the loop approach this will take a bounded amount of time, which
@@ -359,9 +379,38 @@ and the whole idea of property checking is to take that burden
 off the programmer. Despite the theoretical discomfort, this
 approach can turn out to be practical.
 
+### Generating Structs
+
+It is very simple to generate structs in QuickCheck. Consider the following
+example, where the struct `Point` is defined:
+
+```rust
+struct Point {
+    x: i32,
+    y: i32,
+}
+```
+
+In order to generate a random `Point` instance, you need to implement
+the trait `Arbitrary` for the struct `Point`:
+
+```rust
+use quickcheck::{Arbitrary, Gen};
+
+impl Arbitrary for Point {
+    fn arbitrary<G: Gen>(g: &mut G) -> Point {
+        Point {
+            x: i32::arbitrary(g),
+            y: i32::arbitrary(g),
+        }
+    }
+}
+```
+
+
 ### Case study: The Sieve of Eratosthenes
 
-The [Sieve of Eratosthenes](http://en.wikipedia.org/wiki/Sieve_of_Eratosthenes)
+The [Sieve of Eratosthenes](https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes)
 is a simple and elegant way to find all primes less than or equal to `N`.
 Briefly, the algorithm works by allocating an array with `N` slots containing
 booleans. Slots marked with `false` correspond to prime numbers (or numbers

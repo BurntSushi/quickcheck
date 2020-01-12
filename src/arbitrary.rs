@@ -10,7 +10,13 @@ use std::net::{
     IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
 };
 use std::num::Wrapping;
-use std::ops::{Bound, Range, RangeFrom, RangeFull, RangeTo};
+use std::num::{
+    NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
+};
+use std::ops::{
+    Bound, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo,
+    RangeToInclusive,
+};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -890,6 +896,80 @@ macro_rules! float_arbitrary {
 float_arbitrary!(f32, std::f32, i32, 
                  f64, std::f64, i64);
 
+macro_rules! unsigned_non_zero_shrinker {
+    ($ty:tt) => {
+        mod shrinker {
+            pub struct UnsignedNonZeroShrinker {
+                x: $ty,
+                i: $ty,
+            }
+
+            impl UnsignedNonZeroShrinker {
+                pub fn new(x: $ty) -> Box<dyn Iterator<Item = $ty>> {
+                    debug_assert!(x > 0);
+
+                    if x == 1 {
+                        super::empty_shrinker()
+                    } else {
+                        Box::new(
+                            std::iter::once(1).chain(
+                                UnsignedNonZeroShrinker { x: x, i: x / 2 },
+                            ),
+                        )
+                    }
+                }
+            }
+
+            impl Iterator for UnsignedNonZeroShrinker {
+                type Item = $ty;
+
+                fn next(&mut self) -> Option<$ty> {
+                    if self.x - self.i < self.x {
+                        let result = Some(self.x - self.i);
+                        self.i = self.i / 2;
+                        result
+                    } else {
+                        None
+                    }
+                }
+            }
+        }
+    };
+}
+
+macro_rules! unsigned_non_zero_arbitrary {
+    ($($ty:tt => $inner:tt),*) => {
+        $(
+            impl Arbitrary for $ty {
+                fn arbitrary<G: Gen>(g: &mut G) -> $ty {
+                    #![allow(trivial_numeric_casts)]
+                    let s = g.size() as $inner;
+                    use std::cmp::{min, max};
+                    let non_zero = g.gen_range(1, max(2, min(s, $inner::max_value())));
+                    debug_assert!(non_zero != 0);
+                    $ty::new(non_zero).expect("non-zero value contsturction failed")
+                }
+
+                fn shrink(&self) -> Box<dyn Iterator<Item = $ty>> {
+                    unsigned_non_zero_shrinker!($inner);
+                    Box::new(shrinker::UnsignedNonZeroShrinker::new(self.get())
+                        .map($ty::new)
+                        .map(Option::unwrap))
+                }
+            }
+        )*
+    }
+}
+
+unsigned_non_zero_arbitrary! {
+    NonZeroUsize => usize,
+    NonZeroU8    => u8,
+    NonZeroU16   => u16,
+    NonZeroU32   => u32,
+    NonZeroU64   => u64,
+    NonZeroU128  => u128
+}
+
 impl<T: Arbitrary> Arbitrary for Wrapping<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> Wrapping<T> {
         Wrapping(T::arbitrary(g))
@@ -931,6 +1011,19 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for Range<T> {
     }
 }
 
+impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeInclusive<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> RangeInclusive<T> {
+        Arbitrary::arbitrary(g)..=Arbitrary::arbitrary(g)
+    }
+    fn shrink(&self) -> Box<dyn Iterator<Item = RangeInclusive<T>>> {
+        Box::new(
+            (self.start().clone(), self.end().clone())
+                .shrink()
+                .map(|(s, e)| s..=e),
+        )
+    }
+}
+
 impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeFrom<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> RangeFrom<T> {
         Arbitrary::arbitrary(g)..
@@ -946,6 +1039,15 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeTo<T> {
     }
     fn shrink(&self) -> Box<dyn Iterator<Item = RangeTo<T>>> {
         Box::new(self.end.clone().shrink().map(|end| ..end))
+    }
+}
+
+impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeToInclusive<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> RangeToInclusive<T> {
+        ..=Arbitrary::arbitrary(g)
+    }
+    fn shrink(&self) -> Box<dyn Iterator<Item = RangeToInclusive<T>>> {
+        Box::new(self.end.clone().shrink().map(|end| ..=end))
     }
 }
 
@@ -1427,9 +1529,9 @@ mod test {
         assert_eq!(left, right);
     }
     fn shrunk<A: Arbitrary + Eq + Hash>(s: A) -> HashSet<A> {
-        set(s.shrink().collect())
+        set(s.shrink())
     }
-    fn set<A: Eq + Hash>(xs: Vec<A>) -> HashSet<A> {
+    fn set<A: Hash + Eq, I: IntoIterator<Item = A>>(xs: I) -> HashSet<A> {
         xs.into_iter().collect()
     }
 
@@ -1457,6 +1559,8 @@ mod test {
         ordered_eq(3.., vec![0.., 2..]);
         ordered_eq(..3, vec![..0, ..2]);
         ordered_eq(.., vec![]);
+        ordered_eq(3..=5, vec![0..=5, 2..=5, 3..=0, 3..=3, 3..=4]);
+        ordered_eq(..=3, vec![..=0, ..=2]);
     }
 
     #[test]

@@ -1,6 +1,6 @@
 [package]
 name = "quickcheck_macros"
-version = "0.9.0"  #:version
+version = "0.9.1"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "A macro attribute for quickcheck."
 documentation = "http://burntsushi.net/rustdoc/quickcheck/"
@@ -17,9 +17,9 @@ path = "src/lib.rs"
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "0.4.19"
-quote = "0.6.8"
-syn = { version = "0.15", features = ["full"] }
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "1.0", features = ["full"] }
 
 [dev-dependencies]
 quickcheck = { path = "..", version = "0.9.0" }
