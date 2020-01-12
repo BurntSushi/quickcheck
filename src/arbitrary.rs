@@ -853,29 +853,42 @@ signed_arbitrary! {
     isize, i8, i16, i32, i64, i128
 }
 
-impl Arbitrary for f32 {
-    fn arbitrary<G: Gen>(g: &mut G) -> f32 {
-        let s = g.size();
-        g.gen_range(-(s as f32), s as f32)
-    }
-    fn shrink(&self) -> Box<dyn Iterator<Item = f32>> {
-        signed_shrinker!(i32);
-        let it = shrinker::SignedShrinker::new(*self as i32);
-        Box::new(it.map(|x| x as f32))
-    }
+macro_rules! float_problem_values {
+    ($path:path) => {
+        {
+            // hack. see: https://github.com/rust-lang/rust/issues/48067
+            use $path as p;
+            [p::NAN, p::NEG_INFINITY, p::MIN, 0., p::MAX, p::INFINITY]
+        }
+    };
 }
 
-impl Arbitrary for f64 {
-    fn arbitrary<G: Gen>(g: &mut G) -> f64 {
-        let s = g.size();
-        g.gen_range(-(s as f64), s as f64)
-    }
-    fn shrink(&self) -> Box<dyn Iterator<Item = f64>> {
-        signed_shrinker!(i64);
-        let it = shrinker::SignedShrinker::new(*self as i64);
-        Box::new(it.map(|x| x as f64))
-    }
+macro_rules! float_arbitrary {
+    ($($t:ty, $path:path, $shrinkable:ty),+) => {$(
+        impl Arbitrary for $t {
+            fn arbitrary<G: Gen>(g: &mut G) -> $t {
+                match g.gen_range(0,10) {
+                    0 => *float_problem_values!($path).choose(g).unwrap(),
+                    _ => {
+                        use $path as p;
+                        let exp = g.gen_range(0., p::MAX_EXP as i16 as $t);
+                        let mantissa = g.gen_range(1., 2.);
+                        let sign = *[-1., 1.].choose(g).unwrap();
+                        sign * mantissa * exp.exp2()
+                    }
+                }
+            }
+            fn shrink(&self) -> Box<dyn Iterator<Item = $t>> {
+                signed_shrinker!($shrinkable);
+                let it = shrinker::SignedShrinker::new(*self as $shrinkable);
+                Box::new(it.map(|x| x as $t))
+            }
+        }
+    )*};
 }
+
+float_arbitrary!(f32, std::f32, i32, 
+                 f64, std::f64, i64);
 
 impl<T: Arbitrary> Arbitrary for Wrapping<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> Wrapping<T> {
@@ -1022,13 +1035,13 @@ mod test {
 
     macro_rules! arby_int {
         ( $signed:expr, $($t:ty),+) => {$(
-            let arbys: Vec<$t> = (0..10000).map(|_| arby::<$t>()).collect();
+            let mut arbys = (0..1_000_000).map(|_| arby::<$t>());
             let mut problems = if $signed {
                     signed_problem_values!($t).iter()
                 } else {
                     unsigned_problem_values!($t).iter()
                 };
-            assert!(problems.all(|p| arbys.iter().any(|arby| arby == p)),
+            assert!(problems.all(|p| arbys.any(|arby| arby == *p)),
                 "Arbitrary does not generate all problematic values");
             let max = <$t>::max_value();
             let mid = (max + <$t>::min_value()) / 2;
@@ -1045,9 +1058,7 @@ mod test {
             };
             let mut lim = lim.peekable();
             while let (Some(low), Some(&high)) = (lim.next(), lim.peek()) {
-                assert!(arbys.iter()
-                        .find(|arby| low <= **arby && **arby <= high)
-                        .is_some(),
+                assert!(arbys.any(|arby| low <= arby && arby <= high),
                     "Arbitrary doesn't generate numbers in {}..={}", low, high)
             }
         )*};
@@ -1061,6 +1072,40 @@ mod test {
     #[test]
     fn arby_uint() {
         arby_int!(false, u8, u16, u32, u64, usize, u128);
+    }
+
+    macro_rules! arby_float {
+        ($($t:ty, $path:path),+) => {$({
+            use $path as p;
+            let mut arbys = (0..1_000_000).map(|_| arby::<$t>());
+            //NaN != NaN
+            assert!(arbys.any(|f| f.is_nan()),
+                "Arbitrary does not generate the problematic value NaN"
+            );
+            for p in float_problem_values!($path).iter().filter(|f| !f.is_nan()) {
+                assert!(arbys.any(|arby| arby == *p),
+                    "Arbitrary does not generate the problematic value {}",
+                    p
+                );
+            }
+            // split full range of $t into chunks
+            // Arbitrary must return some value in each chunk
+            let double_chunks: i8 = 9;
+            let chunks = double_chunks * 2;  // chunks must be even
+            let lim = (-double_chunks..=double_chunks)
+                        .map(|idx| <$t>::from(idx))
+                        .map(|idx| p::MAX/(<$t>::from(chunks/2)) * idx);
+            let mut lim = lim.peekable();
+            while let (Some(low), Some(&high)) = (lim.next(), lim.peek()) {
+                assert!(arbys.any(|arby| low <= arby && arby <= high),
+                    "Arbitrary doesn't generate numbers in {:e}..={:e}", low, high)
+            }
+        })*};
+    }
+
+    #[test]
+    fn arby_float() {
+        arby_float!(f32, std::f32, f64, std::f64);
     }
 
     fn arby<A: Arbitrary>() -> A {
