@@ -863,7 +863,7 @@ macro_rules! float_problem_values {
     ($path:path) => {{
         // hack. see: https://github.com/rust-lang/rust/issues/48067
         use $path as p;
-        [p::NAN, p::NEG_INFINITY, p::MIN, 0., p::MAX, p::INFINITY]
+        [p::NAN, p::NEG_INFINITY, p::MIN, -0., 0., p::MAX, p::INFINITY]
     }};
 }
 
