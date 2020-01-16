@@ -165,6 +165,14 @@ ever had problems/frustration with shrinking in `quickcheck`, then `proptest`
 might be worth a try!
 
 
+### Alternatives for fuzzing
+
+Please see the
+[Rust Fuzz Book](https://rust-fuzz.github.io/book/introduction.html)
+and the
+[`arbitrary`](https://crates.io/crates/arbitrary) crate.
+
+
 ### Discarding test results (or, properties are polymorphic!)
 
 Sometimes you want to test a property that only holds for a *subset* of the
