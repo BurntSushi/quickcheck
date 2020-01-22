@@ -30,6 +30,10 @@ use rand::{self, Rng, RngCore};
 /// A value with type satisfying the `Gen` trait can be constructed with the
 /// `gen` function in this crate.
 pub trait Gen: RngCore {
+    /// Returns the `size` parameter used by this `Gen`, which controls the size
+    /// of random values generated. For example, it specifies the maximum length
+    /// of a randomly generated vector and also will specify the maximum
+    /// magnitude of a randomly generated number.
     fn size(&self) -> usize;
 }
 
