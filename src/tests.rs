@@ -1,6 +1,7 @@
 use std::cmp::Ord;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
+use std::ffi::CString;
 use std::hash::BuildHasherDefault;
 use std::path::PathBuf;
 
@@ -283,6 +284,10 @@ quickcheck! {
     fn substitute_hashmap(
         _map: HashMap<u8, u8, BuildHasherDefault<DefaultHasher>>
     ) -> bool {
+        true
+    }
+
+    fn cstring(_p: CString) -> bool {
         true
     }
 }

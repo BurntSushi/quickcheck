@@ -3,8 +3,10 @@ use std::collections::{
     BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque,
 };
 use std::env;
+use std::ffi::CString;
 use std::ffi::OsString;
 use std::hash::{BuildHasher, Hash};
+use std::iter;
 use std::iter::{empty, once};
 use std::net::{
     IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
@@ -122,6 +124,13 @@ impl Gen for StdThreadGen {
     fn size(&self) -> usize {
         self.0.size
     }
+}
+
+/// Creates an iterator that produces arbirarily many values by calling Arbitrary.
+pub fn arbitrary_iter<'a, G: Gen, T: Arbitrary>(
+    g: &'a mut G,
+) -> impl Iterator<Item = T> + 'a {
+    iter::from_fn(move || Some(T::arbitrary(g)))
 }
 
 /// Creates a shrinker with zero elements.
@@ -276,7 +285,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
             let s = g.size();
             g.gen_range(0, s)
         };
-        (0..size).map(|_| Arbitrary::arbitrary(g)).collect()
+        arbitrary_iter(g).take(size).collect()
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Vec<A>>> {
@@ -599,17 +608,50 @@ impl Arbitrary for String {
             let s = g.size();
             g.gen_range(0, s)
         };
-        let mut s = String::with_capacity(size);
-        for _ in 0..size {
-            s.push(char::arbitrary(g));
-        }
-        s
+        arbitrary_iter::<_, char>(g).take(size).collect()
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = String>> {
         // Shrink a string by shrinking a vector of its characters.
         let chars: Vec<char> = self.chars().collect();
         Box::new(chars.shrink().map(|x| x.into_iter().collect::<String>()))
+    }
+}
+
+impl Arbitrary for CString {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let size = {
+            let s = g.size();
+            g.gen_range(0, s)
+        };
+        // Use either random bytes or random UTF-8 characters.
+        let use_string: bool = g.gen();
+        if use_string {
+            CString::new(
+                arbitrary_iter::<_, char>(g)
+                    .filter(|&c| c != '\0')
+                    .take(size)
+                    .collect::<String>(),
+            )
+        } else {
+            CString::new(
+                arbitrary_iter::<_, u8>(g)
+                    .filter(|&c| c != 0)
+                    .take(size)
+                    .collect::<Vec<_>>(),
+            )
+        }
+        .expect("null characters should have been filtered out")
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = CString>> {
+        // Use the implementation for a vec here, but make sure null characters are filtered out.
+        Box::new(VecShrinker::new(self.as_bytes().to_owned()).map(|vec| {
+            CString::new(
+                vec.into_iter().filter(|&c| c != 0).collect::<Vec<_>>(),
+            )
+            .expect("null characters should have been filtered out")
+        }))
     }
 }
 
