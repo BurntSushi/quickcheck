@@ -15,7 +15,7 @@ the input space quickly. (It should be the same strategy used in
 Haskell](https://hackage.haskell.org/package/QuickCheck).)
 
 [![Build status](https://github.com/BurntSushi/quickcheck/workflows/ci/badge.svg)](https://github.com/BurntSushi/quickcheck/actions)
-[![](http://meritbadge.herokuapp.com/quickcheck)](https://crates.io/crates/quickcheck)
+[![](https://meritbadge.herokuapp.com/quickcheck)](https://crates.io/crates/quickcheck)
 
 Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
 
@@ -165,6 +165,14 @@ ever had problems/frustration with shrinking in `quickcheck`, then `proptest`
 might be worth a try!
 
 
+### Alternatives for fuzzing
+
+Please see the
+[Rust Fuzz Book](https://rust-fuzz.github.io/book/introduction.html)
+and the
+[`arbitrary`](https://crates.io/crates/arbitrary) crate.
+
+
 ### Discarding test results (or, properties are polymorphic!)
 
 Sometimes you want to test a property that only holds for a *subset* of the
@@ -253,7 +261,7 @@ quickcheck(prop as fn(Vec<isize>) -> TestResult);
 So now our property returns a `TestResult`, which allows us to encode a bit
 more information. There are a few more
 [convenience functions defined for the `TestResult`
-type](http://docs.rs/quickcheck/*/quickcheck/struct.TestResult.html).
+type](https://docs.rs/quickcheck/*/quickcheck/struct.TestResult.html).
 For example, we can't just return a `bool`, so we convert a `bool` value to a
 `TestResult`.
 

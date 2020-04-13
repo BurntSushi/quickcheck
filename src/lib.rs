@@ -1,5 +1,5 @@
 //! This crate is a port of
-//! [Haskell's QuickCheck](http://hackage.haskell.org/package/QuickCheck).
+//! [Haskell's QuickCheck](https://hackage.haskell.org/package/QuickCheck).
 //!
 //! For detailed examples, please see the
 //! [README](https://github.com/BurntSushi/quickcheck).
