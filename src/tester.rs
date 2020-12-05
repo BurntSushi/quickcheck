@@ -256,8 +256,8 @@ impl TestResult {
     pub fn must_fail<T, F>(f: F) -> TestResult
     where
         F: FnOnce() -> T,
-        F: Send + 'static,
-        T: Send + 'static,
+        F: 'static,
+        T: 'static,
     {
         let f = panic::AssertUnwindSafe(f);
         TestResult::from_bool(panic::catch_unwind(f).is_err())
@@ -305,7 +305,7 @@ impl TestResult {
 /// and potentially shrink those arguments if they produce a failure.
 ///
 /// It's unlikely that you'll have to implement this trait yourself.
-pub trait Testable: Send + 'static {
+pub trait Testable: 'static {
     fn result<G: Gen>(&self, _: &mut G) -> TestResult;
 }
 
@@ -330,7 +330,7 @@ impl Testable for TestResult {
 impl<A, E> Testable for Result<A, E>
 where
     A: Testable,
-    E: Debug + Send + 'static,
+    E: Debug + 'static,
 {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         match *self {
@@ -409,8 +409,8 @@ testable_fn!(A, B, C, D, E, F, G, H);
 fn safe<T, F>(fun: F) -> Result<T, String>
 where
     F: FnOnce() -> T,
-    F: Send + 'static,
-    T: Send + 'static,
+    F: 'static,
+    T: 'static,
 {
     panic::catch_unwind(panic::AssertUnwindSafe(fun)).map_err(|any_err| {
         // Extract common types of panic payload:

@@ -142,11 +142,7 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<dyn Iterator<Item = A>> {
 ///
 /// As of now, all types that implement `Arbitrary` must also implement
 /// `Clone`. (I'm not sure if this is a permanent restriction.)
-///
-/// They must also be sendable and static since every test is run in its own
-/// thread using `thread::Builder::spawn`, which requires the `Send + 'static`
-/// bounds.
-pub trait Arbitrary: Clone + Send + 'static {
+pub trait Arbitrary: Clone + 'static {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
@@ -401,7 +397,7 @@ impl<K: Arbitrary + Ord, V: Arbitrary> Arbitrary for BTreeMap<K, V> {
 impl<
         K: Arbitrary + Eq + Hash,
         V: Arbitrary,
-        S: BuildHasher + Default + Clone + Send + 'static,
+        S: BuildHasher + Default + Clone + 'static,
     > Arbitrary for HashMap<K, V, S>
 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
@@ -441,10 +437,8 @@ impl<T: Arbitrary + Ord> Arbitrary for BinaryHeap<T> {
     }
 }
 
-impl<
-        T: Arbitrary + Eq + Hash,
-        S: BuildHasher + Default + Clone + Send + 'static,
-    > Arbitrary for HashSet<T, S>
+impl<T: Arbitrary + Eq + Hash, S: BuildHasher + Default + Clone + 'static>
+    Arbitrary for HashSet<T, S>
 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let vec: Vec<T> = Arbitrary::arbitrary(g);
