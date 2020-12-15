@@ -274,7 +274,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary<G: Gen>(g: &mut G) -> Vec<A> {
         let size = {
             let s = g.size();
-            g.gen_range(0, s)
+            g.gen_range(0..s)
         };
         (0..size).map(|_| Arbitrary::arbitrary(g)).collect()
     }
@@ -597,7 +597,7 @@ impl Arbitrary for String {
     fn arbitrary<G: Gen>(g: &mut G) -> String {
         let size = {
             let s = g.size();
-            g.gen_range(0, s)
+            g.gen_range(0..s)
         };
         let mut s = String::with_capacity(size);
         for _ in 0..size {
@@ -615,16 +615,16 @@ impl Arbitrary for String {
 
 impl Arbitrary for char {
     fn arbitrary<G: Gen>(g: &mut G) -> char {
-        let mode = g.gen_range(0, 100);
+        let mode = g.gen_range(0..100);
         match mode {
             0..=49 => {
                 // ASCII + some control characters
-                g.gen_range(0, 0xB0) as u8 as char
+                g.gen_range(0..0xB0) as u8 as char
             }
             50..=59 => {
                 // Unicode BMP characters
                 loop {
-                    if let Some(x) = char::from_u32(g.gen_range(0, 0x10000)) {
+                    if let Some(x) = char::from_u32(g.gen_range(0..0x10000)) {
                         return x;
                     }
                     // ignore surrogate pairs
@@ -702,7 +702,7 @@ impl Arbitrary for char {
             }
             90..=94 => {
                 // Tricky unicode, part 2
-                char::from_u32(g.gen_range(0x2000, 0x2070)).unwrap()
+                char::from_u32(g.gen_range(0x2000..0x2070)).unwrap()
             }
             95..=99 => {
                 // Completely arbitrary characters
@@ -763,7 +763,7 @@ macro_rules! unsigned_arbitrary {
                     #![allow(trivial_numeric_casts)]
                     let s = g.size() as $ty;
                     use std::cmp::{min, max};
-                    g.gen_range(0, max(1, min(s, $ty::max_value())))
+                    g.gen_range(0..max(1, min(s, $ty::max_value())))
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
                     unsigned_shrinker!($ty);
@@ -833,7 +833,7 @@ macro_rules! signed_arbitrary {
                     } else {
                         -(upper as $ty)
                     };
-                    g.gen_range(lower, max(1, upper as $ty))
+                    g.gen_range(lower..max(1, upper as $ty))
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
                     signed_shrinker!($ty);
@@ -855,7 +855,7 @@ signed_arbitrary! {
 impl Arbitrary for f32 {
     fn arbitrary<G: Gen>(g: &mut G) -> f32 {
         let s = g.size();
-        g.gen_range(-(s as f32), s as f32)
+        g.gen_range(-(s as f32)..s as f32)
     }
     fn shrink(&self) -> Box<dyn Iterator<Item = f32>> {
         signed_shrinker!(i32);
@@ -913,7 +913,7 @@ macro_rules! unsigned_non_zero_arbitrary {
                     #![allow(trivial_numeric_casts)]
                     let s = g.size() as $inner;
                     use std::cmp::{min, max};
-                    let non_zero = g.gen_range(1, max(2, min(s, $inner::max_value())));
+                    let non_zero = g.gen_range(1..max(2, min(s, $inner::max_value())));
                     debug_assert!(non_zero != 0);
                     $ty::new(non_zero).expect("non-zero value contsturction failed")
                 }
@@ -941,7 +941,7 @@ unsigned_non_zero_arbitrary! {
 impl Arbitrary for f64 {
     fn arbitrary<G: Gen>(g: &mut G) -> f64 {
         let s = g.size();
-        g.gen_range(-(s as f64), s as f64)
+        g.gen_range(-(s as f64)..s as f64)
     }
     fn shrink(&self) -> Box<dyn Iterator<Item = f64>> {
         signed_shrinker!(i64);
@@ -961,7 +961,7 @@ impl<T: Arbitrary> Arbitrary for Wrapping<T> {
 
 impl<T: Arbitrary> Arbitrary for Bound<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> Bound<T> {
-        match g.gen_range(0, 3) {
+        match g.gen_range(0..3) {
             0 => Bound::Included(T::arbitrary(g)),
             1 => Bound::Excluded(T::arbitrary(g)),
             _ => Bound::Unbounded,
