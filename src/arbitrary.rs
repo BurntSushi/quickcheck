@@ -69,13 +69,12 @@ impl Gen {
         self.rng.gen()
     }
 
-    fn gen_range<T, B1, B2>(&mut self, low: B1, high: B2) -> T
+    fn gen_range<T, R>(&mut self, range: R) -> T
     where
         T: rand::distributions::uniform::SampleUniform,
-        B1: rand::distributions::uniform::SampleBorrow<T> + Sized,
-        B2: rand::distributions::uniform::SampleBorrow<T> + Sized,
+        R: rand::distributions::uniform::SampleRange<T>,
     {
-        self.rng.gen_range(low, high)
+        self.rng.gen_range(range)
     }
 }
 
@@ -253,7 +252,7 @@ impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary(g: &mut Gen) -> Vec<A> {
         let size = {
             let s = g.size();
-            g.gen_range(0, s)
+            g.gen_range(0..s)
         };
         (0..size).map(|_| A::arbitrary(g)).collect()
     }
@@ -576,7 +575,7 @@ impl Arbitrary for String {
     fn arbitrary(g: &mut Gen) -> String {
         let size = {
             let s = g.size();
-            g.gen_range(0, s)
+            g.gen_range(0..s)
         };
         (0..size).map(|_| char::arbitrary(g)).collect()
     }
@@ -592,7 +591,7 @@ impl Arbitrary for CString {
     fn arbitrary(g: &mut Gen) -> Self {
         let size = {
             let s = g.size();
-            g.gen_range(0, s)
+            g.gen_range(0..s)
         };
         // Use either random bytes or random UTF-8 encoded codepoints.
         let utf8: bool = g.gen();
@@ -630,16 +629,16 @@ impl Arbitrary for CString {
 
 impl Arbitrary for char {
     fn arbitrary(g: &mut Gen) -> char {
-        let mode = g.gen_range(0, 100);
+        let mode = g.gen_range(0..100);
         match mode {
             0..=49 => {
                 // ASCII + some control characters
-                g.gen_range(0, 0xB0) as u8 as char
+                g.gen_range(0..0xB0) as u8 as char
             }
             50..=59 => {
                 // Unicode BMP characters
                 loop {
-                    if let Some(x) = char::from_u32(g.gen_range(0, 0x10000)) {
+                    if let Some(x) = char::from_u32(g.gen_range(0..0x10000)) {
                         return x;
                     }
                     // ignore surrogate pairs
@@ -715,7 +714,7 @@ impl Arbitrary for char {
             }
             90..=94 => {
                 // Tricky unicode, part 2
-                char::from_u32(g.gen_range(0x2000, 0x2070)).unwrap()
+                char::from_u32(g.gen_range(0x2000..0x2070)).unwrap()
             }
             95..=99 => {
                 // Completely arbitrary characters
@@ -779,7 +778,7 @@ macro_rules! unsigned_arbitrary {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary(g: &mut Gen) -> $ty {
-                    match g.gen_range(0, 10) {
+                    match g.gen_range(0..10) {
                         0 => {
                             *g.choose(unsigned_problem_values!($ty)).unwrap()
                         },
@@ -849,7 +848,7 @@ macro_rules! signed_arbitrary {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary(g: &mut Gen) -> $ty {
-                    match g.gen_range(0, 10) {
+                    match g.gen_range(0..10) {
                         0 => {
                             *g.choose(signed_problem_values!($ty)).unwrap()
                         },
@@ -881,12 +880,12 @@ macro_rules! float_arbitrary {
     ($($t:ty, $path:path, $shrinkable:ty),+) => {$(
         impl Arbitrary for $t {
             fn arbitrary(g: &mut Gen) -> $t {
-                match g.gen_range(0, 10) {
+                match g.gen_range(0..10) {
                     0 => *g.choose(float_problem_values!($path)).unwrap(),
                     _ => {
                         use $path as p;
-                        let exp = g.gen_range(0., p::MAX_EXP as i16 as $t);
-                        let mantissa = g.gen_range(1., 2.);
+                        let exp = g.gen_range((0.)..p::MAX_EXP as i16 as $t);
+                        let mantissa = g.gen_range((1.)..2.);
                         let sign = *g.choose(&[-1., 1.]).unwrap();
                         sign * mantissa * exp.exp2()
                     }
@@ -987,7 +986,7 @@ impl<T: Arbitrary> Arbitrary for Wrapping<T> {
 
 impl<T: Arbitrary> Arbitrary for Bound<T> {
     fn arbitrary(g: &mut Gen) -> Bound<T> {
-        match g.gen_range(0, 3) {
+        match g.gen_range(0..3) {
             0 => Bound::Included(T::arbitrary(g)),
             1 => Bound::Excluded(T::arbitrary(g)),
             _ => Bound::Unbounded,
@@ -1065,8 +1064,8 @@ impl Arbitrary for RangeFull {
 
 impl Arbitrary for Duration {
     fn arbitrary(gen: &mut Gen) -> Self {
-        let seconds = gen.gen_range(0, gen.size() as u64);
-        let nanoseconds = gen.gen_range(0, 1_000_000);
+        let seconds = gen.gen_range(0..gen.size() as u64);
+        let nanoseconds = gen.gen_range(0..1_000_000);
         Duration::new(seconds, nanoseconds)
     }
 
