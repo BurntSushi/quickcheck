@@ -1,16 +1,14 @@
 // This is a buggy quick sort implementation, QuickCheck will find the bug for
 // you.
 
-extern crate quickcheck;
-
 use quickcheck::quickcheck;
 
 fn smaller_than<T: Clone + Ord>(xs: &[T], pivot: &T) -> Vec<T> {
-    return xs.iter().filter(|&x| *x < *pivot).map(|x| x.clone()).collect();
+    xs.iter().filter(|&x| *x < *pivot).map(|x| x.clone()).collect()
 }
 
 fn larger_than<T: Clone + Ord>(xs: &[T], pivot: &T) -> Vec<T> {
-    return xs.iter().filter(|&x| *x > *pivot).map(|x| x.clone()).collect();
+    xs.iter().filter(|&x| *x > *pivot).map(|x| x.clone()).collect()
 }
 
 fn sortk<T: Clone + Ord>(x: &T, xs: &[T]) -> Vec<T> {
