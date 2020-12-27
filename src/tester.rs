@@ -3,15 +3,17 @@ use std::env;
 use std::fmt::Debug;
 use std::panic;
 
-use crate::tester::Status::{Discard, Fail, Pass};
-use crate::{Arbitrary, Gen, StdThreadGen};
+use crate::{
+    tester::Status::{Discard, Fail, Pass},
+    Arbitrary, Gen,
+};
 
 /// The main QuickCheck type for setting configuration and running QuickCheck.
-pub struct QuickCheck<G> {
+pub struct QuickCheck {
     tests: u64,
     max_tests: u64,
     min_tests_passed: u64,
-    gen: G,
+    gen: Gen,
 }
 
 fn qc_tests() -> u64 {
@@ -46,46 +48,39 @@ fn qc_min_tests_passed() -> u64 {
     }
 }
 
-impl QuickCheck<StdThreadGen> {
+impl QuickCheck {
     /// Creates a new QuickCheck value.
     ///
-    /// This can be used to run QuickCheck on things that implement
-    /// `Testable`. You may also adjust the configuration, such as
-    /// the number of tests to run.
+    /// This can be used to run QuickCheck on things that implement `Testable`.
+    /// You may also adjust the configuration, such as the number of tests to
+    /// run.
     ///
-    /// By default, the maximum number of passed tests is set to `100`,
-    /// the max number of overall tests is set to `10000` and the generator
-    /// is set to a `StdThreadGen` with a default size of `100`.
-    pub fn new() -> QuickCheck<StdThreadGen> {
-        let gen_size = qc_gen_size();
-        QuickCheck::with_gen(StdThreadGen::new(gen_size))
-    }
-}
+    /// By default, the maximum number of passed tests is set to `100`, the max
+    /// number of overall tests is set to `10000` and the generator is created
+    /// with a size of `100`.
+    pub fn new() -> QuickCheck {
+        let gen = Gen::new(qc_gen_size());
+        let tests = qc_tests();
+        let max_tests = cmp::max(tests, qc_max_tests());
+        let min_tests_passed = qc_min_tests_passed();
 
-impl<G: Gen> QuickCheck<G> {
+        QuickCheck { tests, max_tests, min_tests_passed, gen }
+    }
+
+    /// Set the random number generator to be used by QuickCheck.
+    pub fn gen(self, gen: Gen) -> QuickCheck {
+        QuickCheck { gen, ..self }
+    }
+
     /// Set the number of tests to run.
     ///
     /// This actually refers to the maximum number of *passed* tests that
     /// can occur. Namely, if a test causes a failure, future testing on that
     /// property stops. Additionally, if tests are discarded, there may be
     /// fewer than `tests` passed.
-    pub fn tests(mut self, tests: u64) -> QuickCheck<G> {
+    pub fn tests(mut self, tests: u64) -> QuickCheck {
         self.tests = tests;
         self
-    }
-
-    /// Create a new instance of `QuickCheck` using the given generator.
-    pub fn with_gen(generator: G) -> QuickCheck<G> {
-        let tests = qc_tests();
-        let max_tests = cmp::max(tests, qc_max_tests());
-        let min_tests_passed = qc_min_tests_passed();
-
-        QuickCheck {
-            tests: tests,
-            max_tests: max_tests,
-            min_tests_passed: min_tests_passed,
-            gen: generator,
-        }
     }
 
     /// Set the maximum number of tests to run.
@@ -93,24 +88,16 @@ impl<G: Gen> QuickCheck<G> {
     /// The number of invocations of a property will never exceed this number.
     /// This is necessary to cap the number of tests because QuickCheck
     /// properties can discard tests.
-    pub fn max_tests(mut self, max_tests: u64) -> QuickCheck<G> {
+    pub fn max_tests(mut self, max_tests: u64) -> QuickCheck {
         self.max_tests = max_tests;
         self
-    }
-
-    /// Set the random number generator to be used by QuickCheck.
-    pub fn gen<N: Gen>(self, gen: N) -> QuickCheck<N> {
-        // unfortunately this is necessary because using QuickCheck{ ..self, gen }
-        // wouldn't work due to mismatched types.
-        let QuickCheck { tests, max_tests, min_tests_passed, .. } = self;
-        QuickCheck { tests, max_tests, min_tests_passed, gen }
     }
 
     /// Set the minimum number of tests that needs to pass.
     ///
     /// This actually refers to the minimum number of *valid* *passed* tests
     /// that needs to pass for the property to be considered successful.
-    pub fn min_tests_passed(mut self, min_tests_passed: u64) -> QuickCheck<G> {
+    pub fn min_tests_passed(mut self, min_tests_passed: u64) -> QuickCheck {
         self.min_tests_passed = min_tests_passed;
         self
     }
@@ -306,23 +293,23 @@ impl TestResult {
 ///
 /// It's unlikely that you'll have to implement this trait yourself.
 pub trait Testable: 'static {
-    fn result<G: Gen>(&self, _: &mut G) -> TestResult;
+    fn result(&self, _: &mut Gen) -> TestResult;
 }
 
 impl Testable for bool {
-    fn result<G: Gen>(&self, _: &mut G) -> TestResult {
+    fn result(&self, _: &mut Gen) -> TestResult {
         TestResult::from_bool(*self)
     }
 }
 
 impl Testable for () {
-    fn result<G: Gen>(&self, _: &mut G) -> TestResult {
+    fn result(&self, _: &mut Gen) -> TestResult {
         TestResult::passed()
     }
 }
 
 impl Testable for TestResult {
-    fn result<G: Gen>(&self, _: &mut G) -> TestResult {
+    fn result(&self, _: &mut Gen) -> TestResult {
         self.clone()
     }
 }
@@ -332,7 +319,7 @@ where
     A: Testable,
     E: Debug + 'static,
 {
-    fn result<G: Gen>(&self, g: &mut G) -> TestResult {
+    fn result(&self, g: &mut Gen) -> TestResult {
         match *self {
             Ok(ref r) => r.result(g),
             Err(ref err) => TestResult::error(format!("{:?}", err)),
@@ -351,9 +338,9 @@ macro_rules! testable_fn {
 impl<T: Testable,
      $($name: Arbitrary + Debug),*> Testable for fn($($name),*) -> T {
     #[allow(non_snake_case)]
-    fn result<G_: Gen>(&self, g: &mut G_) -> TestResult {
-        fn shrink_failure<T: Testable, G_: Gen, $($name: Arbitrary + Debug),*>(
-            g: &mut G_,
+    fn result(&self, g: &mut Gen) -> TestResult {
+        fn shrink_failure<T: Testable, $($name: Arbitrary + Debug),*>(
+            g: &mut Gen,
             self_: fn($($name),*) -> T,
             a: ($($name,)*),
         ) -> Option<TestResult> {
@@ -431,8 +418,7 @@ impl<A: Arbitrary + Debug> AShow for A {}
 
 #[cfg(test)]
 mod test {
-    use crate::{QuickCheck, StdGen};
-    use rand::{self, rngs::OsRng};
+    use crate::{Gen, QuickCheck};
 
     #[test]
     fn shrinking_regression_issue_126() {
@@ -445,26 +431,11 @@ mod test {
         let expected_argument = format!("{:?}", [true, true]);
         assert_eq!(failing_case.arguments, vec![expected_argument]);
     }
-
     #[test]
     fn size_for_small_types_issue_143() {
         fn t(_: i8) -> bool {
             true
         }
-        QuickCheck::new()
-            .gen(StdGen::new(rand::thread_rng(), 129))
-            .quickcheck(t as fn(i8) -> bool);
-    }
-
-    #[test]
-    fn different_generator() {
-        fn prop(_: i32) -> bool {
-            true
-        }
-        QuickCheck::with_gen(StdGen::new(OsRng, 129))
-            .quickcheck(prop as fn(i32) -> bool);
-        QuickCheck::new()
-            .gen(StdGen::new(OsRng, 129))
-            .quickcheck(prop as fn(i32) -> bool);
+        QuickCheck::new().gen(Gen::new(129)).quickcheck(t as fn(i8) -> bool);
     }
 }

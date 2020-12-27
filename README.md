@@ -195,7 +195,7 @@ trait. Great, so what is this `Testable` business?
 
 ```rust
 pub trait Testable {
-    fn result<G: Gen>(&self, &mut G) -> TestResult;
+    fn result(&self, &mut Gen) -> TestResult;
 }
 ```
 
@@ -207,7 +207,7 @@ Sure enough, `bool` satisfies the `Testable` trait:
 
 ```rust
 impl Testable for bool {
-    fn result<G: Gen>(&self, _: &mut G) -> TestResult {
+    fn result(&self, _: &mut Gen) -> TestResult {
         TestResult::from_bool(*self)
     }
 }
@@ -218,7 +218,7 @@ satisfy `Testable` too!
 
 ```rust
 impl<A: Arbitrary + Debug, B: Testable> Testable for fn(A) -> B {
-    fn result<G: Gen>(&self, g: &mut G) -> TestResult {
+    fn result(&self, g: &mut Gen) -> TestResult {
         // elided
     }
 }
@@ -236,7 +236,7 @@ make sure `TestResult` satisfies `Testable`:
 
 ```rust
 impl Testable for TestResult {
-    fn result<G: Gen>(&self, _: &mut G) -> TestResult { self.clone() }
+    fn result(&self, _: &mut Gen) -> TestResult { self.clone() }
 }
 ```
 
@@ -406,7 +406,7 @@ the trait `Arbitrary` for the struct `Point`:
 use quickcheck::{Arbitrary, Gen};
 
 impl Arbitrary for Point {
-    fn arbitrary<G: Gen>(g: &mut G) -> Point {
+    fn arbitrary(g: &mut Gen) -> Point {
         Point {
             x: i32::arbitrary(g),
             y: i32::arbitrary(g),
