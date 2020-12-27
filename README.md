@@ -56,7 +56,7 @@ mod tests {
 This example uses the `quickcheck!` macro, which is backwards compatible with
 old versions of Rust.
 
-### The `#[quickcheck]` attribute (requires Rust 1.30 or later)
+### The `#[quickcheck]` attribute
 
 To make it easier to write QuickCheck tests, the `#[quickcheck]` attribute
 will convert a property function into a `#[test]` function.
@@ -95,7 +95,7 @@ mod tests {
 
 ```toml
 [dependencies]
-quickcheck = "0.9"
+quickcheck = "1"
 ```
 
 If you're only using `quickcheck` in your test code, then you can add it as a
@@ -103,15 +103,15 @@ development dependency instead:
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.9"
+quickcheck = "1"
 ```
 
 If you want to use the `#[quickcheck]` attribute, then add `quickcheck_macros`
 
 ```toml
 [dev-dependencies]
-quickcheck = "0.9"
-quickcheck_macros = "0.9"
+quickcheck = "1"
+quickcheck_macros = "1"
 ```
 
 N.B. When using `quickcheck` (either directly or via the attributes),
@@ -121,16 +121,10 @@ witnesses for failures.
 
 Crate features:
 
-- `"unstable"`: Enables Arbitrary implementations that require the Rust nightly
-  channel.
 - `"use_logging"`: (Enabled by default.) Enables the log messages governed
   `RUST_LOG`.
 - `"regex"`: (Enabled by default.) Enables the use of regexes with
   `env_logger`.
-
-Prior to quickcheck 0.8, this crate had an `i128` feature for enabling support
-for 128-bit integers. As of quickcheck 0.8 this feature is now provided by
-default and thus no longer available.
 
 
 ### Minimum Rust version policy
@@ -576,11 +570,14 @@ passing.
 
 I think I've captured the key features, but there are still things missing:
 
-* As of now, only functions with 8 or fewer parameters can be quickchecked.
-This limitation can be lifted to some `N`, but requires an implementation
-for each `n` of the `Testable` trait.
+* Only functions with 8 or fewer parameters can be quickchecked. This
+limitation can be lifted to some `N`, but requires an implementation for each
+`n` of the `Testable` trait.
 * Functions that fail because of a stack overflow are not caught by QuickCheck.
 Therefore, such failures will not have a witness attached
 to them. (I'd like to fix this, but I don't know how.)
-* `Coarbitrary` does not exist in any form in this package. I think it's
-possible; I just haven't gotten around to it yet.
+* `Coarbitrary` does not exist in any form in this package. It's unlikely that
+it ever will.
+* `Arbitrary` is not implemented for closures. See
+[issue #56](https://github.com/BurntSushi/quickcheck/issues/56)
+for more details on why.

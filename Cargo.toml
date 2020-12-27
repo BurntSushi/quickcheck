@@ -18,7 +18,6 @@ members = ["quickcheck_macros"]
 
 [features]
 default = ["regex", "use_logging"]
-unstable = []
 use_logging = ["log", "env_logger"]
 regex = ["env_logger/regex"]
 
