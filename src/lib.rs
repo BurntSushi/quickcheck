@@ -1,10 +1,10 @@
-//! This crate is a port of
-//! [Haskell's QuickCheck](https://hackage.haskell.org/package/QuickCheck).
-//!
-//! For detailed examples, please see the
-//! [README](https://github.com/BurntSushi/quickcheck).
+/*!
+This crate is a port of
+[Haskell's QuickCheck](https://hackage.haskell.org/package/QuickCheck).
 
-#![cfg_attr(feature = "i128", feature(i128_type, i128))]
+For detailed examples, please see the
+[README](https://github.com/BurntSushi/quickcheck).
+*/
 
 pub use crate::arbitrary::{empty_shrinker, single_shrinker, Arbitrary, Gen};
 pub use crate::tester::{quickcheck, QuickCheck, TestResult, Testable};
