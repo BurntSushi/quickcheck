@@ -4,6 +4,14 @@ This crate is a port of
 
 For detailed examples, please see the
 [README](https://github.com/BurntSushi/quickcheck).
+
+# Compatibility
+
+In general, this crate considers the `Arbitrary` implementations provided as
+implementation details. Strategies may or may not change over time, which may
+cause new test failures, presumably due to the discovery of new bugs due to a
+new kind of witness being generated. These sorts of changes may happen in
+semver compatible releases.
 */
 
 pub use crate::arbitrary::{empty_shrinker, single_shrinker, Arbitrary, Gen};

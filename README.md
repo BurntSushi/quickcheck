@@ -152,6 +152,15 @@ aggressive than `rand`'s MSRV policy. Otherwise, `quickcheck` will defer to
 `rand`'s MSRV policy.
 
 
+### Compatibility
+
+In general, this crate considers the `Arbitrary` implementations provided as
+implementation details. Strategies may or may not change over time, which may
+cause new test failures, presumably due to the discovery of new bugs due to a
+new kind of witness being generated. These sorts of changes may happen in
+semver compatible releases.
+
+
 ### Alternative Rust crates for property testing
 
 The [`proptest`](https://docs.rs/proptest) crate is inspired by the
