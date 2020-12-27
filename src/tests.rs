@@ -5,9 +5,7 @@ use std::ffi::CString;
 use std::hash::BuildHasherDefault;
 use std::path::PathBuf;
 
-use rand;
-
-use super::{quickcheck, QuickCheck, StdGen, TestResult};
+use super::{quickcheck, Gen, QuickCheck, TestResult};
 
 #[test]
 fn prop_oob() {
@@ -182,9 +180,7 @@ fn regression_issue_83() {
     fn prop(_: u8) -> bool {
         true
     }
-    QuickCheck::new()
-        .gen(StdGen::new(rand::thread_rng(), 1024))
-        .quickcheck(prop as fn(u8) -> bool)
+    QuickCheck::new().gen(Gen::new(1024)).quickcheck(prop as fn(u8) -> bool)
 }
 
 #[test]
@@ -192,9 +188,7 @@ fn regression_issue_83_signed() {
     fn prop(_: i8) -> bool {
         true
     }
-    QuickCheck::new()
-        .gen(StdGen::new(rand::thread_rng(), 1024))
-        .quickcheck(prop as fn(i8) -> bool)
+    QuickCheck::new().gen(Gen::new(1024)).quickcheck(prop as fn(i8) -> bool)
 }
 
 // Test that we can show the message after panic
