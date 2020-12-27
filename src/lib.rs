@@ -11,8 +11,6 @@ extern crate env_logger;
 #[cfg(feature = "use_logging")]
 #[macro_use]
 extern crate log;
-extern crate rand;
-extern crate rand_core;
 
 pub use crate::arbitrary::{empty_shrinker, single_shrinker, Arbitrary, Gen};
 pub use crate::tester::{quickcheck, QuickCheck, TestResult, Testable};
