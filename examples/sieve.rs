@@ -1,5 +1,3 @@
-extern crate quickcheck;
-
 use quickcheck::quickcheck;
 
 fn sieve(n: usize) -> Vec<usize> {

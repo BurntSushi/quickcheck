@@ -1,5 +1,3 @@
-extern crate quickcheck;
-
 use quickcheck::quickcheck;
 
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {

@@ -1,8 +1,7 @@
-extern crate quickcheck;
-
-use quickcheck::{quickcheck, TestResult};
 use std::collections::BTreeSet;
 use std::ops::Bound::{self, *};
+
+use quickcheck::{quickcheck, TestResult};
 
 /// Covers every `std::ops::Range*` plus variants with exclusive start.
 type RangeAny<T> = (Bound<T>, Bound<T>);
@@ -11,6 +10,7 @@ type RangeAny<T> = (Bound<T>, Bound<T>);
 trait RangeBounds<T> {
     fn contains(&self, _: &T) -> bool;
 }
+
 impl<T: PartialOrd> RangeBounds<T> for RangeAny<T> {
     fn contains(&self, item: &T) -> bool {
         (match &self.0 {

@@ -6,12 +6,6 @@
 
 #![cfg_attr(feature = "i128", feature(i128_type, i128))]
 
-#[cfg(feature = "use_logging")]
-extern crate env_logger;
-#[cfg(feature = "use_logging")]
-#[macro_use]
-extern crate log;
-
 pub use crate::arbitrary::{empty_shrinker, single_shrinker, Arbitrary, Gen};
 pub use crate::tester::{quickcheck, QuickCheck, TestResult, Testable};
 
@@ -67,6 +61,12 @@ macro_rules! quickcheck {
 #[cfg(feature = "use_logging")]
 fn env_logger_init() -> Result<(), log::SetLoggerError> {
     env_logger::try_init()
+}
+#[cfg(feature = "use_logging")]
+macro_rules! info {
+    ($($tt:tt)*) => {
+        log::info!($($tt)*)
+    };
 }
 
 #[cfg(not(feature = "use_logging"))]
