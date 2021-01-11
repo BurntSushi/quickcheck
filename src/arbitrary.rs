@@ -813,7 +813,7 @@ macro_rules! signed_shrinker {
                     } else {
                         let shrinker = SignedShrinker { x: x, i: x / 2 };
                         let mut items = vec![0];
-                        if shrinker.i < 0 {
+                        if shrinker.i < 0 && shrinker.x != <$ty>::MIN {
                             items.push(shrinker.x.abs());
                         }
                         Box::new(items.into_iter().chain(shrinker))
