@@ -443,7 +443,7 @@ mod test {
     #[test]
     fn regression_signed_shrinker_panic() {
         fn foo_can_shrink(v: i8) -> bool {
-            let _ = crate::Arbitrary::shrink(&v);
+            let _ = crate::Arbitrary::shrink(&v).take(100).count();
             true
         }
         crate::quickcheck(foo_can_shrink as fn(i8) -> bool);
