@@ -125,8 +125,8 @@ Crate features:
   `RUST_LOG`.
 - `"regex"`: (Enabled by default.) Enables the use of regexes with
   `env_logger`.
-- `"rand_core_0_6"`: (Disabled by default.) Provides an implementation of 
-  `rand_core::RngCore` for `quickcheck::Gen`.
+- `"use_rand_core_0_6"`: (Disabled by default.) Provides an implementation of 
+  `rand_core::RngCore` for `quickcheck::Gen` using version `0.6` of `rand_core`.
 
 
 ### Minimum Rust version policy
