@@ -56,6 +56,8 @@ jobs:
     - run: cargo test --verbose
     - run: cargo build --verbose --manifest-path quickcheck_macros/Cargo.toml
     - run: cargo test --verbose --manifest-path quickcheck_macros/Cargo.toml
+    # Make sure that the crate compiles if all features flags are switched on at the same time.
+    - run: cargo check --all-features --verbose
 
   rustfmt:
     name: rustfmt

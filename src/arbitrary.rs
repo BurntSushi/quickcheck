@@ -24,6 +24,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use rand::seq::SliceRandom;
 use rand::{self, Rng, SeedableRng};
 
+mod rand_rng_impl;
+
 /// Gen represents a PRNG.
 ///
 /// It is the source of randomness from which QuickCheck will generate

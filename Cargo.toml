@@ -20,6 +20,7 @@ members = ["quickcheck_macros"]
 default = ["regex", "use_logging"]
 use_logging = ["log", "env_logger"]
 regex = ["env_logger/regex"]
+use_rand_core_0_6 = ["rand_core_0_6"]
 
 [lib]
 name = "quickcheck"
@@ -28,3 +29,4 @@ name = "quickcheck"
 env_logger = { version = "0.8.2", default-features = false, optional = true }
 log = { version = "0.4", optional = true }
 rand = { version = "0.8", default-features = false, features = ["getrandom", "small_rng"] }
+rand_core_0_6 = { package = "rand_core", version = "0.6", default-features = false, optional = true }

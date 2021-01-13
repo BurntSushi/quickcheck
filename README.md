@@ -125,6 +125,8 @@ Crate features:
   `RUST_LOG`.
 - `"regex"`: (Enabled by default.) Enables the use of regexes with
   `env_logger`.
+- `"rand_core_0_6"`: (Disabled by default.) Provides an implementation of 
+  `rand_core::RngCore` for `quickcheck::Gen`.
 
 
 ### Minimum Rust version policy
@@ -140,10 +142,9 @@ version of Rust.
 In general, this crate will be conservative with respect to the minimum
 supported version of Rust.
 
-With all of that said, currently, `rand` is a public dependency of
-`quickcheck`. Therefore, the MSRV policy above only applies when it is more
-aggressive than `rand`'s MSRV policy. Otherwise, `quickcheck` will defer to
-`rand`'s MSRV policy.
+If you are opting-in to use the `rand_core_X_X` feature flags, the MSRV policy 
+above only applies when it is more aggressive than `rand`'s MSRV policy. 
+Otherwise, `quickcheck` will defer to `rand`'s MSRV policy.
 
 
 ### Compatibility
