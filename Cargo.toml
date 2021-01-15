@@ -1,6 +1,6 @@
 [package]
 name = "quickcheck"
-version = "1.0.2"  #:version
+version = "1.0.3"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "Automatic property based testing with shrinking."
 documentation = "https://docs.rs/quickcheck"
