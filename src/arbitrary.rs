@@ -11,8 +11,10 @@ use std::net::{
 };
 use std::num::Wrapping;
 use std::num::{
-    NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
 };
+#[cfg(not(target_os = "emscripten"))]
+use std::num::NonZeroU128;
 use std::ops::{
     Bound, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo,
     RangeToInclusive,
@@ -1189,21 +1191,16 @@ mod test {
     #[test]
     fn arby_int() {
         arby_int!(true, i8, i16, i32, i64, isize);
-    }
 
-    #[cfg(not(target_os = "emscripten"))]
-    #[test]
-    fn arby_int_128() {
+        #[cfg(not(target_os = "emscripten"))]
         arby_int!(true, i128);
     }
 
     #[test]
     fn arby_uint() {
         arby_int!(false, u8, u16, u32, u64, usize);
-    }
 
-    #[cfg(not(target_os = "emscripten"))]
-    fn arby_uint_128() {
+        #[cfg(not(target_os = "emscripten"))]
         arby_int!(false, u128);
     }
 
