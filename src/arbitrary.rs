@@ -9,12 +9,10 @@ use std::iter::{empty, once};
 use std::net::{
     IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
 };
-use std::num::Wrapping;
-use std::num::{
-    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
-};
 #[cfg(not(target_os = "emscripten"))]
 use std::num::NonZeroU128;
+use std::num::Wrapping;
+use std::num::{NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
 use std::ops::{
     Bound, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo,
     RangeToInclusive,
