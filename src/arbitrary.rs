@@ -1351,7 +1351,6 @@ mod test {
         eq(0usize, vec![]);
     }
 
-    #[cfg(not(target_os = "emscripten"))]
     #[test]
     fn uints8() {
         eq(5u8, vec![0, 3, 4]);
