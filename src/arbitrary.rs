@@ -39,15 +39,33 @@ pub struct Gen {
 }
 
 impl Gen {
-    /// Returns a `Gen` with the given size configuration.
+    pub(crate) const DEFAULT_SIZE: usize = 100;
+
+    /// Returns a `Gen` with a random seed and the given size configuration.
+    pub fn new(size: usize) -> Gen {
+        Gen { rng: rand::rngs::SmallRng::from_entropy(), size: size }
+    }
+
+    /// Returns a `Gen` with the given seed and a default size configuration.
+    ///
+    /// Two `Gen`s created with the same seed will generate the same values. Though the values
+    /// may vary between QuickCheck releases.
+    pub fn from_seed(seed: u64) -> Gen {
+        Gen {
+            rng: rand::rngs::SmallRng::seed_from_u64(seed),
+            size: Self::DEFAULT_SIZE,
+        }
+    }
+
+    /// Sets the size configuration for this generator.
     ///
     /// The `size` parameter controls the size of random values generated.
     /// For example, it specifies the maximum length of a randomly generated
     /// vector, but is and should not be used to control the range of a
     /// randomly generated number. (Unless that number is used to control the
     /// size of a data structure.)
-    pub fn new(size: usize) -> Gen {
-        Gen { rng: rand::rngs::SmallRng::from_entropy(), size: size }
+    pub fn set_size(&mut self, size: usize) {
+        self.size = size;
     }
 
     /// Returns the size configured with this generator.
