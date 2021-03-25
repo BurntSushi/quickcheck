@@ -252,13 +252,29 @@ impl_arb_for_tuples! {
 impl<T: Arbitrary + Sized, const N: usize> Arbitrary for [T; N] {
     #[allow(unused_variables)] // for [T; 0]
     fn arbitrary(g: &mut Gen) -> [T; N] {
+        // The following code was adopted from the corresponding example provided for `MaybeUninit`:
+        // https://doc.rust-lang.org/1.50.0/core/mem/union.MaybeUninit.html#initializing-an-array-element-by-element
+
+        // SAFETY: Create an uninitialized array of `MaybeUninit`. The `assume_init` is
+        // safe because the type we are claiming to have initialized here is a
+        // bunch of `MaybeUninit`s, which do not require initialization.
         let mut maybe_uninit: [MaybeUninit<T>; N] =
             unsafe { MaybeUninit::uninit().assume_init() };
 
+        // SAFETY: Dropping a `MaybeUninit` does nothing. Thus using raw pointer
+        // assignment instead of `ptr::write` does not cause the old
+        // uninitialized value to be dropped. Also if there is a panic during
+        // this loop, we have a memory leak, but there is no memory safety
+        // issue.
         for elem in &mut maybe_uninit[..] {
             *elem = MaybeUninit::new(T::arbitrary(g));
         }
 
+        // SAFETY: Everything is initialized (i.e. safe).
+        // Transmute the array to the initialized type.
+        // (We need to use `transmute_copy` here as `transmute`
+        // has some limitations around generic types:
+        // https://github.com/rust-lang/rust/issues/47966)
         unsafe { std::mem::transmute_copy::<_, [T; N]>(&maybe_uninit) }
     }
 
