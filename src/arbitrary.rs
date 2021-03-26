@@ -76,6 +76,10 @@ impl Gen {
     {
         self.rng.gen_range(range)
     }
+
+    pub fn gen_uniform(&mut self) -> f32 {
+        self.gen()
+    }
 }
 
 /// Creates a shrinker with zero elements.
@@ -1582,5 +1586,15 @@ mod test {
                 PathBuf::from("/home/foo/../bar"),
             ],
         );
+    }
+
+    #[test]
+    fn gen_uniform() {
+        let mut g = Gen::new(10);
+        for _ in 0..100 {
+            let u = g.gen_uniform();
+            assert!(u >= 0.);
+            assert!(u < 1.);
+        }
     }
 }
