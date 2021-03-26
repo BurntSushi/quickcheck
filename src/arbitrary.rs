@@ -77,6 +77,7 @@ impl Gen {
         self.rng.gen_range(range)
     }
 
+    /// Create a random number uniformly distributed on the unit interval [0, 1)
     pub fn gen_uniform(&mut self) -> f32 {
         self.gen()
     }
