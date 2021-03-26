@@ -1365,11 +1365,11 @@ mod test {
                 for n in v {
                     let found = shrunk.iter().any(|&i| i == n);
                     if !found {
-                        panic!(format!(
+                        panic!(
                             "Element {:?} was not found \
                              in shrink results {:?}",
                             n, shrunk
-                        ));
+                        );
                     }
                 }
             }
