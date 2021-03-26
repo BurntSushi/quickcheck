@@ -337,7 +337,7 @@ impl From<bool> for TestResult {
 /// }
 /// ```
 #[derive(Clone, Debug)]
-pub struct Equivalence<T>(T, T)
+pub struct Equivalence<T>(pub T, pub T)
 where
     T: Debug + PartialEq + 'static;
 
