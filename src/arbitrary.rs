@@ -6,6 +6,7 @@ use std::env;
 use std::ffi::{CString, OsString};
 use std::hash::{BuildHasher, Hash};
 use std::iter::{empty, once};
+use std::mem::MaybeUninit;
 use std::net::{
     IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
 };
@@ -246,6 +247,33 @@ impl_arb_for_tuples! {
     (F, 5),
     (G, 6),
     (H, 7),
+}
+
+impl<T: Arbitrary + Sized, const N: usize> Arbitrary for [T; N] {
+    #[allow(unused_variables)] // for [T; 0]
+    fn arbitrary(g: &mut Gen) -> [T; N] {
+        let mut maybe_uninit: [MaybeUninit<T>; N] =
+            unsafe { MaybeUninit::uninit().assume_init() };
+
+        for elem in &mut maybe_uninit[..] {
+            *elem = MaybeUninit::new(T::arbitrary(g));
+        }
+
+        unsafe { std::mem::transmute_copy::<_, [T; N]>(&maybe_uninit) }
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = [T; N]>> {
+        let cloned = self.clone();
+        let iter = (0..N).flat_map(move |index| {
+            let cloned = cloned.clone();
+            cloned[index].shrink().map(move |shr_value| {
+                let mut result = cloned.clone();
+                result[index] = shr_value.clone();
+                result
+            })
+        });
+        Box::new(iter)
+    }
 }
 
 impl<A: Arbitrary> Arbitrary for Vec<A> {
@@ -1408,6 +1436,29 @@ mod test {
             vec![Wrapping(5), Wrapping(0), Wrapping(-3), Wrapping(-4)],
         );
         eq(Wrapping(0i32), vec![]);
+    }
+
+    #[test]
+    fn arrays() {
+        eq([true], vec![[false]]);
+
+        eq([false, false], vec![]);
+        eq([true, false], vec![[false, false]]);
+        eq([true, true], vec![[false, true], [true, false]]);
+
+        eq([false, false, false], vec![]);
+        eq([true, false, false], vec![[false, false, false]]);
+        eq(
+            [true, true, false],
+            vec![[false, true, false], [true, false, false]],
+        );
+
+        eq([false, false, false, false], vec![]);
+        eq([true, false, false, false], vec![[false, false, false, false]]);
+        eq(
+            [true, true, false, false],
+            vec![[false, true, false, false], [true, false, false, false]],
+        );
     }
 
     #[test]
