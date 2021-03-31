@@ -6,6 +6,7 @@ use std::env;
 use std::ffi::{CString, OsString};
 use std::hash::{BuildHasher, Hash};
 use std::iter::{empty, once};
+use std::mem::MaybeUninit;
 use std::net::{
     IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
 };
@@ -246,6 +247,49 @@ impl_arb_for_tuples! {
     (F, 5),
     (G, 6),
     (H, 7),
+}
+
+impl<T: Arbitrary + Sized, const N: usize> Arbitrary for [T; N] {
+    #[allow(unused_variables)] // for [T; 0]
+    fn arbitrary(g: &mut Gen) -> [T; N] {
+        // The following code was adopted from the corresponding example provided for `MaybeUninit`:
+        // https://doc.rust-lang.org/1.50.0/core/mem/union.MaybeUninit.html#initializing-an-array-element-by-element
+
+        // SAFETY: Create an uninitialized array of `MaybeUninit`. The `assume_init` is
+        // safe because the type we are claiming to have initialized here is a
+        // bunch of `MaybeUninit`s, which do not require initialization.
+        let mut maybe_uninit: [MaybeUninit<T>; N] =
+            unsafe { MaybeUninit::uninit().assume_init() };
+
+        // SAFETY: Dropping a `MaybeUninit` does nothing. Thus using raw pointer
+        // assignment instead of `ptr::write` does not cause the old
+        // uninitialized value to be dropped. Also if there is a panic during
+        // this loop, we have a memory leak, but there is no memory safety
+        // issue.
+        for elem in &mut maybe_uninit[..] {
+            *elem = MaybeUninit::new(T::arbitrary(g));
+        }
+
+        // SAFETY: Everything is initialized (i.e. safe).
+        // Transmute the array to the initialized type.
+        // (We need to use `transmute_copy` here as `transmute`
+        // has some limitations around generic types:
+        // https://github.com/rust-lang/rust/issues/47966)
+        unsafe { std::mem::transmute_copy::<_, [T; N]>(&maybe_uninit) }
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = [T; N]>> {
+        let cloned = self.clone();
+        let iter = (0..N).flat_map(move |index| {
+            let cloned = cloned.clone();
+            cloned[index].shrink().map(move |shr_value| {
+                let mut result = cloned.clone();
+                result[index] = shr_value.clone();
+                result
+            })
+        });
+        Box::new(iter)
+    }
 }
 
 impl<A: Arbitrary> Arbitrary for Vec<A> {
@@ -1408,6 +1452,29 @@ mod test {
             vec![Wrapping(5), Wrapping(0), Wrapping(-3), Wrapping(-4)],
         );
         eq(Wrapping(0i32), vec![]);
+    }
+
+    #[test]
+    fn arrays() {
+        eq([true], vec![[false]]);
+
+        eq([false, false], vec![]);
+        eq([true, false], vec![[false, false]]);
+        eq([true, true], vec![[false, true], [true, false]]);
+
+        eq([false, false, false], vec![]);
+        eq([true, false, false], vec![[false, false, false]]);
+        eq(
+            [true, true, false],
+            vec![[false, true, false], [true, false, false]],
+        );
+
+        eq([false, false, false, false], vec![]);
+        eq([true, false, false, false], vec![[false, false, false, false]]);
+        eq(
+            [true, true, false, false],
+            vec![[false, true, false, false], [true, false, false, false]],
+        );
     }
 
     #[test]
