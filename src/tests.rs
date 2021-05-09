@@ -255,6 +255,12 @@ fn all_tests_discarded_min_tests_passed_missing() {
 }
 
 quickcheck! {
+    /// The documentation on `Gen::sub_n` adversizes some easy-to-check property
+    /// regarding the generators' sizes.
+    fn gen_sub_size_sum(original: usize, num: std::num::NonZeroUsize) -> bool {
+        Gen::new(original).sub(num).size() * num.get() <= original
+    }
+
     /// The following is a very simplistic test, which only verifies
     /// that our PathBuf::arbitrary does not panic.  Still, that's
     /// something!  :)
