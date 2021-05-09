@@ -75,6 +75,15 @@ impl Gen {
         slice.choose(&mut self.rng)
     }
 
+    /// Creates a generator suitable for recursion.
+    ///
+    /// The returned generator's size will be the origianl gnerator's size
+    /// divided by n. In addition, the new generator will be seeded from the
+    /// original.
+    pub fn sub(&mut self, num: NonZeroUsize) -> Self {
+        Self::from_size_and_seed(self.size() / num, self.random())
+    }
+
     fn random<T>(&mut self) -> T
     where
         rand::distr::StandardUniform: rand::distr::Distribution<T>,
