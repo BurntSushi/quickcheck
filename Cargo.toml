@@ -1,6 +1,6 @@
 [package]
 name = "quickcheck"
-version = "1.0.3"  #:version
+version = "1.0.3" #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "Automatic property based testing with shrinking."
 documentation = "https://docs.rs/quickcheck"
@@ -28,3 +28,4 @@ name = "quickcheck"
 env_logger = { version = "0.8.2", default-features = false, optional = true }
 log = { version = "0.4", optional = true }
 rand = { version = "0.8", default-features = false, features = ["getrandom", "small_rng"] }
+array-init = "2"

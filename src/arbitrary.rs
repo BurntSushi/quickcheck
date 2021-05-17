@@ -195,6 +195,12 @@ impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
     }
 }
 
+impl<T: Arbitrary, const N: usize> Arbitrary for [T; N] {
+    fn arbitrary(g: &mut Gen) -> Self {
+        array_init::array_init(|_| T::arbitrary(g))
+    }
+}
+
 macro_rules! impl_arb_for_single_tuple {
     ($(($type_param:ident, $tuple_index:tt),)*) => {
         impl<$($type_param),*> Arbitrary for ($($type_param,)*)
