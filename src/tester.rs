@@ -370,12 +370,12 @@ impl<T: Testable,
      $($name: Arbitrary + Debug),*> Testable for fn($($name),*) -> T {
     #[allow(non_snake_case)]
     fn result(&self, g: &mut Gen) -> TestResult {
-        fn shrink_failure<T: Testable, $($name: Arbitrary + Debug),*>(
-            g: &mut Gen,
-            self_: fn($($name),*) -> T,
-            a: ($($name,)*),
-        ) -> Option<TestResult> {
-            let mut r = Default::default();
+        let self_ = *self;
+        let a: ($($name,)*) = Arbitrary::arbitrary(g);
+        let ( $($name,)* ) = a.clone();
+        let mut r = safe(move || {self_($($name),*)}).result(g);
+
+        if r.is_failure() {
             let mut a = a.shrink();
             while let Some(t) = a.next() {
                 let ($($name,)*) = t.clone();
@@ -388,26 +388,16 @@ impl<T: Testable,
 
                     // The shrunk value *does* witness a failure, so remember
                     // it for now
-                    r = Some(r_new);
+                    r = r_new;
 
                     // ... and switch over to that value, i.e. try to shrink
                     // it further.
                     a = t.shrink()
                 }
             }
-            r
         }
 
-        let self_ = *self;
-        let a: ($($name,)*) = Arbitrary::arbitrary(g);
-        let ( $($name,)* ) = a.clone();
-        let r = safe(move || {self_($($name),*)}).result(g);
-        match r.status {
-            Pass|Discard => r,
-            Fail => {
-                shrink_failure(g, self_, a).unwrap_or(r)
-            }
-        }
+        r
     }
 }}}
 
