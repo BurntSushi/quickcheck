@@ -375,7 +375,9 @@ impl<T: Testable,
             self_: fn($($name),*) -> T,
             a: ($($name,)*),
         ) -> Option<TestResult> {
-            for t in a.shrink() {
+            let mut r = Default::default();
+            let mut a = a.shrink();
+            while let Some(t) = a.next() {
                 let ($($name,)*) = t.clone();
                 let mut r_new = safe(move || {self_($($name),*)}).result(g);
                 if r_new.is_failure() {
@@ -384,16 +386,16 @@ impl<T: Testable,
                         r_new.arguments = Some(debug_reprs(&[$($name),*]));
                     }
 
-                    // The shrunk value *does* witness a failure, so keep
-                    // trying to shrink it.
-                    let shrunk = shrink_failure(g, self_, t);
+                    // The shrunk value *does* witness a failure, so remember
+                    // it for now
+                    r = Some(r_new);
 
-                    // If we couldn't witness a failure on any shrunk value,
-                    // then return the failure we already have.
-                    return Some(shrunk.unwrap_or(r_new))
+                    // ... and switch over to that value, i.e. try to shrink
+                    // it further.
+                    a = t.shrink()
                 }
             }
-            None
+            r
         }
 
         let self_ = *self;
