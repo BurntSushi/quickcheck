@@ -14,7 +14,7 @@ new kind of witness being generated. These sorts of changes may happen in
 semver compatible releases.
 */
 
-pub use crate::arbitrary::{empty_shrinker, single_shrinker, Arbitrary, Gen};
+pub use crate::arbitrary::{empty_shrinker, single_shrinker, Arbitrary, NoShrink, Gen};
 pub use crate::tester::{quickcheck, QuickCheck, TestResult, Testable};
 
 /// A macro for writing quickcheck tests.
