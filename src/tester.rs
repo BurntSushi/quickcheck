@@ -353,6 +353,23 @@ where
     pub fn of(left: T, right: T) -> Self {
         Self(left, right)
     }
+
+    /// Create a `TestResult` reflecting this equivalence
+    ///
+    /// If the two values are equal, the returned `TestResult` will indicate
+    /// success, otherwise it will indicate failure and include a message
+    /// reflecting both values.
+    pub fn as_result(&self) -> TestResult {
+        let Self(l, r) = self;
+        if l == r {
+            TestResult::passed()
+        } else {
+            TestResult::error(format!(
+                "Missmatch! Left: '{:?}', Right: '{:?}'",
+                l, r
+            ))
+        }
+    }
 }
 
 /// `Testable` describes types (e.g., a function) whose values can be
@@ -393,14 +410,7 @@ where
     T: Debug + PartialEq + 'static,
 {
     fn result(&self, _: &mut Gen) -> TestResult {
-        if self.0 == self.1 {
-            TestResult::passed()
-        } else {
-            TestResult::error(format!(
-                "Missmatch! Left: '{:?}', Right: '{:?}'",
-                self.0, self.1
-            ))
-        }
+        self.as_result()
     }
 }
 
