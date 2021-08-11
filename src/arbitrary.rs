@@ -824,11 +824,7 @@ macro_rules! signed_shrinker {
             impl Iterator for SignedShrinker {
                 type Item = $ty;
                 fn next(&mut self) -> Option<$ty> {
-                    if self.i == 0 {
-                        None
-                    } else if self.x == <$ty>::MIN
-                        || (self.x - self.i).abs() < self.x.abs()
-                    {
+                    if self.i != 0 {
                         let result = Some(self.x - self.i);
                         self.i = self.i / 2;
                         result
