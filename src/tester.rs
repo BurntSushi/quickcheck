@@ -186,7 +186,7 @@ pub fn quickcheck<A: Testable>(f: A) {
 /// Describes the status of a single instance of a test.
 ///
 /// All testable things must be capable of producing a `TestResult`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TestResult {
     status: Status,
     arguments: Vec<String>,
@@ -194,7 +194,7 @@ pub struct TestResult {
 }
 
 /// Whether a test has passed, failed or been discarded.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 enum Status {
     Pass,
     Fail,
@@ -278,6 +278,21 @@ impl TestResult {
                 err
             ),
         }
+    }
+}
+
+impl From<bool> for TestResult {
+    /// A shorter way of producing a `TestResult` from a `bool`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use quickcheck::TestResult;
+    /// let result: TestResult = (2 > 1).into();
+    /// assert_eq!(result, TestResult::passed());
+    /// ```
+    fn from(b: bool) -> TestResult {
+        TestResult::from_bool(b)
     }
 }
 
