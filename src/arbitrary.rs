@@ -894,7 +894,8 @@ macro_rules! float_arbitrary {
             fn shrink(&self) -> Box<dyn Iterator<Item = $t>> {
                 signed_shrinker!($shrinkable);
                 let it = shrinker::SignedShrinker::new(*self as $shrinkable);
-                Box::new(it.map(|x| x as $t))
+                let old = *self;
+                Box::new(it.map(|x| x as $t).filter(move |x| *x != old))
             }
         }
     )*};
