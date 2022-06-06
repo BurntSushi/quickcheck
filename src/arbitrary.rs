@@ -1431,6 +1431,45 @@ mod test {
     }
 
     #[test]
+    fn arrays() {
+        eq([false, false], vec![]);
+        eq([true, false], vec![[false, false]]);
+        eq([true, true], vec![[false, true], [true, false]]);
+
+        eq([false, false, false], vec![]);
+        eq([true, false, false], vec![[false, false, false]]);
+        eq(
+            [true, true, false],
+            vec![[false, true, false], [true, false, false]],
+        );
+
+        eq([false, false, false, false], vec![]);
+        eq([true, false, false, false], vec![[false, false, false, false]]);
+        eq(
+            [true, true, false, false],
+            vec![[false, true, false, false], [true, false, false, false]],
+        );
+
+        eq(
+            {
+                let it: [isize; 0] = [];
+                it
+            },
+            vec![],
+        );
+        eq(
+            {
+                let it: [[isize; 0]; 1] = [[]];
+                it
+            },
+            vec![],
+        );
+        eq([1isize; 1], vec![[0; 1]]);
+        eq([11isize; 1], vec![[0; 1], [6; 1], [9; 1], [10; 1]]);
+        eq([3isize, 5], vec![[0, 5], [2, 5], [3, 0], [3, 3], [3, 4]]);
+    }
+
+    #[test]
     fn vecs() {
         eq(
             {
