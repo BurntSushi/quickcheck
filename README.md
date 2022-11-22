@@ -15,7 +15,7 @@ the input space quickly. (It should be the same strategy used in
 Haskell](https://hackage.haskell.org/package/QuickCheck).)
 
 [![Build status](https://github.com/BurntSushi/quickcheck/workflows/ci/badge.svg)](https://github.com/BurntSushi/quickcheck/actions)
-[![](https://meritbadge.herokuapp.com/quickcheck)](https://crates.io/crates/quickcheck)
+[![crates.io](https://img.shields.io/crates/v/quickcheck.svg)](https://crates.io/crates/quickcheck)
 
 Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
 
