@@ -248,6 +248,26 @@ impl_arb_for_tuples! {
     (H, 7),
 }
 
+impl<const N: usize, A: Arbitrary> Arbitrary for [A; N] {
+    fn arbitrary(g: &mut Gen) -> [A; N] {
+        [(); N].map(|_| A::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = [A; N]>> {
+        let cloned = self.clone();
+        let iter = (0..N).flat_map(move |n| {
+            let cloned = cloned.clone();
+            cloned[n].shrink().map(move |shr_value| {
+                let mut result = cloned.clone();
+                result[n] = shr_value;
+                result
+            })
+        });
+
+        Box::new(iter)
+    }
+}
+
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary(g: &mut Gen) -> Vec<A> {
         let size = {
@@ -1408,6 +1428,45 @@ mod test {
             vec![Wrapping(5), Wrapping(0), Wrapping(-3), Wrapping(-4)],
         );
         eq(Wrapping(0i32), vec![]);
+    }
+
+    #[test]
+    fn arrays() {
+        eq([false, false], vec![]);
+        eq([true, false], vec![[false, false]]);
+        eq([true, true], vec![[false, true], [true, false]]);
+
+        eq([false, false, false], vec![]);
+        eq([true, false, false], vec![[false, false, false]]);
+        eq(
+            [true, true, false],
+            vec![[false, true, false], [true, false, false]],
+        );
+
+        eq([false, false, false, false], vec![]);
+        eq([true, false, false, false], vec![[false, false, false, false]]);
+        eq(
+            [true, true, false, false],
+            vec![[false, true, false, false], [true, false, false, false]],
+        );
+
+        eq(
+            {
+                let it: [isize; 0] = [];
+                it
+            },
+            vec![],
+        );
+        eq(
+            {
+                let it: [[isize; 0]; 1] = [[]];
+                it
+            },
+            vec![],
+        );
+        eq([1isize; 1], vec![[0; 1]]);
+        eq([11isize; 1], vec![[0; 1], [6; 1], [9; 1], [10; 1]]);
+        eq([3isize, 5], vec![[0, 5], [2, 5], [3, 0], [3, 3], [3, 4]]);
     }
 
     #[test]
