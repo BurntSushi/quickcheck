@@ -47,7 +47,7 @@ impl Gen {
     /// randomly generated number. (Unless that number is used to control the
     /// size of a data structure.)
     pub fn new(size: usize) -> Gen {
-        Gen { rng: rand::rngs::SmallRng::from_entropy(), size: size }
+        Gen { rng: rand::rngs::SmallRng::from_entropy(), size }
     }
 
     /// Returns the size configured with this generator.
@@ -282,8 +282,8 @@ impl<A: Arbitrary> VecShrinker<A> {
         };
         let size = seed.len();
         Box::new(VecShrinker {
-            seed: seed,
-            size: size,
+            seed,
+            size,
             offset: size,
             element_shrinker: es,
         })
@@ -513,11 +513,12 @@ impl Arbitrary for PathBuf {
     fn arbitrary(g: &mut Gen) -> PathBuf {
         // use some real directories as guesses, so we may end up with
         // actual working directories in case that is relevant.
-        let here =
-            env::current_dir().unwrap_or(PathBuf::from("/test/directory"));
+        let here = env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("/test/directory"));
         let temp = env::temp_dir();
         #[allow(deprecated)]
-        let home = env::home_dir().unwrap_or(PathBuf::from("/home/user"));
+        let home =
+            env::home_dir().unwrap_or_else(|| PathBuf::from("/home/user"));
         let mut p = g
             .choose(&[
                 here,
@@ -567,7 +568,7 @@ impl Arbitrary for OsString {
 
     fn shrink(&self) -> Box<dyn Iterator<Item = OsString>> {
         let mystring: String = self.clone().into_string().unwrap();
-        Box::new(mystring.shrink().map(|s| OsString::from(s)))
+        Box::new(mystring.shrink().map(OsString::from))
     }
 }
 
@@ -745,7 +746,7 @@ macro_rules! unsigned_shrinker {
                         Box::new(
                             vec![0]
                                 .into_iter()
-                                .chain(UnsignedShrinker { x: x, i: x / 2 }),
+                                .chain(UnsignedShrinker { x, i: x / 2 }),
                         )
                     }
                 }
@@ -756,7 +757,7 @@ macro_rules! unsigned_shrinker {
                 fn next(&mut self) -> Option<$ty> {
                     if self.x - self.i < self.x {
                         let result = Some(self.x - self.i);
-                        self.i = self.i / 2;
+                        self.i /= 2;
                         result
                     } else {
                         None
@@ -811,7 +812,7 @@ macro_rules! signed_shrinker {
                     if x == 0 {
                         super::empty_shrinker()
                     } else {
-                        let shrinker = SignedShrinker { x: x, i: x / 2 };
+                        let shrinker = SignedShrinker { x, i: x / 2 };
                         let mut items = vec![0];
                         if shrinker.i < 0 && shrinker.x != <$ty>::MIN {
                             items.push(shrinker.x.abs());
@@ -828,7 +829,7 @@ macro_rules! signed_shrinker {
                         || (self.x - self.i).abs() < self.x.abs()
                     {
                         let result = Some(self.x - self.i);
-                        self.i = self.i / 2;
+                        self.i /= 2;
                         result
                     } else {
                         None
@@ -921,7 +922,7 @@ macro_rules! unsigned_non_zero_shrinker {
                     } else {
                         Box::new(
                             std::iter::once(1).chain(
-                                UnsignedNonZeroShrinker { x: x, i: x / 2 },
+                                UnsignedNonZeroShrinker { x, i: x / 2 },
                             ),
                         )
                     }
@@ -934,7 +935,7 @@ macro_rules! unsigned_non_zero_shrinker {
                 fn next(&mut self) -> Option<$ty> {
                     if self.x - self.i < self.x {
                         let result = Some(self.x - self.i);
-                        self.i = self.i / 2;
+                        self.i /= 2;
                         result
                     } else {
                         None
@@ -982,7 +983,7 @@ impl<T: Arbitrary> Arbitrary for Wrapping<T> {
         Wrapping(T::arbitrary(g))
     }
     fn shrink(&self) -> Box<dyn Iterator<Item = Wrapping<T>>> {
-        Box::new(self.0.shrink().map(|inner| Wrapping(inner)))
+        Box::new(self.0.shrink().map(Wrapping))
     }
 }
 
@@ -1365,11 +1366,11 @@ mod test {
                 for n in v {
                     let found = shrunk.iter().any(|&i| i == n);
                     if !found {
-                        panic!(format!(
+                        panic!(
                             "Element {:?} was not found \
                              in shrink results {:?}",
                             n, shrunk
-                        ));
+                        );
                     }
                 }
             }
