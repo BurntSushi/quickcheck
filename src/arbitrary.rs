@@ -1124,6 +1124,49 @@ impl Arbitrary for SystemTime {
     }
 }
 
+/// Wrapper for disabling shrinking for an Arbitrary
+///
+/// This type allows generating values via a given `Arbitrary` implementation
+/// for a test for which we don't want to shrink input values.
+///
+/// # Example
+///
+/// ```rust
+/// use quickcheck::{QuickCheck, NoShrink};
+///
+/// fn prop_sane_shrinker() {
+///     // Yielding the original value will result in endless recursion
+///     fn shrinker_no_self(value: NoShrink<u16>) -> bool {
+///         use quickcheck::Arbitrary;
+///         !value.as_ref().shrink().any(|v| v == *value.as_ref())
+///     }
+///     QuickCheck::new().quickcheck(shrinker_no_self as fn(NoShrink<u16>) -> bool);
+/// }
+/// ```
+#[derive(Clone, Debug)]
+pub struct NoShrink<A: Arbitrary>{
+    inner: A,
+}
+
+impl<A: Arbitrary> NoShrink<A> {
+    /// Unwrap the inner value
+    pub fn into_inner(self) -> A {
+        self.inner
+    }
+}
+
+impl<A: Arbitrary> Arbitrary for NoShrink<A> {
+    fn arbitrary(gen: &mut Gen) -> Self {
+        Self{inner: Arbitrary::arbitrary(gen)}
+    }
+}
+
+impl<A: Arbitrary> AsRef<A> for NoShrink<A> {
+    fn as_ref(&self) -> &A {
+        &self.inner
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::collections::{
