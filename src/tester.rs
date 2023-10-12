@@ -33,7 +33,7 @@ fn qc_max_tests() -> u64 {
 }
 
 fn qc_gen_size() -> usize {
-    let default = 100;
+    let default = Gen::DEFAULT_SIZE;
     match env::var("QUICKCHECK_GENERATOR_SIZE") {
         Ok(val) => val.parse().unwrap_or(default),
         Err(_) => default,
