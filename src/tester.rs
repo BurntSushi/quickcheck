@@ -189,7 +189,7 @@ pub fn quickcheck<A: Testable>(f: A) {
 #[derive(Clone, Debug)]
 pub struct TestResult {
     status: Status,
-    arguments: Vec<String>,
+    arguments: Option<Vec<String>>,
     err: Option<String>,
 }
 
@@ -224,7 +224,7 @@ impl TestResult {
     /// When a test is discarded, `quickcheck` will replace it with a
     /// fresh one (up to a certain limit).
     pub fn discard() -> TestResult {
-        TestResult { status: Discard, arguments: vec![], err: None }
+        TestResult { status: Discard, arguments: None, err: None }
     }
 
     /// Converts a `bool` to a `TestResult`. A `true` value indicates that
@@ -233,7 +233,7 @@ impl TestResult {
     pub fn from_bool(b: bool) -> TestResult {
         TestResult {
             status: if b { Pass } else { Fail },
-            arguments: vec![],
+            arguments: None,
             err: None,
         }
     }
@@ -266,16 +266,15 @@ impl TestResult {
     }
 
     fn failed_msg(&self) -> String {
+        let arguments_msg = match self.arguments {
+            None => format!("No Arguments Provided"),
+            Some(ref args) => format!("Arguments: ({})", args.join(", ")),
+        };
         match self.err {
-            None => format!(
-                "[quickcheck] TEST FAILED. Arguments: ({})",
-                self.arguments.join(", ")
-            ),
+            None => format!("[quickcheck] TEST FAILED. {}", arguments_msg),
             Some(ref err) => format!(
-                "[quickcheck] TEST FAILED (runtime error). \
-                 Arguments: ({})\nError: {}",
-                self.arguments.join(", "),
-                err
+                "[quickcheck] TEST FAILED (runtime error). {}\nError: {}",
+                arguments_msg, err
             ),
         }
     }
@@ -350,7 +349,7 @@ impl<T: Testable,
                 if r_new.is_failure() {
                     {
                         let ($(ref $name,)*) : ($($name,)*) = t;
-                        r_new.arguments = debug_reprs(&[$($name),*]);
+                        r_new.arguments = Some(debug_reprs(&[$($name),*]));
                     }
 
                     // The shrunk value *does* witness a failure, so keep
@@ -368,12 +367,7 @@ impl<T: Testable,
         let self_ = *self;
         let a: ($($name,)*) = Arbitrary::arbitrary(g);
         let ( $($name,)* ) = a.clone();
-        let mut r = safe(move || {self_($($name),*)}).result(g);
-
-        {
-            let ( $(ref $name,)* ) = a;
-            r.arguments = debug_reprs(&[$($name),*]);
-        }
+        let r = safe(move || {self_($($name),*)}).result(g);
         match r.status {
             Pass|Discard => r,
             Fail => {
@@ -429,7 +423,7 @@ mod test {
             .quicktest(thetest as fn(vals: Vec<bool>) -> bool)
             .unwrap_err();
         let expected_argument = format!("{:?}", [true, true]);
-        assert_eq!(failing_case.arguments, vec![expected_argument]);
+        assert_eq!(failing_case.arguments, Some(vec![expected_argument]));
     }
 
     #[test]
