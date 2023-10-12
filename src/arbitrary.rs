@@ -9,10 +9,10 @@ use std::iter::{empty, once};
 use std::net::{
     IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
 };
+#[cfg(not(target_os = "emscripten"))]
+use std::num::NonZeroU128;
 use std::num::Wrapping;
-use std::num::{
-    NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
-};
+use std::num::{NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
 use std::ops::{
     Bound, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo,
     RangeToInclusive,
@@ -795,7 +795,12 @@ macro_rules! unsigned_arbitrary {
 }
 
 unsigned_arbitrary! {
-    usize, u8, u16, u32, u64, u128
+    usize, u8, u16, u32, u64
+}
+
+#[cfg(not(target_os = "emscripten"))]
+unsigned_arbitrary! {
+    u128
 }
 
 macro_rules! signed_shrinker {
@@ -867,7 +872,12 @@ macro_rules! signed_arbitrary {
 }
 
 signed_arbitrary! {
-    isize, i8, i16, i32, i64, i128
+    isize, i8, i16, i32, i64
+}
+
+#[cfg(not(target_os = "emscripten"))]
+signed_arbitrary! {
+     i128
 }
 
 macro_rules! float_problem_values {
@@ -973,7 +983,11 @@ unsigned_non_zero_arbitrary! {
     NonZeroU8    => u8,
     NonZeroU16   => u16,
     NonZeroU32   => u32,
-    NonZeroU64   => u64,
+    NonZeroU64   => u64
+}
+
+#[cfg(not(target_os = "emscripten"))]
+unsigned_non_zero_arbitrary! {
     NonZeroU128  => u128
 }
 
@@ -1174,12 +1188,18 @@ mod test {
 
     #[test]
     fn arby_int() {
-        arby_int!(true, i8, i16, i32, i64, isize, i128);
+        arby_int!(true, i8, i16, i32, i64, isize);
+
+        #[cfg(not(target_os = "emscripten"))]
+        arby_int!(true, i128);
     }
 
     #[test]
     fn arby_uint() {
-        arby_int!(false, u8, u16, u32, u64, usize, u128);
+        arby_int!(false, u8, u16, u32, u64, usize);
+
+        #[cfg(not(target_os = "emscripten"))]
+        arby_int!(false, u128);
     }
 
     macro_rules! arby_float {
@@ -1315,6 +1335,7 @@ mod test {
         eq(0i64, vec![]);
     }
 
+    #[cfg(not(target_os = "emscripten"))]
     #[test]
     fn ints128() {
         eq(5i128, vec![0, 3, 4]);
@@ -1352,6 +1373,7 @@ mod test {
         eq(0u64, vec![]);
     }
 
+    #[cfg(not(target_os = "emscripten"))]
     #[test]
     fn uints128() {
         eq(5u128, vec![0, 3, 4]);
