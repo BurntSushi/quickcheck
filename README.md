@@ -36,7 +36,7 @@ Here's an example that tests a function that reverses a vector:
 extern crate quickcheck;
 
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
-    let mut rev = vec!();
+    let mut rev = vec![];
     for x in xs.iter() {
         rev.insert(0, x.clone())
     }
@@ -45,11 +45,12 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
 
 #[cfg(test)]
 mod tests {
-  quickcheck! {
-      fn prop(xs: Vec<u32>) -> bool {
-          xs == reverse(&reverse(&xs))
-      }
-  }
+    use crate::reverse;
+    quickcheck! {
+        fn prop(xs: Vec<u32>) -> bool {
+            xs == reverse(&reverse(&xs))
+        }
+    }
 }
 ```
 
