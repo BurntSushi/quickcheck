@@ -5,7 +5,7 @@ use std::collections::{
 use std::env;
 use std::ffi::{CString, OsString};
 use std::hash::{BuildHasher, Hash};
-use std::iter::{empty, once};
+use std::iter::{empty, once, successors};
 use std::net::{
     IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
 };
@@ -1104,11 +1104,16 @@ impl Arbitrary for SystemTime {
     fn arbitrary(gen: &mut Gen) -> Self {
         let after_epoch = bool::arbitrary(gen);
         let duration = Duration::arbitrary(gen);
-        if after_epoch {
-            UNIX_EPOCH + duration
-        } else {
-            UNIX_EPOCH - duration
-        }
+        successors(Some(duration), |d| Some(*d / 2))
+            .take_while(|d| !d.is_zero())
+            .find_map(|d| {
+                if after_epoch {
+                    UNIX_EPOCH.checked_add(d)
+                } else {
+                    UNIX_EPOCH.checked_sub(d)
+                }
+            })
+            .unwrap_or(UNIX_EPOCH)
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
