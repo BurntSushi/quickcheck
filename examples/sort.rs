@@ -29,7 +29,7 @@ fn sort<T: Clone + Ord>(list: &[T]) -> Vec<T> {
 
 fn main() {
     fn is_sorted(xs: Vec<isize>) -> bool {
-        for win in xs.windows(2) {
+        for win in sort(&xs).windows(2) {
             if win[0] > win[1] {
                 return false;
             }
