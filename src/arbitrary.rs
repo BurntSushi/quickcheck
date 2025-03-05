@@ -248,6 +248,12 @@ impl_arb_for_tuples! {
     (H, 7),
 }
 
+impl<const N: usize, A: Arbitrary> Arbitrary for [A; N] {
+    fn arbitrary(g: &mut Gen) -> Self {
+        std::array::from_fn(|_ix| A::arbitrary(g))
+    }
+}
+
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary(g: &mut Gen) -> Vec<A> {
         let size = {
