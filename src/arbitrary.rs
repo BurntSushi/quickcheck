@@ -62,6 +62,16 @@ impl Gen {
         slice.choose(&mut self.rng)
     }
 
+    /// Fill a mutable slice of any Arbitrary-compatible type with Arbitrary
+    /// values.
+    pub fn fill_slice<S, T>(&mut self, mut slice: S)
+    where
+        T: Arbitrary,
+        S: AsMut<[T]>,
+    {
+        slice.as_mut().fill_with(|| T::arbitrary(self))
+    }
+
     fn gen<T>(&mut self) -> T
     where
         rand::distributions::Standard: rand::distributions::Distribution<T>,
