@@ -1,8 +1,3 @@
-extern crate proc_macro;
-extern crate proc_macro2;
-extern crate quote;
-extern crate syn;
-
 use std::mem;
 
 use proc_macro::TokenStream;

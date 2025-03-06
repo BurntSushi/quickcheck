@@ -9,6 +9,7 @@ repository = "https://github.com/BurntSushi/quickcheck"
 readme = "../README.md"
 keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
 license = "Unlicense OR MIT"
+edition = "2021"
 autotests = false
 
 [lib]
