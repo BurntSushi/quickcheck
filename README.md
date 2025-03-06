@@ -17,7 +17,7 @@ Haskell](https://hackage.haskell.org/package/QuickCheck).)
 [![Build status](https://github.com/BurntSushi/quickcheck/workflows/ci/badge.svg)](https://github.com/BurntSushi/quickcheck/actions)
 [![crates.io](https://img.shields.io/crates/v/quickcheck.svg)](https://crates.io/crates/quickcheck)
 
-Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
+Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org/).
 
 ## Documentation
 
@@ -146,11 +146,11 @@ semver compatible releases.
 ## Alternative Rust crates for property testing
 
 The [`proptest`](https://docs.rs/proptest) crate is inspired by the
-[Hypothesis](https://hypothesis.works) framework for Python.
+[Hypothesis](https://hypothesis.works/) framework for Python.
 You can read a comparison between `proptest` and `quickcheck`
-[here](https://github.com/AltSysrq/proptest/blob/master/proptest/README.md#differences-between-quickcheck-and-proptest)
+[here](https://github.com/proptest-rs/proptest/blob/main/proptest/README.md#differences-between-quickcheck-and-proptest)
 and
-[here](https://github.com/AltSysrq/proptest/issues/15#issuecomment-348382287).
+[here](https://github.com/proptest-rs/proptest/issues/15#issuecomment-348382287).
 In particular, `proptest` improves on the concept of shrinking. So if you've
 ever had problems/frustration with shrinking in `quickcheck`, then `proptest`
 might be worth a try!
