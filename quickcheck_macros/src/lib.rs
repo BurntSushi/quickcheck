@@ -28,6 +28,13 @@ pub fn quickcheck(_args: TokenStream, input: TokenStream) -> TokenStream {
             if errors.is_empty() {
                 let attrs = mem::take(&mut item_fn.attrs);
                 let name = &item_fn.sig.ident;
+                if let Some(variadic) = &item_fn.sig.variadic {
+                    // variadics are just for `extern fn`
+                    errors.push(syn::parse::Error::new(
+                        variadic.span(),
+                        "unsupported variadic",
+                    ));
+                }
                 let fn_type = syn::TypeBareFn {
                     lifetimes: None,
                     unsafety: item_fn.sig.unsafety,
@@ -35,7 +42,7 @@ pub fn quickcheck(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fn_token: <syn::Token![fn]>::default(),
                     paren_token: syn::token::Paren::default(),
                     inputs,
-                    variadic: item_fn.sig.variadic.clone(),
+                    variadic: None,
                     output: item_fn.sig.output.clone(),
                 };
 
