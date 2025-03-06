@@ -48,6 +48,12 @@ fn qc_min_tests_passed() -> u64 {
     }
 }
 
+impl Default for QuickCheck {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl QuickCheck {
     /// Creates a new QuickCheck value.
     ///
@@ -166,12 +172,12 @@ impl QuickCheck {
         };
 
         if n_tests_passed >= self.min_tests_passed {
-            info!("(Passed {} QuickCheck tests.)", n_tests_passed)
+            info!("(Passed {} QuickCheck tests.)", n_tests_passed);
         } else {
             panic!(
                 "(Unable to generate enough tests, {} not discarded.)",
                 n_tests_passed
-            )
+            );
         }
     }
 }
@@ -267,14 +273,13 @@ impl TestResult {
 
     fn failed_msg(&self) -> String {
         let arguments_msg = match self.arguments {
-            None => format!("No Arguments Provided"),
+            None => "No Arguments Provided".to_owned(),
             Some(ref args) => format!("Arguments: ({})", args.join(", ")),
         };
         match self.err {
-            None => format!("[quickcheck] TEST FAILED. {}", arguments_msg),
+            None => format!("[quickcheck] TEST FAILED. {arguments_msg}"),
             Some(ref err) => format!(
-                "[quickcheck] TEST FAILED (runtime error). {}\nError: {}",
-                arguments_msg, err
+                "[quickcheck] TEST FAILED (runtime error). {arguments_msg}\nError: {err}"
             ),
         }
     }
@@ -336,14 +341,14 @@ where
     fn result(&self, g: &mut Gen) -> TestResult {
         match *self {
             Ok(ref r) => r.result(g),
-            Err(ref err) => TestResult::error(format!("{:?}", err)),
+            Err(ref err) => TestResult::error(format!("{err:?}")),
         }
     }
 }
 
 /// Return a vector of the debug formatting of each item in `args`
 fn debug_reprs(args: &[&dyn Debug]) -> Vec<String> {
-    args.iter().map(|x| format!("{:?}", x)).collect()
+    args.iter().map(|x| format!("{x:?}")).collect()
 }
 
 macro_rules! testable_fn {
@@ -420,10 +425,6 @@ where
         }
     })
 }
-
-/// Convenient aliases.
-trait AShow: Arbitrary + Debug {}
-impl<A: Arbitrary + Debug> AShow for A {}
 
 #[cfg(test)]
 mod test {

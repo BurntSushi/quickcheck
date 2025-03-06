@@ -31,7 +31,7 @@ fn main() {
     }
 
     fn prop_prime_iff_in_the_sieve(n: usize) -> bool {
-        sieve(n) == (0..(n + 1)).filter(|&i| is_prime(i)).collect::<Vec<_>>()
+        sieve(n) == (0..=n).filter(|&i| is_prime(i)).collect::<Vec<_>>()
     }
 
     quickcheck(prop_all_prime as fn(usize) -> bool);

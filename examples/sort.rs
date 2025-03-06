@@ -4,18 +4,18 @@
 use quickcheck::quickcheck;
 
 fn smaller_than<T: Clone + Ord>(xs: &[T], pivot: &T) -> Vec<T> {
-    xs.iter().filter(|&x| *x < *pivot).map(|x| x.clone()).collect()
+    xs.iter().filter(|&x| *x < *pivot).cloned().collect()
 }
 
 fn larger_than<T: Clone + Ord>(xs: &[T], pivot: &T) -> Vec<T> {
-    xs.iter().filter(|&x| *x > *pivot).map(|x| x.clone()).collect()
+    xs.iter().filter(|&x| *x > *pivot).cloned().collect()
 }
 
 fn sortk<T: Clone + Ord>(x: &T, xs: &[T]) -> Vec<T> {
-    let mut result: Vec<T> = sort(&*smaller_than(xs, x));
-    let last_part = sort(&*larger_than(xs, x));
+    let mut result: Vec<T> = sort(&smaller_than(xs, x));
+    let last_part = sort(&larger_than(xs, x));
     result.push(x.clone());
-    result.extend(last_part.iter().map(|x| x.clone()));
+    result.extend(last_part.iter().cloned());
     result
 }
 
@@ -38,9 +38,9 @@ fn main() {
     }
 
     fn keeps_length(xs: Vec<isize>) -> bool {
-        xs.len() == sort(&*xs).len()
+        xs.len() == sort(&xs).len()
     }
     quickcheck(keeps_length as fn(Vec<isize>) -> bool);
 
-    quickcheck(is_sorted as fn(Vec<isize>) -> bool)
+    quickcheck(is_sorted as fn(Vec<isize>) -> bool);
 }

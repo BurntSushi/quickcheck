@@ -131,9 +131,7 @@ pub trait Arbitrary: Clone + 'static {
 }
 
 impl Arbitrary for () {
-    fn arbitrary(_: &mut Gen) -> () {
-        ()
-    }
+    fn arbitrary(_: &mut Gen) {}
 }
 
 impl Arbitrary for bool {
@@ -281,8 +279,9 @@ struct VecShrinker<A> {
 }
 
 impl<A: Arbitrary> VecShrinker<A> {
+    #[allow(clippy::new_ret_no_self)]
     fn new(seed: Vec<A>) -> Box<dyn Iterator<Item = Vec<A>>> {
-        let es = match seed.get(0) {
+        let es = match seed.first() {
             Some(e) => e.shrink(),
             None => return empty_shrinker(),
         };
@@ -350,7 +349,7 @@ where
             // offset (self.offset == 0 only on first entry to this part of the
             // iterator)
             if self.offset == 0 {
-                self.offset = 1
+                self.offset = 1;
             }
 
             match self.next_element() {
@@ -358,7 +357,7 @@ where
                     self.seed[..self.offset - 1]
                         .iter()
                         .cloned()
-                        .chain(Some(e).into_iter())
+                        .chain(Some(e))
                         .chain(self.seed[self.offset..].iter().cloned())
                         .collect(),
                 ),
@@ -640,7 +639,7 @@ impl Arbitrary for char {
         match mode {
             0..=49 => {
                 // ASCII + some control characters
-                g.gen_range(0..0xB0) as u8 as char
+                g.gen_range(0u8..0xB0) as char
             }
             50..=59 => {
                 // Unicode BMP characters
@@ -745,6 +744,7 @@ macro_rules! unsigned_shrinker {
             }
 
             impl UnsignedShrinker {
+                #[allow(clippy::new_ret_no_self)]
                 pub fn new(x: $ty) -> Box<dyn Iterator<Item = $ty>> {
                     if x == 0 {
                         super::empty_shrinker()
@@ -776,7 +776,7 @@ macro_rules! unsigned_shrinker {
 
 macro_rules! unsigned_problem_values {
     ($t:ty) => {
-        &[<$t>::min_value(), 1, <$t>::max_value()]
+        &[<$t>::MIN, 1, <$t>::MAX]
     };
 }
 
@@ -814,6 +814,7 @@ macro_rules! signed_shrinker {
             }
 
             impl SignedShrinker {
+                #[allow(clippy::new_ret_no_self)]
                 pub fn new(x: $ty) -> Box<dyn Iterator<Item = $ty>> {
                     if x == 0 {
                         super::empty_shrinker()
@@ -848,7 +849,7 @@ macro_rules! signed_shrinker {
 
 macro_rules! signed_problem_values {
     ($t:ty) => {
-        &[<$t>::min_value(), 0, <$t>::max_value()]
+        &[<$t>::MIN, 0, <$t>::MAX]
     };
 }
 
@@ -878,22 +879,27 @@ signed_arbitrary! {
 }
 
 macro_rules! float_problem_values {
-    ($path:path) => {{
-        // hack. see: https://github.com/rust-lang/rust/issues/48067
-        use $path as p;
-        &[p::NAN, p::NEG_INFINITY, p::MIN, -0., 0., p::MAX, p::INFINITY]
+    ($t:ty) => {{
+        &[
+            <$t>::NAN,
+            <$t>::NEG_INFINITY,
+            <$t>::MIN,
+            -0.,
+            0.,
+            <$t>::MAX,
+            <$t>::INFINITY,
+        ]
     }};
 }
 
 macro_rules! float_arbitrary {
-    ($($t:ty, $path:path, $shrinkable:ty),+) => {$(
+    ($($t:ty, $shrinkable:ty),+) => {$(
         impl Arbitrary for $t {
             fn arbitrary(g: &mut Gen) -> $t {
                 match g.gen_range(0..10) {
-                    0 => *g.choose(float_problem_values!($path)).unwrap(),
+                    0 => *g.choose(float_problem_values!($t)).unwrap(),
                     _ => {
-                        use $path as p;
-                        let exp = g.gen_range((0.)..p::MAX_EXP as i16 as $t);
+                        let exp = g.gen_range((0.)..<$t>::MAX_EXP as i16 as $t);
                         let mantissa = g.gen_range((1.)..2.);
                         let sign = *g.choose(&[-1., 1.]).unwrap();
                         sign * mantissa * exp.exp2()
@@ -909,7 +915,7 @@ macro_rules! float_arbitrary {
     )*};
 }
 
-float_arbitrary!(f32, std::f32, i32, f64, std::f64, i64);
+float_arbitrary!(f32, i32, f64, i64);
 
 macro_rules! unsigned_non_zero_shrinker {
     ($ty:tt) => {
@@ -920,6 +926,7 @@ macro_rules! unsigned_non_zero_shrinker {
             }
 
             impl UnsignedNonZeroShrinker {
+                #[allow(clippy::new_ret_no_self)]
                 pub fn new(x: $ty) -> Box<dyn Iterator<Item = $ty>> {
                     debug_assert!(x > 0);
 
@@ -1145,7 +1152,7 @@ mod test {
 
     #[test]
     fn arby_unit() {
-        assert_eq!(arby::<()>(), ());
+        let _: () = arby::<()>();
     }
 
     macro_rules! arby_int {
@@ -1158,8 +1165,8 @@ mod test {
                 };
             assert!(problems.all(|p| arbys.any(|arby| arby == *p)),
                 "Arbitrary does not generate all problematic values");
-            let max = <$t>::max_value();
-            let mid = (max + <$t>::min_value()) / 2;
+            let max = <$t>::MAX;
+            let mid = (max + <$t>::MIN) / 2;
             // split full range of $t into chunks
             // Arbitrary must return some value in each chunk
             let double_chunks: $t = 9;
@@ -1190,14 +1197,13 @@ mod test {
     }
 
     macro_rules! arby_float {
-        ($($t:ty, $path:path),+) => {$({
-            use $path as p;
+        ($($t:ty),+) => {$({
             let mut arbys = (0..1_000_000).map(|_| arby::<$t>());
             //NaN != NaN
             assert!(arbys.any(|f| f.is_nan()),
                 "Arbitrary does not generate the problematic value NaN"
             );
-            for p in float_problem_values!($path).iter().filter(|f| !f.is_nan()) {
+            for p in float_problem_values!($t).iter().filter(|f| !f.is_nan()) {
                 assert!(arbys.any(|arby| arby == *p),
                     "Arbitrary does not generate the problematic value {}",
                     p
@@ -1209,7 +1215,7 @@ mod test {
             let chunks = double_chunks * 2;  // chunks must be even
             let lim = (-double_chunks..=double_chunks)
                         .map(|idx| <$t>::from(idx))
-                        .map(|idx| p::MAX/(<$t>::from(chunks/2)) * idx);
+                        .map(|idx| <$t>::MAX/(<$t>::from(chunks/2)) * idx);
             let mut lim = lim.peekable();
             while let (Some(low), Some(&high)) = (lim.next(), lim.peek()) {
                 assert!(
@@ -1224,7 +1230,7 @@ mod test {
 
     #[test]
     fn arby_float() {
-        arby_float!(f32, std::f32, f64, std::f64);
+        arby_float!(f32, f64);
     }
 
     fn arby<A: Arbitrary>() -> A {
@@ -1567,6 +1573,7 @@ mod test {
         eq(Unbounded::<i32>, vec![]);
     }
 
+    #[allow(clippy::reversed_empty_ranges)]
     #[test]
     fn ranges() {
         ordered_eq(0..0, vec![]);

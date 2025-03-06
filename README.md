@@ -1,5 +1,5 @@
-quickcheck
-==========
+# quickcheck
+
 QuickCheck is a way to do property based testing using randomly generated
 input. This crate comes with the ability to randomly generate and shrink
 integers, floats, tuples, booleans, lists, strings, options and results.
@@ -19,14 +19,12 @@ Haskell](https://hackage.haskell.org/package/QuickCheck).)
 
 Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
 
-
-### Documentation
+## Documentation
 
 The API is fully documented:
 [https://docs.rs/quickcheck](https://docs.rs/quickcheck).
 
-
-### Simple example
+## Simple example
 
 Here's an example that tests a function that reverses a vector:
 
@@ -56,7 +54,7 @@ mod tests {
 This example uses the `quickcheck!` macro, which is backwards compatible with
 old versions of Rust.
 
-### The `#[quickcheck]` attribute
+## The `#[quickcheck]` attribute
 
 To make it easier to write QuickCheck tests, the `#[quickcheck]` attribute
 will convert a property function into a `#[test]` function.
@@ -88,8 +86,7 @@ mod tests {
 }
 ```
 
-
-### Installation
+## Installation
 
 `quickcheck` is on `crates.io`, so you can include it in your project like so:
 
@@ -126,8 +123,7 @@ Crate features:
 - `"regex"`: (Enabled by default.) Enables the use of regexes with
   `env_logger`.
 
-
-### Minimum Rust version policy
+## Minimum Rust version policy
 
 This crate's minimum supported `rustc` version is `1.65.0`.
 
@@ -145,8 +141,7 @@ With all of that said, currently, `rand` is a public dependency of
 aggressive than `rand`'s MSRV policy. Otherwise, `quickcheck` will defer to
 `rand`'s MSRV policy.
 
-
-### Compatibility
+## Compatibility
 
 In general, this crate considers the `Arbitrary` implementations provided as
 implementation details. Strategies may or may not change over time, which may
@@ -154,8 +149,7 @@ cause new test failures, presumably due to the discovery of new bugs due to a
 new kind of witness being generated. These sorts of changes may happen in
 semver compatible releases.
 
-
-### Alternative Rust crates for property testing
+## Alternative Rust crates for property testing
 
 The [`proptest`](https://docs.rs/proptest) crate is inspired by the
 [Hypothesis](https://hypothesis.works) framework for Python.
@@ -167,16 +161,14 @@ In particular, `proptest` improves on the concept of shrinking. So if you've
 ever had problems/frustration with shrinking in `quickcheck`, then `proptest`
 might be worth a try!
 
-
-### Alternatives for fuzzing
+## Alternatives for fuzzing
 
 Please see the
 [Rust Fuzz Book](https://rust-fuzz.github.io/book/introduction.html)
 and the
 [`arbitrary`](https://crates.io/crates/arbitrary) crate.
 
-
-### Discarding test results (or, properties are polymorphic!)
+## Discarding test results (or, properties are polymorphic!)
 
 Sometimes you want to test a property that only holds for a *subset* of the
 possible inputs, so that when your property is given an input that is outside
@@ -285,8 +277,7 @@ There is also `QUICKCHECK_MIN_TESTS_PASSED` which sets the minimum number of
 valid tests that need pass (defaults to `0`) in order for it to be considered a
 success.
 
-
-### Shrinking
+## Shrinking
 
 Shrinking is a crucial part of QuickCheck that simplifies counter-examples for
 your properties automatically. For example, if you erroneously defined a
@@ -313,7 +304,7 @@ quickcheck(prop as fn(Vec<isize>) -> bool);
 
 Then without shrinking, you might get a counter-example like:
 
-```
+```text
 [quickcheck] TEST FAILED. Arguments: ([-17, 13, -12, 17, -8, -10, 15, -19,
 -19, -9, 11, -5, 1, 19, -16, 6])
 ```
@@ -321,13 +312,13 @@ Then without shrinking, you might get a counter-example like:
 Which is pretty mysterious. But with shrinking enabled, you're nearly
 guaranteed to get this counter-example every time:
 
-```
+```text
 [quickcheck] TEST FAILED. Arguments: ([0])
 ```
 
 Which is going to be much easier to debug.
 
-### More Thorough Checking
+## More Thorough Checking
 
 Quickcheck uses random input to test, so it won't
 always find bugs that could be uncovered with a particular
@@ -341,7 +332,7 @@ lot, you might also be interested in trying out
 [`cargo fuzz`](https://github.com/rust-fuzz/cargo-fuzz),
 which runs in a loop by default.
 
-##### Running in a Loop
+### Running in a Loop
 
 One approach is to run your quickcheck properties in a loop that
 just keeps going until you tell it to stop or it finds a bug.
@@ -369,7 +360,7 @@ would take time away from quickcheck!
 Checking the return code and exiting is also important. Without that
 test, you won't ever notice when a failure happens.
 
-##### Cranking the Number of Tests
+### Cranking the Number of Tests
 
 Another approach is to just ask quickcheck to run properties more
 times. You can do this either via the
@@ -380,7 +371,7 @@ the loop approach this will take a bounded amount of time, which
 makes it more suitable for something like a release cycle that
 wants to really hammer your software.
 
-##### Making Arbitrary Smarter
+### Making Arbitrary Smarter
 
 This approach entails spending more time generating interesting
 inputs in your implementations of Arbitrary. The idea is to
@@ -390,7 +381,7 @@ and the whole idea of property checking is to take that burden
 off the programmer. Despite the theoretical discomfort, this
 approach can turn out to be practical.
 
-### Generating Structs
+## Generating Structs
 
 It is very simple to generate structs in QuickCheck. Consider the following
 example, where the struct `Point` is defined:
@@ -418,8 +409,7 @@ impl Arbitrary for Point {
 }
 ```
 
-
-### Case study: The Sieve of Eratosthenes
+## Case study: The Sieve of Eratosthenes
 
 The [Sieve of Eratosthenes](https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes)
 is a simple and elegant way to find all primes less than or equal to `N`.
@@ -458,7 +448,7 @@ fn sieve(n: usize) -> Vec<usize> {
 
 Let's try it on a few inputs by hand:
 
-```
+```text
 sieve(3) => [2, 3]
 sieve(5) => [2, 3, 5]
 sieve(8) => [2, 3, 5, 7, 8] # !!!
@@ -503,7 +493,7 @@ A fully working source file with this code is in
 
 The output of running this program has this message:
 
-```
+```text
 [quickcheck] TEST FAILED. Arguments: (4)
 ```
 
@@ -558,7 +548,7 @@ fn main() {
 
 we see that it fails immediately for value n = 2.
 
-```
+```text
 [quickcheck] TEST FAILED. Arguments: (2)
 ```
 
@@ -566,18 +556,18 @@ If we inspect `sieve()` once again, we see that we mistakenly mark `2` as
 non-prime. Removing the line `marked[2] = true;` results in both properties
 passing.
 
-### What's not in this port of QuickCheck?
+## What's not in this port of QuickCheck?
 
 I think I've captured the key features, but there are still things missing:
 
-* Only functions with 8 or fewer parameters can be quickchecked. This
+- Only functions with 8 or fewer parameters can be quickchecked. This
 limitation can be lifted to some `N`, but requires an implementation for each
 `n` of the `Testable` trait.
-* Functions that fail because of a stack overflow are not caught by QuickCheck.
+- Functions that fail because of a stack overflow are not caught by QuickCheck.
 Therefore, such failures will not have a witness attached
 to them. (I'd like to fix this, but I don't know how.)
-* `Coarbitrary` does not exist in any form in this package. It's unlikely that
+- `Coarbitrary` does not exist in any form in this package. It's unlikely that
 it ever will.
-* `Arbitrary` is not implemented for closures. See
+- `Arbitrary` is not implemented for closures. See
 [issue #56](https://github.com/BurntSushi/quickcheck/issues/56)
 for more details on why.
