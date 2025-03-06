@@ -5,15 +5,16 @@ use std::panic;
 
 use crate::{
     tester::Status::{Discard, Fail, Pass},
-    Arbitrary, Gen,
+    Arbitrary, RandomSource,
 };
 
-/// The main QuickCheck type for setting configuration and running QuickCheck.
+/// The main `QuickCheck` type for setting configuration and running
+/// `QuickCheck`.
 pub struct QuickCheck {
     tests: u64,
     max_tests: u64,
     min_tests_passed: u64,
-    gen: Gen,
+    gen: RandomSource,
 }
 
 fn qc_tests() -> u64 {
@@ -55,17 +56,17 @@ impl Default for QuickCheck {
 }
 
 impl QuickCheck {
-    /// Creates a new QuickCheck value.
+    /// Creates a new `QuickCheck` value.
     ///
-    /// This can be used to run QuickCheck on things that implement `Testable`.
-    /// You may also adjust the configuration, such as the number of tests to
-    /// run.
+    /// This can be used to run `QuickCheck` on things that implement
+    /// `Testable`. You may also adjust the configuration, such as the
+    /// number of tests to run.
     ///
     /// By default, the maximum number of passed tests is set to `100`, the max
     /// number of overall tests is set to `10000` and the generator is created
     /// with a size of `100`.
     pub fn new() -> QuickCheck {
-        let gen = Gen::new(qc_gen_size());
+        let gen = RandomSource::new(qc_gen_size());
         let tests = qc_tests();
         let max_tests = cmp::max(tests, qc_max_tests());
         let min_tests_passed = qc_min_tests_passed();
@@ -73,8 +74,8 @@ impl QuickCheck {
         QuickCheck { tests, max_tests, min_tests_passed, gen }
     }
 
-    /// Set the random number generator to be used by QuickCheck.
-    pub fn gen(self, gen: Gen) -> QuickCheck {
+    /// Set the random number generator to be used by `QuickCheck`.
+    pub fn gen(self, gen: RandomSource) -> QuickCheck {
         QuickCheck { gen, ..self }
     }
 
@@ -92,7 +93,7 @@ impl QuickCheck {
     /// Set the maximum number of tests to run.
     ///
     /// The number of invocations of a property will never exceed this number.
-    /// This is necessary to cap the number of tests because QuickCheck
+    /// This is necessary to cap the number of tests because `QuickCheck`
     /// properties can discard tests.
     pub fn max_tests(mut self, max_tests: u64) -> QuickCheck {
         self.max_tests = max_tests;
@@ -143,7 +144,7 @@ impl QuickCheck {
     ///
     /// Note that if the environment variable `RUST_LOG` is set to enable
     /// `info` level log messages for the `quickcheck` crate, then this will
-    /// include output on how many QuickCheck tests were passed.
+    /// include output on how many `QuickCheck` tests were passed.
     ///
     /// # Example
     ///
@@ -182,7 +183,7 @@ impl QuickCheck {
     }
 }
 
-/// Convenience function for running QuickCheck.
+/// Convenience function for running `QuickCheck`.
 ///
 /// This is an alias for `QuickCheck::new().quickcheck(f)`.
 pub fn quickcheck<A: Testable>(f: A) {
@@ -312,23 +313,23 @@ impl From<bool> for TestResult {
 ///
 /// It's unlikely that you'll have to implement this trait yourself.
 pub trait Testable: 'static {
-    fn result(&self, _: &mut Gen) -> TestResult;
+    fn result(&self, _: &mut RandomSource) -> TestResult;
 }
 
 impl Testable for bool {
-    fn result(&self, _: &mut Gen) -> TestResult {
+    fn result(&self, _: &mut RandomSource) -> TestResult {
         TestResult::from_bool(*self)
     }
 }
 
 impl Testable for () {
-    fn result(&self, _: &mut Gen) -> TestResult {
+    fn result(&self, _: &mut RandomSource) -> TestResult {
         TestResult::passed()
     }
 }
 
 impl Testable for TestResult {
-    fn result(&self, _: &mut Gen) -> TestResult {
+    fn result(&self, _: &mut RandomSource) -> TestResult {
         self.clone()
     }
 }
@@ -338,7 +339,7 @@ where
     A: Testable,
     E: Debug + 'static,
 {
-    fn result(&self, g: &mut Gen) -> TestResult {
+    fn result(&self, g: &mut RandomSource) -> TestResult {
         match *self {
             Ok(ref r) => r.result(g),
             Err(ref err) => TestResult::error(format!("{err:?}")),
@@ -357,9 +358,9 @@ macro_rules! testable_fn {
 impl<T: Testable,
      $($name: Arbitrary + Debug),*> Testable for fn($($name),*) -> T {
     #[allow(non_snake_case)]
-    fn result(&self, g: &mut Gen) -> TestResult {
+    fn result(&self, g: &mut RandomSource) -> TestResult {
         fn shrink_failure<T: Testable, $($name: Arbitrary + Debug),*>(
-            g: &mut Gen,
+            g: &mut RandomSource,
             self_: fn($($name),*) -> T,
             a: ($($name,)*),
         ) -> Option<TestResult> {
@@ -428,7 +429,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{Gen, QuickCheck};
+    use crate::{QuickCheck, RandomSource};
 
     #[test]
     fn shrinking_regression_issue_126() {
@@ -447,7 +448,9 @@ mod test {
         fn t(_: i8) -> bool {
             true
         }
-        QuickCheck::new().gen(Gen::new(129)).quickcheck(t as fn(i8) -> bool);
+        QuickCheck::new()
+            .gen(RandomSource::new(129))
+            .quickcheck(t as fn(i8) -> bool);
     }
 
     #[test]

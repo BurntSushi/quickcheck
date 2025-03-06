@@ -29,12 +29,8 @@ The API is fully documented:
 Here's an example that tests a function that reverses a vector:
 
 ```rust
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-
 fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
-    let mut rev = vec!();
+    let mut rev = vec![];
     for x in xs.iter() {
         rev.insert(0, x.clone())
     }
@@ -43,6 +39,8 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
 
 #[cfg(test)]
 mod tests {
+    use quickcheck::quickcheck;
+
   quickcheck! {
       fn prop(xs: Vec<u32>) -> bool {
           xs == reverse(&reverse(&xs))
@@ -64,15 +62,11 @@ from the `quickcheck_macros` crate:
 
 ```rust
 #[cfg(test)]
-extern crate quickcheck;
-#[cfg(test)]
-#[macro_use(quickcheck)]
-extern crate quickcheck_macros;
-
-#[cfg(test)]
 mod tests {
+    use quickcheck_macros::quickcheck;
+
     fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
-        let mut rev = vec!();
+        let mut rev = vec![];
         for x in xs {
             rev.insert(0, x.clone())
         }
@@ -190,7 +184,7 @@ trait. Great, so what is this `Testable` business?
 
 ```rust
 pub trait Testable {
-    fn result(&self, &mut Gen) -> TestResult;
+    fn result(&self, &mut RandomSource) -> TestResult;
 }
 ```
 
@@ -202,7 +196,7 @@ Sure enough, `bool` satisfies the `Testable` trait:
 
 ```rust
 impl Testable for bool {
-    fn result(&self, _: &mut Gen) -> TestResult {
+    fn result(&self, _: &mut RandomSource) -> TestResult {
         TestResult::from_bool(*self)
     }
 }
@@ -213,7 +207,7 @@ satisfy `Testable` too!
 
 ```rust
 impl<A: Arbitrary + Debug, B: Testable> Testable for fn(A) -> B {
-    fn result(&self, g: &mut Gen) -> TestResult {
+    fn result(&self, g: &mut RandomSource) -> TestResult {
         // elided
     }
 }
@@ -231,7 +225,7 @@ make sure `TestResult` satisfies `Testable`:
 
 ```rust
 impl Testable for TestResult {
-    fn result(&self, _: &mut Gen) -> TestResult { self.clone() }
+    fn result(&self, _: &mut RandomSource) -> TestResult { self.clone() }
 }
 ```
 
@@ -397,10 +391,10 @@ In order to generate a random `Point` instance, you need to implement
 the trait `Arbitrary` for the struct `Point`:
 
 ```rust
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::{Arbitrary, RandomSource};
 
 impl Arbitrary for Point {
-    fn arbitrary(g: &mut Gen) -> Point {
+    fn arbitrary(g: &mut RandomSource) -> Point {
         Point {
             x: i32::arbitrary(g),
             y: i32::arbitrary(g),

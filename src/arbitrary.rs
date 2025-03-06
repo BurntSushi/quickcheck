@@ -21,33 +21,33 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use rand::seq::SliceRandom;
-use rand::{self, Rng, SeedableRng};
+use rand::prelude::*;
+use rand::{Rng, SeedableRng};
 
-/// Gen represents a PRNG.
+/// `RandomSource` represents a PRNG.
 ///
 /// It is the source of randomness from which QuickCheck will generate
-/// values. An instance of `Gen` is passed to every invocation of
+/// values. An instance of `RandomSource` is passed to every invocation of
 /// `Arbitrary::arbitrary`, which permits callers to use lower level RNG
 /// routines to generate values.
 ///
 /// It is unspecified whether this is a secure RNG or not. Therefore, callers
 /// should assume it is insecure.
-pub struct Gen {
+pub struct RandomSource {
     rng: rand::rngs::SmallRng,
     size: usize,
 }
 
-impl Gen {
-    /// Returns a `Gen` with the given size configuration.
+impl RandomSource {
+    /// Returns a `RandomSource` with the given size configuration.
     ///
     /// The `size` parameter controls the size of random values generated.
     /// For example, it specifies the maximum length of a randomly generated
     /// vector, but is and should not be used to control the range of a
     /// randomly generated number. (Unless that number is used to control the
     /// size of a data structure.)
-    pub fn new(size: usize) -> Gen {
-        Gen { rng: rand::rngs::SmallRng::from_entropy(), size }
+    pub fn new(size: usize) -> RandomSource {
+        RandomSource { rng: rand::rngs::SmallRng::from_os_rng(), size }
     }
 
     /// Returns the size configured with this generator.
@@ -62,19 +62,19 @@ impl Gen {
         slice.choose(&mut self.rng)
     }
 
-    fn gen<T>(&mut self) -> T
+    fn random<T>(&mut self) -> T
     where
-        rand::distributions::Standard: rand::distributions::Distribution<T>,
+        rand::distr::StandardUniform: rand::distr::Distribution<T>,
     {
-        self.rng.gen()
+        self.rng.random()
     }
 
-    fn gen_range<T, R>(&mut self, range: R) -> T
+    fn random_range<T, R>(&mut self, range: R) -> T
     where
-        T: rand::distributions::uniform::SampleUniform,
-        R: rand::distributions::uniform::SampleRange<T>,
+        T: rand::distr::uniform::SampleUniform,
+        R: rand::distr::uniform::SampleRange<T>,
     {
-        self.rng.gen_range(range)
+        self.rng.random_range(range)
     }
 }
 
@@ -92,25 +92,25 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<dyn Iterator<Item = A>> {
 /// shrunk.
 ///
 /// Aside from shrinking, `Arbitrary` is different from typical RNGs in that
-/// it respects `Gen::size()` for controlling how much memory a particular
-/// value uses, for practical purposes. For example, `Vec::arbitrary()`
-/// respects `Gen::size()` to decide the maximum `len()` of the vector.
-/// This behavior is necessary due to practical speed and size limitations.
-/// Conversely, `i32::arbitrary()` ignores `size()` since all `i32` values
-/// require `O(1)` memory and operations between `i32`s require `O(1)` time
-/// (with the exception of exponentiation).
+/// it respects `RandomSource::size()` for controlling how much memory a
+/// particular value uses, for practical purposes. For example,
+/// `Vec::arbitrary()` respects `RandomSource::size()` to decide the maximum
+/// `len()` of the vector. This behavior is necessary due to practical speed
+/// and size limitations. Conversely, `i32::arbitrary()` ignores `size()` since
+/// all `i32` values require `O(1)` memory and operations between `i32`s
+/// require `O(1)` time (with the exception of exponentiation).
 ///
 /// Additionally, all types that implement `Arbitrary` must also implement
 /// `Clone`.
 pub trait Arbitrary: Clone + 'static {
     /// Return an arbitrary value.
     ///
-    /// Implementations should respect `Gen::size()` when decisions about how
-    /// big a particular value should be. Implementations should generally
-    /// defer to other `Arbitrary` implementations to generate other random
-    /// values when necessary. The `Gen` type also offers a few RNG helper
-    /// routines.
-    fn arbitrary(g: &mut Gen) -> Self;
+    /// Implementations should respect `RandomSource::size()` when decisions
+    /// about how big a particular value should be. Implementations should
+    /// generally defer to other `Arbitrary` implementations to generate
+    /// other random values when necessary. The `RandomSource` type also
+    /// offers a few RNG helper routines.
+    fn arbitrary(g: &mut RandomSource) -> Self;
 
     /// Return an iterator of values that are smaller than itself.
     ///
@@ -131,12 +131,12 @@ pub trait Arbitrary: Clone + 'static {
 }
 
 impl Arbitrary for () {
-    fn arbitrary(_: &mut Gen) {}
+    fn arbitrary(_: &mut RandomSource) {}
 }
 
 impl Arbitrary for bool {
-    fn arbitrary(g: &mut Gen) -> bool {
-        g.gen()
+    fn arbitrary(g: &mut RandomSource) -> bool {
+        g.random()
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = bool>> {
@@ -149,8 +149,8 @@ impl Arbitrary for bool {
 }
 
 impl<A: Arbitrary> Arbitrary for Option<A> {
-    fn arbitrary(g: &mut Gen) -> Option<A> {
-        if g.gen() {
+    fn arbitrary(g: &mut RandomSource) -> Option<A> {
+        if g.random() {
             None
         } else {
             Some(Arbitrary::arbitrary(g))
@@ -169,8 +169,8 @@ impl<A: Arbitrary> Arbitrary for Option<A> {
 }
 
 impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
-    fn arbitrary(g: &mut Gen) -> Result<A, B> {
-        if g.gen() {
+    fn arbitrary(g: &mut RandomSource) -> Result<A, B> {
+        if g.random() {
             Ok(Arbitrary::arbitrary(g))
         } else {
             Err(Arbitrary::arbitrary(g))
@@ -198,7 +198,7 @@ macro_rules! impl_arb_for_single_tuple {
         impl<$($type_param),*> Arbitrary for ($($type_param,)*)
             where $($type_param: Arbitrary,)*
         {
-            fn arbitrary(g: &mut Gen) -> ($($type_param,)*) {
+            fn arbitrary(g: &mut RandomSource) -> ($($type_param,)*) {
                 (
                     $(
                         $type_param::arbitrary(g),
@@ -247,16 +247,16 @@ impl_arb_for_tuples! {
 }
 
 impl<const N: usize, A: Arbitrary> Arbitrary for [A; N] {
-    fn arbitrary(g: &mut Gen) -> Self {
+    fn arbitrary(g: &mut RandomSource) -> Self {
         std::array::from_fn(|_ix| A::arbitrary(g))
     }
 }
 
 impl<A: Arbitrary> Arbitrary for Vec<A> {
-    fn arbitrary(g: &mut Gen) -> Vec<A> {
+    fn arbitrary(g: &mut RandomSource) -> Vec<A> {
         let size = {
             let s = g.size();
-            g.gen_range(0..s)
+            g.random_range(0..s)
         };
         (0..size).map(|_| A::arbitrary(g)).collect()
     }
@@ -368,7 +368,7 @@ where
 }
 
 impl<K: Arbitrary + Ord, V: Arbitrary> Arbitrary for BTreeMap<K, V> {
-    fn arbitrary(g: &mut Gen) -> BTreeMap<K, V> {
+    fn arbitrary(g: &mut RandomSource) -> BTreeMap<K, V> {
         let vec: Vec<(K, V)> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
     }
@@ -387,7 +387,7 @@ impl<
         S: BuildHasher + Default + Clone + 'static,
     > Arbitrary for HashMap<K, V, S>
 {
-    fn arbitrary(g: &mut Gen) -> Self {
+    fn arbitrary(g: &mut RandomSource) -> Self {
         let vec: Vec<(K, V)> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
     }
@@ -399,7 +399,7 @@ impl<
 }
 
 impl<T: Arbitrary + Ord> Arbitrary for BTreeSet<T> {
-    fn arbitrary(g: &mut Gen) -> BTreeSet<T> {
+    fn arbitrary(g: &mut RandomSource) -> BTreeSet<T> {
         let vec: Vec<T> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
     }
@@ -411,7 +411,7 @@ impl<T: Arbitrary + Ord> Arbitrary for BTreeSet<T> {
 }
 
 impl<T: Arbitrary + Ord> Arbitrary for BinaryHeap<T> {
-    fn arbitrary(g: &mut Gen) -> BinaryHeap<T> {
+    fn arbitrary(g: &mut RandomSource) -> BinaryHeap<T> {
         let vec: Vec<T> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
     }
@@ -427,7 +427,7 @@ impl<T: Arbitrary + Ord> Arbitrary for BinaryHeap<T> {
 impl<T: Arbitrary + Eq + Hash, S: BuildHasher + Default + Clone + 'static>
     Arbitrary for HashSet<T, S>
 {
-    fn arbitrary(g: &mut Gen) -> Self {
+    fn arbitrary(g: &mut RandomSource) -> Self {
         let vec: Vec<T> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
     }
@@ -439,7 +439,7 @@ impl<T: Arbitrary + Eq + Hash, S: BuildHasher + Default + Clone + 'static>
 }
 
 impl<T: Arbitrary> Arbitrary for LinkedList<T> {
-    fn arbitrary(g: &mut Gen) -> LinkedList<T> {
+    fn arbitrary(g: &mut RandomSource) -> LinkedList<T> {
         let vec: Vec<T> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
     }
@@ -453,7 +453,7 @@ impl<T: Arbitrary> Arbitrary for LinkedList<T> {
 }
 
 impl<T: Arbitrary> Arbitrary for VecDeque<T> {
-    fn arbitrary(g: &mut Gen) -> VecDeque<T> {
+    fn arbitrary(g: &mut RandomSource) -> VecDeque<T> {
         let vec: Vec<T> = Arbitrary::arbitrary(g);
         vec.into_iter().collect()
     }
@@ -465,8 +465,8 @@ impl<T: Arbitrary> Arbitrary for VecDeque<T> {
 }
 
 impl Arbitrary for IpAddr {
-    fn arbitrary(g: &mut Gen) -> IpAddr {
-        let ipv4: bool = g.gen();
+    fn arbitrary(g: &mut RandomSource) -> IpAddr {
+        let ipv4: bool = g.random();
         if ipv4 {
             IpAddr::V4(Arbitrary::arbitrary(g))
         } else {
@@ -476,46 +476,51 @@ impl Arbitrary for IpAddr {
 }
 
 impl Arbitrary for Ipv4Addr {
-    fn arbitrary(g: &mut Gen) -> Ipv4Addr {
-        Ipv4Addr::new(g.gen(), g.gen(), g.gen(), g.gen())
+    fn arbitrary(g: &mut RandomSource) -> Ipv4Addr {
+        Ipv4Addr::new(g.random(), g.random(), g.random(), g.random())
     }
 }
 
 impl Arbitrary for Ipv6Addr {
-    fn arbitrary(g: &mut Gen) -> Ipv6Addr {
+    fn arbitrary(g: &mut RandomSource) -> Ipv6Addr {
         Ipv6Addr::new(
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
+            g.random(),
+            g.random(),
+            g.random(),
+            g.random(),
+            g.random(),
+            g.random(),
+            g.random(),
+            g.random(),
         )
     }
 }
 
 impl Arbitrary for SocketAddr {
-    fn arbitrary(g: &mut Gen) -> SocketAddr {
-        SocketAddr::new(Arbitrary::arbitrary(g), g.gen())
+    fn arbitrary(g: &mut RandomSource) -> SocketAddr {
+        SocketAddr::new(Arbitrary::arbitrary(g), g.random())
     }
 }
 
 impl Arbitrary for SocketAddrV4 {
-    fn arbitrary(g: &mut Gen) -> SocketAddrV4 {
-        SocketAddrV4::new(Arbitrary::arbitrary(g), g.gen())
+    fn arbitrary(g: &mut RandomSource) -> SocketAddrV4 {
+        SocketAddrV4::new(Arbitrary::arbitrary(g), g.random())
     }
 }
 
 impl Arbitrary for SocketAddrV6 {
-    fn arbitrary(g: &mut Gen) -> SocketAddrV6 {
-        SocketAddrV6::new(Arbitrary::arbitrary(g), g.gen(), g.gen(), g.gen())
+    fn arbitrary(g: &mut RandomSource) -> SocketAddrV6 {
+        SocketAddrV6::new(
+            Arbitrary::arbitrary(g),
+            g.random(),
+            g.random(),
+            g.random(),
+        )
     }
 }
 
 impl Arbitrary for PathBuf {
-    fn arbitrary(g: &mut Gen) -> PathBuf {
+    fn arbitrary(g: &mut RandomSource) -> PathBuf {
         // use some real directories as guesses, so we may end up with
         // actual working directories in case that is relevant.
         let here = env::current_dir()
@@ -567,7 +572,7 @@ impl Arbitrary for PathBuf {
 }
 
 impl Arbitrary for OsString {
-    fn arbitrary(g: &mut Gen) -> OsString {
+    fn arbitrary(g: &mut RandomSource) -> OsString {
         OsString::from(String::arbitrary(g))
     }
 
@@ -578,10 +583,10 @@ impl Arbitrary for OsString {
 }
 
 impl Arbitrary for String {
-    fn arbitrary(g: &mut Gen) -> String {
+    fn arbitrary(g: &mut RandomSource) -> String {
         let size = {
             let s = g.size();
-            g.gen_range(0..s)
+            g.random_range(0..s)
         };
         (0..size).map(|_| char::arbitrary(g)).collect()
     }
@@ -594,13 +599,13 @@ impl Arbitrary for String {
 }
 
 impl Arbitrary for CString {
-    fn arbitrary(g: &mut Gen) -> Self {
+    fn arbitrary(g: &mut RandomSource) -> Self {
         let size = {
             let s = g.size();
-            g.gen_range(0..s)
+            g.random_range(0..s)
         };
         // Use either random bytes or random UTF-8 encoded codepoints.
-        let utf8: bool = g.gen();
+        let utf8: bool = g.random();
         if utf8 {
             CString::new(
                 (0..)
@@ -634,17 +639,18 @@ impl Arbitrary for CString {
 }
 
 impl Arbitrary for char {
-    fn arbitrary(g: &mut Gen) -> char {
-        let mode = g.gen_range(0..100);
+    fn arbitrary(g: &mut RandomSource) -> char {
+        let mode = g.random_range(0..100);
         match mode {
             0..=49 => {
                 // ASCII + some control characters
-                g.gen_range(0u8..0xB0) as char
+                g.random_range(0u8..0xB0) as char
             }
             50..=59 => {
                 // Unicode BMP characters
                 loop {
-                    if let Some(x) = char::from_u32(g.gen_range(0..0x10000)) {
+                    if let Some(x) = char::from_u32(g.random_range(0..0x10000))
+                    {
                         return x;
                     }
                     // ignore surrogate pairs
@@ -720,11 +726,11 @@ impl Arbitrary for char {
             }
             90..=94 => {
                 // Tricky unicode, part 2
-                char::from_u32(g.gen_range(0x2000..0x2070)).unwrap()
+                char::from_u32(g.random_range(0x2000..0x2070)).unwrap()
             }
             95..=99 => {
                 // Completely arbitrary characters
-                g.gen()
+                g.random()
             }
             _ => unreachable!(),
         }
@@ -784,12 +790,10 @@ macro_rules! unsigned_arbitrary {
     ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
-                fn arbitrary(g: &mut Gen) -> $ty {
-                    match g.gen_range(0..10) {
-                        0 => {
-                            *g.choose(unsigned_problem_values!($ty)).unwrap()
-                        },
-                        _ => g.gen()
+                fn arbitrary(g: &mut RandomSource) -> $ty {
+                    match g.random_range(0..10) {
+                        0 => *g.choose(unsigned_problem_values!($ty)).unwrap(),
+                        _ => g.random()
                     }
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
@@ -802,7 +806,33 @@ macro_rules! unsigned_arbitrary {
 }
 
 unsigned_arbitrary! {
-    usize, u8, u16, u32, u64, u128
+    u8, u16, u32, u64, u128
+}
+
+impl Arbitrary for usize {
+    fn arbitrary(g: &mut RandomSource) -> usize {
+        match g.random_range(0..10) {
+            0 => *g.choose(unsigned_problem_values!(usize)).unwrap(),
+            _ => {
+                #[cfg(target_pointer_width = "16")]
+                {
+                    g.random::<u16>() as usize
+                }
+                #[cfg(target_pointer_width = "32")]
+                {
+                    g.random::<u32>() as usize
+                }
+                #[cfg(target_pointer_width = "64")]
+                {
+                    g.random::<u64>() as usize
+                }
+            }
+        }
+    }
+    fn shrink(&self) -> Box<dyn Iterator<Item = usize>> {
+        unsigned_shrinker!(usize);
+        shrinker::UnsignedShrinker::new(*self)
+    }
 }
 
 macro_rules! signed_shrinker {
@@ -857,12 +887,10 @@ macro_rules! signed_arbitrary {
     ($($ty:tt),*) => {
         $(
             impl Arbitrary for $ty {
-                fn arbitrary(g: &mut Gen) -> $ty {
-                    match g.gen_range(0..10) {
-                        0 => {
-                            *g.choose(signed_problem_values!($ty)).unwrap()
-                        },
-                        _ => g.gen()
+                fn arbitrary(g: &mut RandomSource) -> $ty {
+                    match g.random_range(0..10) {
+                        0 => *g.choose(signed_problem_values!($ty)).unwrap(),
+                        _ => g.random()
                     }
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
@@ -875,7 +903,33 @@ macro_rules! signed_arbitrary {
 }
 
 signed_arbitrary! {
-    isize, i8, i16, i32, i64, i128
+    i8, i16, i32, i64, i128
+}
+
+impl Arbitrary for isize {
+    fn arbitrary(g: &mut RandomSource) -> isize {
+        match g.random_range(0..10) {
+            0 => *g.choose(signed_problem_values!(isize)).unwrap(),
+            _ => {
+                #[cfg(target_pointer_width = "16")]
+                {
+                    g.random::<i16>() as isize
+                }
+                #[cfg(target_pointer_width = "32")]
+                {
+                    g.random::<i32>() as isize
+                }
+                #[cfg(target_pointer_width = "64")]
+                {
+                    g.random::<i64>() as isize
+                }
+            }
+        }
+    }
+    fn shrink(&self) -> Box<dyn Iterator<Item = isize>> {
+        signed_shrinker!(isize);
+        shrinker::SignedShrinker::new(*self)
+    }
 }
 
 macro_rules! float_problem_values {
@@ -895,12 +949,12 @@ macro_rules! float_problem_values {
 macro_rules! float_arbitrary {
     ($($t:ty, $shrinkable:ty),+) => {$(
         impl Arbitrary for $t {
-            fn arbitrary(g: &mut Gen) -> $t {
-                match g.gen_range(0..10) {
+            fn arbitrary(g: &mut RandomSource) -> $t {
+                match g.random_range(0..10) {
                     0 => *g.choose(float_problem_values!($t)).unwrap(),
                     _ => {
-                        let exp = g.gen_range((0.)..<$t>::MAX_EXP as i16 as $t);
-                        let mantissa = g.gen_range((1.)..2.);
+                        let exp = g.random_range((0.)..<$t>::MAX_EXP as i16 as $t);
+                        let mantissa = g.random_range((1.)..2.);
                         let sign = *g.choose(&[-1., 1.]).unwrap();
                         sign * mantissa * exp.exp2()
                     }
@@ -963,12 +1017,12 @@ macro_rules! unsigned_non_zero_arbitrary {
     ($($ty:tt => $inner:tt),*) => {
         $(
             impl Arbitrary for $ty {
-                fn arbitrary(g: &mut Gen) -> $ty {
-                    let mut v: $inner = g.gen();
+                fn arbitrary(g: &mut RandomSource) -> $ty {
+                    let mut v = $inner::arbitrary(g);
                     if v == 0 {
                         v += 1;
                     }
-                    $ty::new(v).expect("non-zero value contsturction failed")
+                    $ty::new(v).expect("non-zero value construction failed")
                 }
 
                 fn shrink(&self) -> Box<dyn Iterator<Item = $ty>> {
@@ -992,7 +1046,7 @@ unsigned_non_zero_arbitrary! {
 }
 
 impl<T: Arbitrary> Arbitrary for Wrapping<T> {
-    fn arbitrary(g: &mut Gen) -> Wrapping<T> {
+    fn arbitrary(g: &mut RandomSource) -> Wrapping<T> {
         Wrapping(T::arbitrary(g))
     }
     fn shrink(&self) -> Box<dyn Iterator<Item = Wrapping<T>>> {
@@ -1001,8 +1055,8 @@ impl<T: Arbitrary> Arbitrary for Wrapping<T> {
 }
 
 impl<T: Arbitrary> Arbitrary for Bound<T> {
-    fn arbitrary(g: &mut Gen) -> Bound<T> {
-        match g.gen_range(0..3) {
+    fn arbitrary(g: &mut RandomSource) -> Bound<T> {
+        match g.random_range(0..3) {
             0 => Bound::Included(T::arbitrary(g)),
             1 => Bound::Excluded(T::arbitrary(g)),
             _ => Bound::Unbounded,
@@ -1022,7 +1076,7 @@ impl<T: Arbitrary> Arbitrary for Bound<T> {
 }
 
 impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for Range<T> {
-    fn arbitrary(g: &mut Gen) -> Range<T> {
+    fn arbitrary(g: &mut RandomSource) -> Range<T> {
         Arbitrary::arbitrary(g)..Arbitrary::arbitrary(g)
     }
     fn shrink(&self) -> Box<dyn Iterator<Item = Range<T>>> {
@@ -1033,7 +1087,7 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for Range<T> {
 }
 
 impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeInclusive<T> {
-    fn arbitrary(g: &mut Gen) -> RangeInclusive<T> {
+    fn arbitrary(g: &mut RandomSource) -> RangeInclusive<T> {
         Arbitrary::arbitrary(g)..=Arbitrary::arbitrary(g)
     }
     fn shrink(&self) -> Box<dyn Iterator<Item = RangeInclusive<T>>> {
@@ -1046,7 +1100,7 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeInclusive<T> {
 }
 
 impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeFrom<T> {
-    fn arbitrary(g: &mut Gen) -> RangeFrom<T> {
+    fn arbitrary(g: &mut RandomSource) -> RangeFrom<T> {
         Arbitrary::arbitrary(g)..
     }
     fn shrink(&self) -> Box<dyn Iterator<Item = RangeFrom<T>>> {
@@ -1055,7 +1109,7 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeFrom<T> {
 }
 
 impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeTo<T> {
-    fn arbitrary(g: &mut Gen) -> RangeTo<T> {
+    fn arbitrary(g: &mut RandomSource) -> RangeTo<T> {
         ..Arbitrary::arbitrary(g)
     }
     fn shrink(&self) -> Box<dyn Iterator<Item = RangeTo<T>>> {
@@ -1064,7 +1118,7 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeTo<T> {
 }
 
 impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeToInclusive<T> {
-    fn arbitrary(g: &mut Gen) -> RangeToInclusive<T> {
+    fn arbitrary(g: &mut RandomSource) -> RangeToInclusive<T> {
         ..=Arbitrary::arbitrary(g)
     }
     fn shrink(&self) -> Box<dyn Iterator<Item = RangeToInclusive<T>>> {
@@ -1073,15 +1127,15 @@ impl<T: Arbitrary + Clone + PartialOrd> Arbitrary for RangeToInclusive<T> {
 }
 
 impl Arbitrary for RangeFull {
-    fn arbitrary(_: &mut Gen) -> RangeFull {
+    fn arbitrary(_: &mut RandomSource) -> RangeFull {
         ..
     }
 }
 
 impl Arbitrary for Duration {
-    fn arbitrary(gen: &mut Gen) -> Self {
-        let seconds = gen.gen_range(0..gen.size() as u64);
-        let nanoseconds = gen.gen_range(0..1_000_000);
+    fn arbitrary(gen: &mut RandomSource) -> Self {
+        let seconds = gen.random_range(0..gen.size() as u64);
+        let nanoseconds = gen.random_range(0..1_000_000);
         Duration::new(seconds, nanoseconds)
     }
 
@@ -1095,7 +1149,7 @@ impl Arbitrary for Duration {
 }
 
 impl<A: Arbitrary> Arbitrary for Box<A> {
-    fn arbitrary(g: &mut Gen) -> Box<A> {
+    fn arbitrary(g: &mut RandomSource) -> Box<A> {
         Box::new(A::arbitrary(g))
     }
 
@@ -1105,7 +1159,7 @@ impl<A: Arbitrary> Arbitrary for Box<A> {
 }
 
 impl<A: Arbitrary + Sync> Arbitrary for Arc<A> {
-    fn arbitrary(g: &mut Gen) -> Arc<A> {
+    fn arbitrary(g: &mut RandomSource) -> Arc<A> {
         Arc::new(A::arbitrary(g))
     }
 
@@ -1115,7 +1169,7 @@ impl<A: Arbitrary + Sync> Arbitrary for Arc<A> {
 }
 
 impl Arbitrary for SystemTime {
-    fn arbitrary(gen: &mut Gen) -> Self {
+    fn arbitrary(gen: &mut RandomSource) -> Self {
         let after_epoch = bool::arbitrary(gen);
         let duration = Duration::arbitrary(gen);
         if after_epoch {
@@ -1148,7 +1202,7 @@ mod test {
     use std::num::Wrapping;
     use std::path::PathBuf;
 
-    use super::{Arbitrary, Gen};
+    use super::{Arbitrary, RandomSource};
 
     #[test]
     fn arby_unit() {
@@ -1234,7 +1288,7 @@ mod test {
     }
 
     fn arby<A: Arbitrary>() -> A {
-        Arbitrary::arbitrary(&mut Gen::new(5))
+        Arbitrary::arbitrary(&mut RandomSource::new(5))
     }
 
     // Shrink testing.

@@ -37,7 +37,8 @@ fn panics<T: PartialOrd>(range: RangeAny<T>) -> bool {
     }
 }
 
-/// Checks that `BTreeSet::range` returns all items contained in the given `range`.
+/// Checks that `BTreeSet::range` returns all items contained in the given
+/// `range`.
 fn check_range(set: BTreeSet<i32>, range: RangeAny<i32>) -> TestResult {
     if panics(range) {
         TestResult::discard()
