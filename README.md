@@ -40,11 +40,12 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
 #[cfg(test)]
 mod tests {
     use quickcheck::quickcheck;
+    use super::reverse;
 
-  quickcheck! {
-      fn prop(xs: Vec<u32>) -> bool {
-          xs == reverse(&reverse(&xs))
-      }
+    quickcheck! {
+        fn prop(xs: Vec<u32>) -> bool {
+            xs == reverse(&reverse(&xs))
+        }
   }
 }
 ```
@@ -61,17 +62,18 @@ To use the `#[quickcheck]` attribute, you must import the `quickcheck` macro
 from the `quickcheck_macros` crate:
 
 ```rust
+fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
+    let mut rev = vec![];
+    for x in xs {
+        rev.insert(0, x.clone())
+    }
+    rev
+}
+
 #[cfg(test)]
 mod tests {
     use quickcheck_macros::quickcheck;
-
-    fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
-        let mut rev = vec![];
-        for x in xs {
-            rev.insert(0, x.clone())
-        }
-        rev
-    }
+    use super::reverse;
 
     #[quickcheck]
     fn double_reversal_is_identity(xs: Vec<isize>) -> bool {
