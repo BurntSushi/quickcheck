@@ -4,7 +4,7 @@ use std::ffi::CString;
 use std::hash::BuildHasherDefault;
 use std::path::PathBuf;
 
-use super::{quickcheck, QuickCheck, RandomSource, TestResult};
+use super::{quickcheck, Gen, QuickCheck, TestResult};
 
 #[test]
 fn prop_oob() {
@@ -179,7 +179,7 @@ fn regression_issue_83() {
         true
     }
     QuickCheck::new()
-        .gen(RandomSource::new(1024))
+        .set_rng(Gen::new(1024))
         .quickcheck(prop as fn(u8) -> bool);
 }
 
@@ -189,7 +189,7 @@ fn regression_issue_83_signed() {
         true
     }
     QuickCheck::new()
-        .gen(RandomSource::new(1024))
+        .set_rng(Gen::new(1024))
         .quickcheck(prop as fn(i8) -> bool);
 }
 
