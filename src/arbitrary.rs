@@ -21,13 +21,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use rand::seq::SliceRandom;
-use rand::{self, Rng, SeedableRng};
+use rand::prelude::*;
+use rand::{Rng, SeedableRng};
 
-/// Gen represents a PRNG.
+/// `Gen` represents a PRNG.
 ///
-/// It is the source of randomness from which QuickCheck will generate
-/// values. An instance of `Gen` is passed to every invocation of
+/// It is the source of randomness from which QuickCheck will generate values.
+/// An instance of `Gen` is passed to every invocation of
 /// `Arbitrary::arbitrary`, which permits callers to use lower level RNG
 /// routines to generate values.
 ///
@@ -47,7 +47,7 @@ impl Gen {
     /// randomly generated number. (Unless that number is used to control the
     /// size of a data structure.)
     pub fn new(size: usize) -> Gen {
-        Gen { rng: rand::rngs::SmallRng::from_entropy(), size: size }
+        Gen { rng: rand::rngs::SmallRng::from_os_rng(), size }
     }
 
     /// Returns the size configured with this generator.
@@ -62,19 +62,19 @@ impl Gen {
         slice.choose(&mut self.rng)
     }
 
-    fn gen<T>(&mut self) -> T
+    fn random<T>(&mut self) -> T
     where
-        rand::distributions::Standard: rand::distributions::Distribution<T>,
+        rand::distr::StandardUniform: rand::distr::Distribution<T>,
     {
-        self.rng.gen()
+        self.rng.random()
     }
 
-    fn gen_range<T, R>(&mut self, range: R) -> T
+    fn random_range<T, R>(&mut self, range: R) -> T
     where
-        T: rand::distributions::uniform::SampleUniform,
-        R: rand::distributions::uniform::SampleRange<T>,
+        T: rand::distr::uniform::SampleUniform,
+        R: rand::distr::uniform::SampleRange<T>,
     {
-        self.rng.gen_range(range)
+        self.rng.random_range(range)
     }
 }
 
@@ -91,14 +91,14 @@ pub fn single_shrinker<A: 'static>(value: A) -> Box<dyn Iterator<Item = A>> {
 /// `Arbitrary` describes types whose values can be randomly generated and
 /// shrunk.
 ///
-/// Aside from shrinking, `Arbitrary` is different from typical RNGs in that
-/// it respects `Gen::size()` for controlling how much memory a particular
-/// value uses, for practical purposes. For example, `Vec::arbitrary()`
-/// respects `Gen::size()` to decide the maximum `len()` of the vector.
-/// This behavior is necessary due to practical speed and size limitations.
-/// Conversely, `i32::arbitrary()` ignores `size()` since all `i32` values
-/// require `O(1)` memory and operations between `i32`s require `O(1)` time
-/// (with the exception of exponentiation).
+/// Aside from shrinking, `Arbitrary` is different from typical RNGs in that it
+/// respects `Gen::size()` for controlling how much memory a particular value
+/// uses, for practical purposes. For example, `Vec::arbitrary()` respects
+/// `Gen::size()` to decide the maximum `len()` of the vector. This behavior is
+/// necessary due to practical speed and size limitations. Conversely,
+/// `i32::arbitrary()` ignores `size()` since all `i32` values require `O(1)`
+/// memory and operations between `i32`s require `O(1)` time (with the
+/// exception of exponentiation).
 ///
 /// Additionally, all types that implement `Arbitrary` must also implement
 /// `Clone`.
@@ -131,14 +131,12 @@ pub trait Arbitrary: Clone + 'static {
 }
 
 impl Arbitrary for () {
-    fn arbitrary(_: &mut Gen) -> () {
-        ()
-    }
+    fn arbitrary(_: &mut Gen) {}
 }
 
 impl Arbitrary for bool {
     fn arbitrary(g: &mut Gen) -> bool {
-        g.gen()
+        g.random()
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = bool>> {
@@ -152,7 +150,7 @@ impl Arbitrary for bool {
 
 impl<A: Arbitrary> Arbitrary for Option<A> {
     fn arbitrary(g: &mut Gen) -> Option<A> {
-        if g.gen() {
+        if g.random() {
             None
         } else {
             Some(Arbitrary::arbitrary(g))
@@ -172,7 +170,7 @@ impl<A: Arbitrary> Arbitrary for Option<A> {
 
 impl<A: Arbitrary, B: Arbitrary> Arbitrary for Result<A, B> {
     fn arbitrary(g: &mut Gen) -> Result<A, B> {
-        if g.gen() {
+        if g.random() {
             Ok(Arbitrary::arbitrary(g))
         } else {
             Err(Arbitrary::arbitrary(g))
@@ -248,11 +246,31 @@ impl_arb_for_tuples! {
     (H, 7),
 }
 
+impl<const N: usize, A: Arbitrary> Arbitrary for [A; N] {
+    fn arbitrary(g: &mut Gen) -> Self {
+        std::array::from_fn(|_ix| A::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = [A; N]>> {
+        let cloned = self.clone();
+        let iter = (0..N).flat_map(move |n| {
+            let cloned = cloned.clone();
+            cloned[n].shrink().map(move |shr_value| {
+                let mut result = cloned.clone();
+                result[n] = shr_value;
+                result
+            })
+        });
+
+        Box::new(iter)
+    }
+}
+
 impl<A: Arbitrary> Arbitrary for Vec<A> {
     fn arbitrary(g: &mut Gen) -> Vec<A> {
         let size = {
             let s = g.size();
-            g.gen_range(0..s)
+            g.random_range(0..s)
         };
         (0..size).map(|_| A::arbitrary(g)).collect()
     }
@@ -275,15 +293,16 @@ struct VecShrinker<A> {
 }
 
 impl<A: Arbitrary> VecShrinker<A> {
+    #[allow(clippy::new_ret_no_self)]
     fn new(seed: Vec<A>) -> Box<dyn Iterator<Item = Vec<A>>> {
-        let es = match seed.get(0) {
+        let es = match seed.first() {
             Some(e) => e.shrink(),
             None => return empty_shrinker(),
         };
         let size = seed.len();
         Box::new(VecShrinker {
-            seed: seed,
-            size: size,
+            seed,
+            size,
             offset: size,
             element_shrinker: es,
         })
@@ -344,7 +363,7 @@ where
             // offset (self.offset == 0 only on first entry to this part of the
             // iterator)
             if self.offset == 0 {
-                self.offset = 1
+                self.offset = 1;
             }
 
             match self.next_element() {
@@ -352,7 +371,7 @@ where
                     self.seed[..self.offset - 1]
                         .iter()
                         .cloned()
-                        .chain(Some(e).into_iter())
+                        .chain(Some(e))
                         .chain(self.seed[self.offset..].iter().cloned())
                         .collect(),
                 ),
@@ -461,7 +480,7 @@ impl<T: Arbitrary> Arbitrary for VecDeque<T> {
 
 impl Arbitrary for IpAddr {
     fn arbitrary(g: &mut Gen) -> IpAddr {
-        let ipv4: bool = g.gen();
+        let ipv4: bool = g.random();
         if ipv4 {
             IpAddr::V4(Arbitrary::arbitrary(g))
         } else {
@@ -472,40 +491,45 @@ impl Arbitrary for IpAddr {
 
 impl Arbitrary for Ipv4Addr {
     fn arbitrary(g: &mut Gen) -> Ipv4Addr {
-        Ipv4Addr::new(g.gen(), g.gen(), g.gen(), g.gen())
+        Ipv4Addr::new(g.random(), g.random(), g.random(), g.random())
     }
 }
 
 impl Arbitrary for Ipv6Addr {
     fn arbitrary(g: &mut Gen) -> Ipv6Addr {
         Ipv6Addr::new(
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
-            g.gen(),
+            g.random(),
+            g.random(),
+            g.random(),
+            g.random(),
+            g.random(),
+            g.random(),
+            g.random(),
+            g.random(),
         )
     }
 }
 
 impl Arbitrary for SocketAddr {
     fn arbitrary(g: &mut Gen) -> SocketAddr {
-        SocketAddr::new(Arbitrary::arbitrary(g), g.gen())
+        SocketAddr::new(Arbitrary::arbitrary(g), g.random())
     }
 }
 
 impl Arbitrary for SocketAddrV4 {
     fn arbitrary(g: &mut Gen) -> SocketAddrV4 {
-        SocketAddrV4::new(Arbitrary::arbitrary(g), g.gen())
+        SocketAddrV4::new(Arbitrary::arbitrary(g), g.random())
     }
 }
 
 impl Arbitrary for SocketAddrV6 {
     fn arbitrary(g: &mut Gen) -> SocketAddrV6 {
-        SocketAddrV6::new(Arbitrary::arbitrary(g), g.gen(), g.gen(), g.gen())
+        SocketAddrV6::new(
+            Arbitrary::arbitrary(g),
+            g.random(),
+            g.random(),
+            g.random(),
+        )
     }
 }
 
@@ -513,11 +537,12 @@ impl Arbitrary for PathBuf {
     fn arbitrary(g: &mut Gen) -> PathBuf {
         // use some real directories as guesses, so we may end up with
         // actual working directories in case that is relevant.
-        let here =
-            env::current_dir().unwrap_or(PathBuf::from("/test/directory"));
+        let here = env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("/test/directory"));
         let temp = env::temp_dir();
         #[allow(deprecated)]
-        let home = env::home_dir().unwrap_or(PathBuf::from("/home/user"));
+        let home =
+            env::home_dir().unwrap_or_else(|| PathBuf::from("/home/user"));
         let mut p = g
             .choose(&[
                 here,
@@ -567,7 +592,7 @@ impl Arbitrary for OsString {
 
     fn shrink(&self) -> Box<dyn Iterator<Item = OsString>> {
         let mystring: String = self.clone().into_string().unwrap();
-        Box::new(mystring.shrink().map(|s| OsString::from(s)))
+        Box::new(mystring.shrink().map(OsString::from))
     }
 }
 
@@ -575,7 +600,7 @@ impl Arbitrary for String {
     fn arbitrary(g: &mut Gen) -> String {
         let size = {
             let s = g.size();
-            g.gen_range(0..s)
+            g.random_range(0..s)
         };
         (0..size).map(|_| char::arbitrary(g)).collect()
     }
@@ -591,10 +616,10 @@ impl Arbitrary for CString {
     fn arbitrary(g: &mut Gen) -> Self {
         let size = {
             let s = g.size();
-            g.gen_range(0..s)
+            g.random_range(0..s)
         };
         // Use either random bytes or random UTF-8 encoded codepoints.
-        let utf8: bool = g.gen();
+        let utf8: bool = g.random();
         if utf8 {
             CString::new(
                 (0..)
@@ -629,16 +654,17 @@ impl Arbitrary for CString {
 
 impl Arbitrary for char {
     fn arbitrary(g: &mut Gen) -> char {
-        let mode = g.gen_range(0..100);
+        let mode = g.random_range(0..100);
         match mode {
             0..=49 => {
                 // ASCII + some control characters
-                g.gen_range(0..0xB0) as u8 as char
+                g.random_range(0u8..0xB0) as char
             }
             50..=59 => {
                 // Unicode BMP characters
                 loop {
-                    if let Some(x) = char::from_u32(g.gen_range(0..0x10000)) {
+                    if let Some(x) = char::from_u32(g.random_range(0..0x10000))
+                    {
                         return x;
                     }
                     // ignore surrogate pairs
@@ -714,11 +740,11 @@ impl Arbitrary for char {
             }
             90..=94 => {
                 // Tricky unicode, part 2
-                char::from_u32(g.gen_range(0x2000..0x2070)).unwrap()
+                char::from_u32(g.random_range(0x2000..0x2070)).unwrap()
             }
             95..=99 => {
                 // Completely arbitrary characters
-                g.gen()
+                g.random()
             }
             _ => unreachable!(),
         }
@@ -738,6 +764,7 @@ macro_rules! unsigned_shrinker {
             }
 
             impl UnsignedShrinker {
+                #[allow(clippy::new_ret_no_self)]
                 pub fn new(x: $ty) -> Box<dyn Iterator<Item = $ty>> {
                     if x == 0 {
                         super::empty_shrinker()
@@ -745,7 +772,7 @@ macro_rules! unsigned_shrinker {
                         Box::new(
                             vec![0]
                                 .into_iter()
-                                .chain(UnsignedShrinker { x: x, i: x / 2 }),
+                                .chain(UnsignedShrinker { x, i: x / 2 }),
                         )
                     }
                 }
@@ -756,7 +783,7 @@ macro_rules! unsigned_shrinker {
                 fn next(&mut self) -> Option<$ty> {
                     if self.x - self.i < self.x {
                         let result = Some(self.x - self.i);
-                        self.i = self.i / 2;
+                        self.i /= 2;
                         result
                     } else {
                         None
@@ -769,7 +796,7 @@ macro_rules! unsigned_shrinker {
 
 macro_rules! unsigned_problem_values {
     ($t:ty) => {
-        &[<$t>::min_value(), 1, <$t>::max_value()]
+        &[<$t>::MIN, 1, <$t>::MAX]
     };
 }
 
@@ -778,11 +805,9 @@ macro_rules! unsigned_arbitrary {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary(g: &mut Gen) -> $ty {
-                    match g.gen_range(0..10) {
-                        0 => {
-                            *g.choose(unsigned_problem_values!($ty)).unwrap()
-                        },
-                        _ => g.gen()
+                    match g.random_range(0..10) {
+                        0 => *g.choose(unsigned_problem_values!($ty)).unwrap(),
+                        _ => g.random()
                     }
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
@@ -795,7 +820,33 @@ macro_rules! unsigned_arbitrary {
 }
 
 unsigned_arbitrary! {
-    usize, u8, u16, u32, u64, u128
+    u8, u16, u32, u64, u128
+}
+
+impl Arbitrary for usize {
+    fn arbitrary(g: &mut Gen) -> usize {
+        match g.random_range(0..10) {
+            0 => *g.choose(unsigned_problem_values!(usize)).unwrap(),
+            _ => {
+                #[cfg(target_pointer_width = "16")]
+                {
+                    g.random::<u16>() as usize
+                }
+                #[cfg(target_pointer_width = "32")]
+                {
+                    g.random::<u32>() as usize
+                }
+                #[cfg(target_pointer_width = "64")]
+                {
+                    g.random::<u64>() as usize
+                }
+            }
+        }
+    }
+    fn shrink(&self) -> Box<dyn Iterator<Item = usize>> {
+        unsigned_shrinker!(usize);
+        shrinker::UnsignedShrinker::new(*self)
+    }
 }
 
 macro_rules! signed_shrinker {
@@ -807,11 +858,12 @@ macro_rules! signed_shrinker {
             }
 
             impl SignedShrinker {
+                #[allow(clippy::new_ret_no_self)]
                 pub fn new(x: $ty) -> Box<dyn Iterator<Item = $ty>> {
                     if x == 0 {
                         super::empty_shrinker()
                     } else {
-                        let shrinker = SignedShrinker { x: x, i: x / 2 };
+                        let shrinker = SignedShrinker { x, i: x / 2 };
                         let mut items = vec![0];
                         if shrinker.i < 0 && shrinker.x != <$ty>::MIN {
                             items.push(shrinker.x.abs());
@@ -828,7 +880,7 @@ macro_rules! signed_shrinker {
                         || (self.x - self.i).abs() < self.x.abs()
                     {
                         let result = Some(self.x - self.i);
-                        self.i = self.i / 2;
+                        self.i /= 2;
                         result
                     } else {
                         None
@@ -841,7 +893,7 @@ macro_rules! signed_shrinker {
 
 macro_rules! signed_problem_values {
     ($t:ty) => {
-        &[<$t>::min_value(), 0, <$t>::max_value()]
+        &[<$t>::MIN, 0, <$t>::MAX]
     };
 }
 
@@ -850,11 +902,9 @@ macro_rules! signed_arbitrary {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary(g: &mut Gen) -> $ty {
-                    match g.gen_range(0..10) {
-                        0 => {
-                            *g.choose(signed_problem_values!($ty)).unwrap()
-                        },
-                        _ => g.gen()
+                    match g.random_range(0..10) {
+                        0 => *g.choose(signed_problem_values!($ty)).unwrap(),
+                        _ => g.random()
                     }
                 }
                 fn shrink(&self) -> Box<dyn Iterator<Item=$ty>> {
@@ -867,27 +917,58 @@ macro_rules! signed_arbitrary {
 }
 
 signed_arbitrary! {
-    isize, i8, i16, i32, i64, i128
+    i8, i16, i32, i64, i128
+}
+
+impl Arbitrary for isize {
+    fn arbitrary(g: &mut Gen) -> isize {
+        match g.random_range(0..10) {
+            0 => *g.choose(signed_problem_values!(isize)).unwrap(),
+            _ => {
+                #[cfg(target_pointer_width = "16")]
+                {
+                    g.random::<i16>() as isize
+                }
+                #[cfg(target_pointer_width = "32")]
+                {
+                    g.random::<i32>() as isize
+                }
+                #[cfg(target_pointer_width = "64")]
+                {
+                    g.random::<i64>() as isize
+                }
+            }
+        }
+    }
+    fn shrink(&self) -> Box<dyn Iterator<Item = isize>> {
+        signed_shrinker!(isize);
+        shrinker::SignedShrinker::new(*self)
+    }
 }
 
 macro_rules! float_problem_values {
-    ($path:path) => {{
-        // hack. see: https://github.com/rust-lang/rust/issues/48067
-        use $path as p;
-        &[p::NAN, p::NEG_INFINITY, p::MIN, -0., 0., p::MAX, p::INFINITY]
+    ($t:ty) => {{
+        &[
+            <$t>::NAN,
+            <$t>::NEG_INFINITY,
+            <$t>::MIN,
+            -0.,
+            0.,
+            <$t>::MAX,
+            <$t>::INFINITY,
+        ]
     }};
 }
 
 macro_rules! float_arbitrary {
-    ($($t:ty, $path:path, $shrinkable:ty),+) => {$(
+    ($($t:ty, $shrinkable:ty),+) => {$(
         impl Arbitrary for $t {
             fn arbitrary(g: &mut Gen) -> $t {
-                match g.gen_range(0..10) {
-                    0 => *g.choose(float_problem_values!($path)).unwrap(),
+                match g.random_range(0..10) {
+                    0 => *g.choose(float_problem_values!($t)).unwrap(),
                     _ => {
-                        use $path as p;
-                        let exp = g.gen_range((0.)..p::MAX_EXP as i16 as $t);
-                        let mantissa = g.gen_range((1.)..2.);
+                        let exp = g.random_range((0.)..<$t>::MAX_EXP as i16 as $t);
+                        let mantissa = g.random_range((1.)..2.);
                         let sign = *g.choose(&[-1., 1.]).unwrap();
                         sign * mantissa * exp.exp2()
                     }
@@ -902,7 +983,7 @@ macro_rules! float_arbitrary {
     )*};
 }
 
-float_arbitrary!(f32, std::f32, i32, f64, std::f64, i64);
+float_arbitrary!(f32, i32, f64, i64);
 
 macro_rules! unsigned_non_zero_shrinker {
     ($ty:tt) => {
@@ -913,6 +994,7 @@ macro_rules! unsigned_non_zero_shrinker {
             }
 
             impl UnsignedNonZeroShrinker {
+                #[allow(clippy::new_ret_no_self)]
                 pub fn new(x: $ty) -> Box<dyn Iterator<Item = $ty>> {
                     debug_assert!(x > 0);
 
@@ -921,7 +1003,7 @@ macro_rules! unsigned_non_zero_shrinker {
                     } else {
                         Box::new(
                             std::iter::once(1).chain(
-                                UnsignedNonZeroShrinker { x: x, i: x / 2 },
+                                UnsignedNonZeroShrinker { x, i: x / 2 },
                             ),
                         )
                     }
@@ -934,7 +1016,7 @@ macro_rules! unsigned_non_zero_shrinker {
                 fn next(&mut self) -> Option<$ty> {
                     if self.x - self.i < self.x {
                         let result = Some(self.x - self.i);
-                        self.i = self.i / 2;
+                        self.i /= 2;
                         result
                     } else {
                         None
@@ -950,11 +1032,11 @@ macro_rules! unsigned_non_zero_arbitrary {
         $(
             impl Arbitrary for $ty {
                 fn arbitrary(g: &mut Gen) -> $ty {
-                    let mut v: $inner = g.gen();
+                    let mut v = $inner::arbitrary(g);
                     if v == 0 {
                         v += 1;
                     }
-                    $ty::new(v).expect("non-zero value contsturction failed")
+                    $ty::new(v).expect("non-zero value construction failed")
                 }
 
                 fn shrink(&self) -> Box<dyn Iterator<Item = $ty>> {
@@ -982,13 +1064,13 @@ impl<T: Arbitrary> Arbitrary for Wrapping<T> {
         Wrapping(T::arbitrary(g))
     }
     fn shrink(&self) -> Box<dyn Iterator<Item = Wrapping<T>>> {
-        Box::new(self.0.shrink().map(|inner| Wrapping(inner)))
+        Box::new(self.0.shrink().map(Wrapping))
     }
 }
 
 impl<T: Arbitrary> Arbitrary for Bound<T> {
     fn arbitrary(g: &mut Gen) -> Bound<T> {
-        match g.gen_range(0..3) {
+        match g.random_range(0..3) {
             0 => Bound::Included(T::arbitrary(g)),
             1 => Bound::Excluded(T::arbitrary(g)),
             _ => Bound::Unbounded,
@@ -1065,9 +1147,9 @@ impl Arbitrary for RangeFull {
 }
 
 impl Arbitrary for Duration {
-    fn arbitrary(gen: &mut Gen) -> Self {
-        let seconds = gen.gen_range(0..gen.size() as u64);
-        let nanoseconds = gen.gen_range(0..1_000_000);
+    fn arbitrary(rng: &mut Gen) -> Self {
+        let seconds = rng.random_range(0..rng.size() as u64);
+        let nanoseconds = rng.random_range(0..1_000_000);
         Duration::new(seconds, nanoseconds)
     }
 
@@ -1101,9 +1183,9 @@ impl<A: Arbitrary + Sync> Arbitrary for Arc<A> {
 }
 
 impl Arbitrary for SystemTime {
-    fn arbitrary(gen: &mut Gen) -> Self {
-        let after_epoch = bool::arbitrary(gen);
-        let duration = Duration::arbitrary(gen);
+    fn arbitrary(rng: &mut Gen) -> Self {
+        let after_epoch = bool::arbitrary(rng);
+        let duration = Duration::arbitrary(rng);
         if after_epoch {
             UNIX_EPOCH + duration
         } else {
@@ -1138,7 +1220,7 @@ mod test {
 
     #[test]
     fn arby_unit() {
-        assert_eq!(arby::<()>(), ());
+        let _: () = arby::<()>();
     }
 
     macro_rules! arby_int {
@@ -1151,8 +1233,8 @@ mod test {
                 };
             assert!(problems.all(|p| arbys.any(|arby| arby == *p)),
                 "Arbitrary does not generate all problematic values");
-            let max = <$t>::max_value();
-            let mid = (max + <$t>::min_value()) / 2;
+            let max = <$t>::MAX;
+            let mid = (max + <$t>::MIN) / 2;
             // split full range of $t into chunks
             // Arbitrary must return some value in each chunk
             let double_chunks: $t = 9;
@@ -1183,14 +1265,13 @@ mod test {
     }
 
     macro_rules! arby_float {
-        ($($t:ty, $path:path),+) => {$({
-            use $path as p;
+        ($($t:ty),+) => {$({
             let mut arbys = (0..1_000_000).map(|_| arby::<$t>());
             //NaN != NaN
             assert!(arbys.any(|f| f.is_nan()),
                 "Arbitrary does not generate the problematic value NaN"
             );
-            for p in float_problem_values!($path).iter().filter(|f| !f.is_nan()) {
+            for p in float_problem_values!($t).iter().filter(|f| !f.is_nan()) {
                 assert!(arbys.any(|arby| arby == *p),
                     "Arbitrary does not generate the problematic value {}",
                     p
@@ -1202,7 +1283,7 @@ mod test {
             let chunks = double_chunks * 2;  // chunks must be even
             let lim = (-double_chunks..=double_chunks)
                         .map(|idx| <$t>::from(idx))
-                        .map(|idx| p::MAX/(<$t>::from(chunks/2)) * idx);
+                        .map(|idx| <$t>::MAX/(<$t>::from(chunks/2)) * idx);
             let mut lim = lim.peekable();
             while let (Some(low), Some(&high)) = (lim.next(), lim.peek()) {
                 assert!(
@@ -1217,7 +1298,7 @@ mod test {
 
     #[test]
     fn arby_float() {
-        arby_float!(f32, std::f32, f64, std::f64);
+        arby_float!(f32, f64);
     }
 
     fn arby<A: Arbitrary>() -> A {
@@ -1365,11 +1446,11 @@ mod test {
                 for n in v {
                     let found = shrunk.iter().any(|&i| i == n);
                     if !found {
-                        panic!(format!(
+                        panic!(
                             "Element {:?} was not found \
                              in shrink results {:?}",
                             n, shrunk
-                        ));
+                        );
                     }
                 }
             }
@@ -1560,6 +1641,7 @@ mod test {
         eq(Unbounded::<i32>, vec![]);
     }
 
+    #[allow(clippy::reversed_empty_ranges)]
     #[test]
     fn ranges() {
         ordered_eq(0..0, vec![]);

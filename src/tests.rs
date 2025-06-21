@@ -1,4 +1,3 @@
-use std::cmp::Ord;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::ffi::CString;
@@ -13,13 +12,12 @@ fn prop_oob() {
         let zero: Vec<bool> = vec![];
         zero[0]
     }
-    match QuickCheck::new().quicktest(prop as fn() -> bool) {
-        Ok(n) => panic!(
+    if let Ok(n) = QuickCheck::new().quicktest(prop as fn() -> bool) {
+        panic!(
             "prop_oob should fail with a runtime error \
-             but instead it passed {} tests.",
+            but instead it passed {} tests.",
             n
-        ),
-        _ => return,
+        );
     }
 }
 
@@ -65,12 +63,12 @@ fn reverse_single() {
 fn reverse_app() {
     fn prop(xs: Vec<usize>, ys: Vec<usize>) -> bool {
         let mut app = xs.clone();
-        app.extend(ys.iter().cloned());
+        app.extend(ys.iter().copied());
         let app_rev: Vec<usize> = app.into_iter().rev().collect();
 
         let rxs: Vec<usize> = xs.into_iter().rev().collect();
         let mut rev_app = ys.into_iter().rev().collect::<Vec<usize>>();
-        rev_app.extend(rxs.into_iter());
+        rev_app.extend(rxs);
 
         app_rev == rev_app
     }
@@ -92,7 +90,7 @@ fn max() {
 #[test]
 fn sort() {
     fn prop(mut xs: Vec<isize>) -> bool {
-        xs.sort_by(|x, y| x.cmp(y));
+        xs.sort_unstable();
         for i in xs.windows(2) {
             if i[0] > i[1] {
                 return false;
@@ -142,7 +140,7 @@ fn sieve_not_prime() {
 fn sieve_not_all_primes() {
     fn prop_prime_iff_in_the_sieve(n: u8) -> bool {
         let n = n as usize;
-        sieve(n) == (0..(n + 1)).filter(|&i| is_prime(i)).collect::<Vec<_>>()
+        sieve(n) == (0..=n).filter(|&i| is_prime(i)).collect::<Vec<_>>()
     }
     quickcheck(prop_prime_iff_in_the_sieve as fn(u8) -> bool);
 }
@@ -170,7 +168,7 @@ fn testable_unit() {
 #[test]
 fn testable_unit_panic() {
     fn panic() {
-        panic!()
+        panic!();
     }
     assert!(QuickCheck::new().quicktest(panic as fn()).is_err());
 }
@@ -180,7 +178,9 @@ fn regression_issue_83() {
     fn prop(_: u8) -> bool {
         true
     }
-    QuickCheck::new().gen(Gen::new(1024)).quickcheck(prop as fn(u8) -> bool)
+    QuickCheck::new()
+        .set_rng(Gen::new(1024))
+        .quickcheck(prop as fn(u8) -> bool);
 }
 
 #[test]
@@ -188,7 +188,9 @@ fn regression_issue_83_signed() {
     fn prop(_: i8) -> bool {
         true
     }
-    QuickCheck::new().gen(Gen::new(1024)).quickcheck(prop as fn(i8) -> bool)
+    QuickCheck::new()
+        .set_rng(Gen::new(1024))
+        .quickcheck(prop as fn(i8) -> bool);
 }
 
 // Test that we can show the message after panic
@@ -242,7 +244,7 @@ fn all_tests_discarded_min_tests_passed_set() {
     QuickCheck::new()
         .tests(16)
         .min_tests_passed(8)
-        .quickcheck(prop_discarded as fn(u8) -> TestResult)
+        .quickcheck(prop_discarded as fn(u8) -> TestResult);
 }
 
 #[test]
@@ -251,7 +253,7 @@ fn all_tests_discarded_min_tests_passed_missing() {
         TestResult::discard()
     }
 
-    QuickCheck::new().quickcheck(prop_discarded as fn(u8) -> TestResult)
+    QuickCheck::new().quickcheck(prop_discarded as fn(u8) -> TestResult);
 }
 
 quickcheck! {

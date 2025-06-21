@@ -31,19 +31,19 @@ impl<T: PartialOrd> RangeBounds<T> for RangeAny<T> {
 fn panics<T: PartialOrd>(range: RangeAny<T>) -> bool {
     match (&range.0, &range.1) {
         (Excluded(start), Excluded(end)) => start >= end,
-        (Included(start), Excluded(end))
-        | (Excluded(start), Included(end))
-        | (Included(start), Included(end)) => start > end,
+        (Included(start), Excluded(end) | Included(end))
+        | (Excluded(start), Included(end)) => start > end,
         (Unbounded, _) | (_, Unbounded) => false,
     }
 }
 
-/// Checks that `BTreeSet::range` returns all items contained in the given `range`.
+/// Checks that `BTreeSet::range` returns all items contained in the given
+/// `range`.
 fn check_range(set: BTreeSet<i32>, range: RangeAny<i32>) -> TestResult {
     if panics(range) {
         TestResult::discard()
     } else {
-        let xs: BTreeSet<_> = set.range(range).cloned().collect();
+        let xs: BTreeSet<_> = set.range(range).copied().collect();
         TestResult::from_bool(
             set.iter().all(|x| range.contains(x) == xs.contains(x)),
         )

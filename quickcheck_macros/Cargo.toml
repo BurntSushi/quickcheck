@@ -1,6 +1,6 @@
 [package]
 name = "quickcheck_macros"
-version = "1.0.0"  #:version
+version = "1.1.0"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "A macro attribute for quickcheck."
 documentation = "https://docs.rs/quickcheck"
@@ -8,7 +8,8 @@ homepage = "https://github.com/BurntSushi/quickcheck"
 repository = "https://github.com/BurntSushi/quickcheck"
 readme = "../README.md"
 keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
-license = "Unlicense/MIT"
+license = "Unlicense OR MIT"
+edition = "2021"
 autotests = false
 
 [lib]
@@ -19,7 +20,7 @@ proc-macro = true
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = { version = "1.0", features = ["full"] }
+syn = { version = "2.0", features = ["full"] }
 
 [dev-dependencies]
 quickcheck = { path = "..", version = "1.0.0" }
