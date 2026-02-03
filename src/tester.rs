@@ -393,11 +393,18 @@ impl<T: Testable,
         let self_ = *self;
         let a: ($($name,)*) = Arbitrary::arbitrary(g);
         let ( $($name,)* ) = a.clone();
-        let r = safe(move || {self_($($name),*)}).result(g);
+        let mut r = safe(move || {self_($($name),*)}).result(g);
         match r.status {
             Pass|Discard => r,
             Fail => {
-                shrink_failure(g, self_, a).unwrap_or(r)
+                shrink_failure(g, self_, a.clone()).unwrap_or_else(
+		    || {
+			//if no shrinked value failed, we need to add the arguments here.
+                        let ($(ref $name,)*) : ($($name,)*) = a;
+			r.arguments = Some(debug_reprs(&[$($name),*]));
+			r
+		    }
+		)
             }
         }
     }
@@ -465,5 +472,17 @@ mod test {
             true
         }
         crate::quickcheck(foo_can_shrink as fn(i8) -> bool);
+    }
+
+    #[test]
+    fn arguments_when_shrinking_does_not_find_a_smaller_input() {
+	fn thetest(x: bool) -> bool {
+	    x
+	}
+	let failing_case = QuickCheck::new()
+            .quicktest(thetest as fn(x: bool) -> bool)
+            .unwrap_err();
+        let expected_argument = format!("{:?}", false);
+        assert_eq!(failing_case.arguments, Some(vec![expected_argument]));
     }
 }
