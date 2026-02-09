@@ -22,7 +22,6 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use rand::prelude::*;
-use rand::{Rng, SeedableRng};
 
 /// `Gen` represents a PRNG.
 ///
@@ -47,7 +46,7 @@ impl Gen {
     /// randomly generated number. (Unless that number is used to control the
     /// size of a data structure.)
     pub fn new(size: usize) -> Gen {
-        Gen { rng: rand::rngs::SmallRng::from_os_rng(), size }
+        Gen { rng: rand::make_rng(), size }
     }
 
     /// Returns the size configured with this generator.
