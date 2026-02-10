@@ -178,9 +178,7 @@ fn regression_issue_83() {
     fn prop(_: u8) -> bool {
         true
     }
-    QuickCheck::new()
-        .set_rng(Gen::new(1024))
-        .quickcheck(prop as fn(u8) -> bool);
+    QuickCheck::new().rng(Gen::new(1024)).quickcheck(prop as fn(u8) -> bool);
 }
 
 #[test]
@@ -188,9 +186,7 @@ fn regression_issue_83_signed() {
     fn prop(_: i8) -> bool {
         true
     }
-    QuickCheck::new()
-        .set_rng(Gen::new(1024))
-        .quickcheck(prop as fn(i8) -> bool);
+    QuickCheck::new().rng(Gen::new(1024)).quickcheck(prop as fn(i8) -> bool);
 }
 
 // Test that we can show the message after panic
