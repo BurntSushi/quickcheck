@@ -75,13 +75,18 @@ impl QuickCheck {
     }
 
     /// Set the random number generator to be used by `QuickCheck`.
-    pub fn set_rng(self, rng: Gen) -> QuickCheck {
+    pub fn rng(self, rng: Gen) -> QuickCheck {
         QuickCheck { rng, ..self }
     }
 
+    /// Set the random number generator to be used by `QuickCheck`.
+    ///
+    /// This is **DEPRECATED**. Using this method on Rust 2024 or newer
+    /// requires the raw identifier syntax because `gen` is now a keyword.
+    /// Instead, prefer the [`QuickCheck::rng`] method.
     #[deprecated(since = "1.1.0", note = "use `set_rng` instead")]
     pub fn r#gen(self, rng: Gen) -> QuickCheck {
-        self.set_rng(rng)
+        self.rng(rng)
     }
 
     /// Set the number of tests to run.
@@ -454,9 +459,7 @@ mod test {
         fn t(_: i8) -> bool {
             true
         }
-        QuickCheck::new()
-            .set_rng(Gen::new(129))
-            .quickcheck(t as fn(i8) -> bool);
+        QuickCheck::new().rng(Gen::new(129)).quickcheck(t as fn(i8) -> bool);
     }
 
     #[test]
