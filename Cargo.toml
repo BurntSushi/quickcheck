@@ -12,6 +12,7 @@ categories = ["development-tools::testing"]
 license = "Unlicense OR MIT"
 exclude = ["/Makefile", "/ctags.rust", "/session.vim"]
 edition = "2021"
+rust-version = "1.85.0"
 
 [workspace]
 members = ["quickcheck_macros"]
