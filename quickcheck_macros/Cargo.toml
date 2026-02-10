@@ -11,6 +11,7 @@ keywords = ["testing", "quickcheck", "property", "shrinking", "fuzz"]
 license = "Unlicense OR MIT"
 edition = "2021"
 autotests = false
+rust-version = "1.85.0"
 
 [lib]
 name = "quickcheck_macros"
