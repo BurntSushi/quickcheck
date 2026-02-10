@@ -1,6 +1,6 @@
 [package]
 name = "quickcheck_macros"
-version = "1.1.0"  #:version
+version = "1.2.0"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "A macro attribute for quickcheck."
 documentation = "https://docs.rs/quickcheck"
