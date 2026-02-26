@@ -41,6 +41,12 @@ fn qc_gen_size() -> usize {
     }
 }
 
+fn qc_seed() -> Option<u64> {
+    env::var("QUICKCHECK_SEED")
+        .ok()
+        .and_then(|v| u64::from_str_radix(v.as_ref(), 16).ok())
+}
+
 fn qc_min_tests_passed() -> u64 {
     let default = 0;
     match env::var("QUICKCHECK_MIN_TESTS_PASSED") {
@@ -62,11 +68,25 @@ impl QuickCheck {
     /// `Testable`. You may also adjust the configuration, such as the
     /// number of tests to run.
     ///
-    /// By default, the maximum number of passed tests is set to `100`, the max
-    /// number of overall tests is set to `10000` and the generator is created
-    /// with a size of `100`.
+    /// The instance is initialized with the following configuration:
+    ///
+    ///  * The maximum number of passed tests is initialized from the env var
+    ///    `QUICKCHECK_TESTS`. This value defaults to `100`.
+    ///  * The maximum number of overall tests is initialized from the env var
+    ///    `QUICKCHECK_MAX_TESTS`. This value defaults to `10000`.
+    ///  * The generator is initialized with a size specified in the env var
+    ///    `QUICKCHECK_GENERATOR_SIZE`. The size defaults to `100`.
+    ///  * If the env var `QUICKCHECK_SEED` is present and contains a
+    ///    hexadecimal number, its value is used to seed the generator.
+    ///  * The minimum number of valid tests which need to pass (i.e. excluding
+    ///    discarded ones) is initialized from the env var
+    ///    `QUICKCHECK_MIN_TESTS_PASSED`. This defaults to `0`.
     pub fn new() -> QuickCheck {
-        let rng = Gen::new(qc_gen_size());
+        let rng = if let Some(seed) = qc_seed() {
+            Gen::from_size_and_seed(qc_gen_size(), seed)
+        } else {
+            Gen::new(qc_gen_size())
+        };
         let tests = qc_tests();
         let max_tests = cmp::max(tests, qc_max_tests());
         let min_tests_passed = qc_min_tests_passed();
