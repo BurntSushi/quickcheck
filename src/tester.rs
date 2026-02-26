@@ -312,6 +312,66 @@ impl From<bool> for TestResult {
     }
 }
 
+/// Utility type for properties involving an equivalence
+///
+/// Sometimes, properties we want to test for are the equivalence of two values.
+/// For example, we may construct a pseudeo-identity from a formatter and a
+/// parser in order to test a parser. In such cases, we want to compare the
+/// input of the pseudo-identity to its output.
+///
+/// `Equivalence` is a `Testable` type which expresses this intent, but also
+/// includes both values as part of the failure report if a test fails.
+///
+/// # Example
+///
+/// ```rust
+/// use quickcheck::{QuickCheck, Equivalence};
+///
+/// fn prop_reverse_reverse() {
+///     fn revrev(xs: Vec<usize>) -> Equivalence<Vec<usize>> {
+///         let rev: Vec<_> = xs.clone().into_iter().rev().collect();
+///         let revrev: Vec<_> = rev.into_iter().rev().collect();
+///         Equivalence::of(xs, revrev)
+///     }
+///     QuickCheck::new().quickcheck(revrev as fn(Vec<usize>) -> Equivalence<Vec<usize>>);
+/// }
+/// ```
+#[derive(Clone, Debug)]
+pub struct Equivalence<T>(pub T, pub T)
+where
+    T: Debug + PartialEq + 'static;
+
+impl<T> Equivalence<T>
+where
+    T: Debug + PartialEq + 'static,
+{
+    /// Construct a value expressing the equivalence of the given values
+    ///
+    /// In many cases, you'll be able to construct an instance for two values
+    /// `a` and `b` via `Equivalence(a, b)`. This function is intended for
+    /// situations where you can't for whatever reasons.
+    pub fn of(left: T, right: T) -> Self {
+        Self(left, right)
+    }
+
+    /// Create a `TestResult` reflecting this equivalence
+    ///
+    /// If the two values are equal, the returned `TestResult` will indicate
+    /// success, otherwise it will indicate failure and include a message
+    /// reflecting both values.
+    pub fn as_result(&self) -> TestResult {
+        let Self(l, r) = self;
+        if l == r {
+            TestResult::passed()
+        } else {
+            TestResult::error(format!(
+                "Missmatch! Left: '{:?}', Right: '{:?}'",
+                l, r
+            ))
+        }
+    }
+}
+
 /// `Testable` describes types (e.g., a function) whose values can be
 /// tested.
 ///
@@ -342,6 +402,15 @@ impl Testable for () {
 impl Testable for TestResult {
     fn result(&self, _: &mut Gen) -> TestResult {
         self.clone()
+    }
+}
+
+impl<T> Testable for Equivalence<T>
+where
+    T: Debug + PartialEq + 'static,
+{
+    fn result(&self, _: &mut Gen) -> TestResult {
+        self.as_result()
     }
 }
 
