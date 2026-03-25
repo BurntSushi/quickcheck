@@ -257,6 +257,8 @@ impl TestResult {
 
     /// Tests if a "procedure" fails when executed. The test passes only if
     /// `f` generates a task failure during its execution.
+    ///
+    /// See [`TestFailure::must_fail`] for a version of this method that returns a `Result<TestSuccess, TestFailure>`.
     pub fn must_fail<T, F>(f: F) -> TestResult
     where
         F: FnOnce() -> T,
@@ -312,6 +314,82 @@ impl From<bool> for TestResult {
     }
 }
 
+/// An enum indicationg where a test passed or was discarded. For use in
+/// conjunction with [`TestFailure`], as in `Result<TestSuccess, TestFailure>`.
+#[derive(Clone, Debug)]
+pub enum TestSuccess {
+    Passed,
+    Discarded,
+}
+
+impl TestSuccess {
+    /// Produces a test success that indicates the current test has passed.
+    pub fn passed() -> Self {
+        Self::Passed
+    }
+
+    /// Produces a test success that indicates the current test has been
+    /// discarded.
+    pub fn discard() -> Self {
+        Self::Discarded
+    }
+}
+
+impl From<TestSuccess> for TestResult {
+    fn from(success: TestSuccess) -> TestResult {
+        match success {
+            TestSuccess::Passed => TestResult::passed(),
+            TestSuccess::Discarded => TestResult::discard(),
+        }
+    }
+}
+
+/// A type representing a test failure, which can be converted into a
+/// `TestResult`.
+///
+/// The type `Result<(), TestFailure>` implements `Testable`, so you can use it
+/// as the return type of a property, allowing the implementation to use the `?`
+/// operator to indicate failure or discarding of a test.
+#[derive(Clone, Debug)]
+pub struct TestFailure(Option<String>);
+
+impl TestFailure {
+    /// Produces a test failure that indicates the current test has failed.
+    pub fn failed() -> Self {
+        Self(None)
+    }
+
+    /// Produces a test failure that indicates failure from a runtime error.
+    pub fn error<S: Into<String>>(msg: S) -> Self {
+        Self(Some(msg.into()))
+    }
+
+    /// Tests if a "procedure" fails when executed. The test passes only if
+    /// `f` generates a task failure during its execution.
+    pub fn must_fail<T, F>(f: F) -> Result<(), Self>
+    where
+        F: FnOnce() -> T,
+        F: 'static,
+        T: 'static,
+    {
+        let f = panic::AssertUnwindSafe(f);
+        if panic::catch_unwind(f).is_err() {
+            Ok(())
+        } else {
+            Err(TestFailure::error("Expected function to fail with a panic."))
+        }
+    }
+}
+
+impl From<TestFailure> for TestResult {
+    fn from(failure: TestFailure) -> TestResult {
+        match failure.0 {
+            None => TestResult::failed(),
+            Some(err) => TestResult::error(err),
+        }
+    }
+}
+
 /// `Testable` describes types (e.g., a function) whose values can be
 /// tested.
 ///
@@ -342,6 +420,18 @@ impl Testable for () {
 impl Testable for TestResult {
     fn result(&self, _: &mut Gen) -> TestResult {
         self.clone()
+    }
+}
+
+impl Testable for TestSuccess {
+    fn result(&self, _: &mut Gen) -> TestResult {
+        self.clone().into()
+    }
+}
+
+impl Testable for TestFailure {
+    fn result(&self, _: &mut Gen) -> TestResult {
+        self.clone().into()
     }
 }
 
@@ -432,7 +522,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{Gen, QuickCheck};
+    use crate::{Gen, QuickCheck, TestFailure};
 
     #[test]
     fn shrinking_regression_issue_126() {
@@ -461,5 +551,14 @@ mod test {
             true
         }
         crate::quickcheck(foo_can_shrink as fn(i8) -> bool);
+    }
+
+    #[test]
+    fn can_return_early_with_question_mark() {
+        fn inner() -> Result<(), TestFailure> {
+            Err(TestFailure::failed())?;
+            Ok(())
+        }
+        assert!(QuickCheck::new().quicktest(inner as fn() -> _).is_err());
     }
 }
