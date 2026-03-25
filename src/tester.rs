@@ -418,6 +418,11 @@ where
     T: 'static,
 {
     panic::catch_unwind(panic::AssertUnwindSafe(fun)).map_err(|any_err| {
+        #[cfg(feature = "anyhow")]
+        if let Some(err) = any_err.downcast_ref::<anyhow::Error>() {
+            return err.to_string();
+        }
+
         // Extract common types of panic payload:
         // panic and assert produce &str or String
         if let Some(&s) = any_err.downcast_ref::<&str>() {

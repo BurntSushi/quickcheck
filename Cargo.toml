@@ -18,9 +18,10 @@ rust-version = "1.85.0"
 members = ["quickcheck_macros"]
 
 [features]
-default = ["regex", "use_logging"]
+default = ["regex", "use_logging", "anyhow"]
 use_logging = ["log", "env_logger"]
 regex = ["env_logger/regex"]
+anyhow = ["dep:anyhow"]
 
 [lib]
 name = "quickcheck"
@@ -29,3 +30,4 @@ name = "quickcheck"
 env_logger = { version = "0.11", default-features = false, optional = true }
 log = { version = "0.4", optional = true }
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
+anyhow = { version = "1.0", optional = true }
