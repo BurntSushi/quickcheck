@@ -84,7 +84,7 @@ impl QuickCheck {
     /// This is **DEPRECATED**. Using this method on Rust 2024 or newer
     /// requires the raw identifier syntax because `gen` is now a keyword.
     /// Instead, prefer the [`QuickCheck::rng`] method.
-    #[deprecated(since = "1.1.0", note = "use `set_rng` instead")]
+    #[deprecated(since = "1.1.0", note = "use `rng` instead")]
     pub fn r#gen(self, rng: Gen) -> QuickCheck {
         self.rng(rng)
     }
