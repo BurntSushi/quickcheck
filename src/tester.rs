@@ -277,7 +277,7 @@ impl TestResult {
     }
 
     /// Returns `true` if and only if this test result describes a failing
-    /// test as a result of a run time error.
+    /// test as a result with an error message.
     pub fn is_error(&self) -> bool {
         self.is_failure() && self.err.is_some()
     }
