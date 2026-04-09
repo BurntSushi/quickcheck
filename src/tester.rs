@@ -282,6 +282,34 @@ impl TestResult {
         self.is_failure() && self.err.is_some()
     }
 
+    /// Tests that `left` and `right` are equal. If they are, then the test
+    /// passes. If they aren't, then the test fails and the debug formatting of
+    /// `left` and `right` are included
+    pub fn eq<T>(left: &T, right: &T) -> TestResult
+    where
+        T: PartialEq + Debug,
+    {
+        if left == right {
+            TestResult::passed()
+        } else {
+            TestResult::error(format!("Expected {left:?} == {right:?}"))
+        }
+    }
+
+    /// Tests that `left` and `right` are not equal. If they aren't, then the test
+    /// passes. If they are, then the test fails and the debug formatting of
+    /// `left` and `right` are included
+    pub fn ne<T>(left: &T, right: &T) -> TestResult
+    where
+        T: PartialEq + Debug,
+    {
+        if left != right {
+            TestResult::passed()
+        } else {
+            TestResult::error(format!("Expected {left:?} != {right:?}"))
+        }
+    }
+
     fn failed_msg(&self) -> String {
         let arguments_msg = match self.arguments {
             None => "No Arguments Provided".to_owned(),
