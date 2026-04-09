@@ -375,7 +375,14 @@ impl<T: Testable,
         let ( $($name,)* ) = a.clone();
         let mut r = safe(move || {self_($($name),*)}).result(g);
 
+
         if r.is_failure() {
+            // Always retain the first failing arguments, even if shrink does not
+            // produce another failing candidate.
+            let t = a.clone();
+            let ($(ref $name,)*) : ($($name,)*) = t;
+            r.arguments = Some(debug_reprs(&[$($name),*]));
+
             let mut a = a.shrink();
             while let Some(t) = a.next() {
                 let ($($name,)*) = t.clone();
