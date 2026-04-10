@@ -114,7 +114,7 @@ witnesses for failures.
 
 Crate features:
 
-- `"use_logging"`: (Enabled by default.) Enables the log messages governed
+- `"use_logging"`: (Enabled by default.) Enables the log messages governed by
   `RUST_LOG`.
 - `"regex"`: (Enabled by default.) Enables the use of regexes with
   `env_logger`.
