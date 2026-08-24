@@ -51,7 +51,9 @@ pub fn quickcheck(_args: TokenStream, input: TokenStream) -> TokenStream {
                     #(#attrs)*
                     fn #name() {
                         #item_fn
-                       ::quickcheck::quickcheck(#name as #fn_type)
+                        // Coerce without `as` to avoid trivial_casts inside macro_rules (#261).
+                        let f: #fn_type = #name;
+                        ::quickcheck::quickcheck(f)
                     }
                 }
             } else {
