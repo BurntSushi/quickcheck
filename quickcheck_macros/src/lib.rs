@@ -35,9 +35,14 @@ pub fn quickcheck(_args: TokenStream, input: TokenStream) -> TokenStream {
                         "unsupported variadic",
                     ));
                 }
-                let fn_type = syn::TypeBareFn {
+                let unsafety = match item_fn.sig.safety {
+                    syn::Safety::Unsafe(token) => Some(token),
+                    _ => None,
+                };
+                let fn_type = syn::TypeFnPtr {
+                    attrs: Vec::new(),
                     lifetimes: None,
-                    unsafety: item_fn.sig.unsafety,
+                    unsafety,
                     abi: item_fn.sig.abi.clone(),
                     fn_token: <syn::Token![fn]>::default(),
                     paren_token: syn::token::Paren::default(),
