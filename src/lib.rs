@@ -52,7 +52,7 @@ macro_rules! quickcheck {
     {
         $(
             $(#[$m:meta])*
-            fn $fn_name:ident($($arg_name:ident : $arg_ty:ty),*) -> $ret:ty {
+            fn $fn_name:ident($($($arg_name:ident)+ : $arg_ty:ty),*) -> $ret:ty {
                 $($code:tt)*
             }
         )*
@@ -63,7 +63,7 @@ macro_rules! quickcheck {
                 #[test]
                 $(#[$m])*
                 fn $fn_name() {
-                    fn prop($($arg_name: $arg_ty),*) -> $ret {
+                    fn prop($($($arg_name)+: $arg_ty),*) -> $ret {
                         $($code)*
                     }
                     $crate::quickcheck(prop as fn($($arg_ty),*) -> $ret);
