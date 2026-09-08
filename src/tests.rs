@@ -38,6 +38,11 @@ quickcheck! {
         xs == revrev
     }
 
+    fn prop_macro_mut_arg(mut xs: Vec<usize>) -> bool {
+        xs.sort();
+        xs.windows(2).all(|w| w[0] <= w[1])
+    }
+
     #[should_panic]
     fn prop_macro_panic(_x: u32) -> bool {
         assert!(false);
