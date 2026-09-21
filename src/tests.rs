@@ -6,8 +6,6 @@ use std::path::PathBuf;
 
 use super::{quickcheck, Gen, QuickCheck, TestResult};
 
-mod with_location;
-
 #[test]
 fn prop_oob() {
     fn prop() -> bool {
