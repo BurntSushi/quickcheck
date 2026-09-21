@@ -5,7 +5,7 @@ use crate::quickcheck;
 #[test]
 #[should_panic(
     expected = r#"[quickcheck] TEST FAILED (runtime error) at src/tests/with_location.rs:13:9.
-Arguments: ()
+No Arguments Provided
 Error: explicit panic"#
 )]
 fn panic_msg() {

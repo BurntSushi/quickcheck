@@ -209,7 +209,7 @@ pub struct TestResult {
     status: Status,
     arguments: Option<Vec<String>>,
     err: Option<String>,
-    location: Option<panic::Location<'static>>,
+    location: Option<String>,
 }
 
 /// Whether a test has passed, failed or been discarded.
@@ -295,13 +295,13 @@ impl TestResult {
             None => "No Arguments Provided".to_owned(),
             Some(ref args) => format!("Arguments: ({})", args.join(", ")),
         };
-        match (self.err.as_ref(), self.location) {
+        match (self.err.as_ref(), self.location.as_ref()) {
             (None, None) => format!("[quickcheck] TEST FAILED.\n{arguments_msg}"),
-            (None, Some(ref location)) => format!("[quickcheck] TEST FAILED at {location}.\n{arguments_msg}"),
-            (Some(ref err), None) => format!(
+            (None, Some( location)) => format!("[quickcheck] TEST FAILED at {location}.\n{arguments_msg}"),
+            (Some( err), None) => format!(
                 "[quickcheck] TEST FAILED (runtime error).\n{arguments_msg}\nError: {err}"
             ),
-            (Some(ref err), Some(ref location)) => format!(
+            (Some( err), Some( location)) => format!(
                 "[quickcheck] TEST FAILED (runtime error) at {location}.\n{arguments_msg}\nError: {err}"
             ),
         }
@@ -379,7 +379,7 @@ where
             SafeResult::Ok(ref r) => r.result(g),
             SafeResult::Err { ref message, ref location } => {
                 let mut result = TestResult::error(message.clone());
-                result.location = *location;
+                result.location = location.clone();
                 result
             }
         }
@@ -441,11 +441,11 @@ testable_fn!(A, B, C, D, E, F, G, H);
 
 enum SafeResult<T> {
     Ok(T),
-    Err { message: String, location: Option<panic::Location<'static>> },
+    Err { message: String, location: Option<String> },
 }
 
 thread_local! {
-    static PANIC_LOCATION: RefCell<Option<panic::Location<'static>>> = const { RefCell::new(None) };
+    static PANIC_LOCATION: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
 fn safe<T, F>(fun: F) -> SafeResult<T>
@@ -457,7 +457,9 @@ where
     let old_hook = panic::take_hook();
     panic::set_hook(Box::new(|hook_info| {
         PANIC_LOCATION.with(|cell| {
-            *cell.borrow_mut() = hook_info.location().cloned();
+            *cell.borrow_mut() = hook_info.location().map(|loc| {
+                format!("{}:{}:{}", loc.file(), loc.line(), loc.column())
+            });
         });
     }));
 
@@ -474,7 +476,7 @@ where
                 } else {
                     "UNABLE TO SHOW RESULT OF PANIC.".to_owned()
                 },
-                location: PANIC_LOCATION.with(|cell| *cell.borrow()),
+                location: PANIC_LOCATION.with(|cell| cell.borrow().clone()),
             }
         }
     };
