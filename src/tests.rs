@@ -191,7 +191,9 @@ fn regression_issue_83_signed() {
 
 // Test that we can show the message after panic
 #[test]
-#[should_panic(expected = "foo")]
+#[should_panic(expected = r#"
+No Arguments Provided
+Error: foo"#)]
 fn panic_msg_1() {
     fn prop() -> bool {
         panic!("foo");
@@ -200,7 +202,9 @@ fn panic_msg_1() {
 }
 
 #[test]
-#[should_panic(expected = "foo")]
+#[should_panic(expected = r#"
+No Arguments Provided
+Error: assertion failed: "foo" == "bar""#)]
 fn panic_msg_2() {
     fn prop() -> bool {
         assert!("foo" == "bar");
@@ -210,7 +214,11 @@ fn panic_msg_2() {
 }
 
 #[test]
-#[should_panic(expected = "foo")]
+#[should_panic(expected = r#"
+No Arguments Provided
+Error: assertion `left == right` failed
+  left: "foo"
+ right: "bar""#)]
 fn panic_msg_3() {
     fn prop() -> bool {
         assert_eq!("foo", "bar");

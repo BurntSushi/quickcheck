@@ -288,9 +288,9 @@ impl TestResult {
             Some(ref args) => format!("Arguments: ({})", args.join(", ")),
         };
         match self.err {
-            None => format!("[quickcheck] TEST FAILED. {arguments_msg}"),
+            None => format!("[quickcheck] TEST FAILED.\n{arguments_msg}"),
             Some(ref err) => format!(
-                "[quickcheck] TEST FAILED (runtime error). {arguments_msg}\nError: {err}"
+                "[quickcheck] TEST FAILED (runtime error).\n{arguments_msg}\nError: {err}"
             ),
         }
     }
@@ -358,6 +358,18 @@ where
     }
 }
 
+impl<T> Testable for SafeResult<T>
+where
+    T: Testable,
+{
+    fn result(&self, g: &mut Gen) -> TestResult {
+        match *self {
+            SafeResult::Ok(ref r) => r.result(g),
+            SafeResult::Err(ref message) => TestResult::error(message.clone()),
+        }
+    }
+}
+
 /// Return a vector of the debug formatting of each item in `args`
 fn debug_reprs(args: &[&dyn Debug]) -> Vec<String> {
     args.iter().map(|x| format!("{x:?}")).collect()
@@ -411,23 +423,31 @@ testable_fn!(A, B, C, D, E, F);
 testable_fn!(A, B, C, D, E, F, G);
 testable_fn!(A, B, C, D, E, F, G, H);
 
-fn safe<T, F>(fun: F) -> Result<T, String>
+enum SafeResult<T> {
+    Ok(T),
+    Err(String),
+}
+
+fn safe<T, F>(fun: F) -> SafeResult<T>
 where
     F: FnOnce() -> T,
     F: 'static,
     T: 'static,
 {
-    panic::catch_unwind(panic::AssertUnwindSafe(fun)).map_err(|any_err| {
-        // Extract common types of panic payload:
-        // panic and assert produce &str or String
-        if let Some(&s) = any_err.downcast_ref::<&str>() {
-            s.to_owned()
-        } else if let Some(s) = any_err.downcast_ref::<String>() {
-            s.to_owned()
-        } else {
-            "UNABLE TO SHOW RESULT OF PANIC.".to_owned()
+    match panic::catch_unwind(panic::AssertUnwindSafe(fun)) {
+        Ok(x) => SafeResult::Ok(x),
+        Err(any_err) => {
+            // Extract common types of panic payload:
+            // panic and assert produce &str or String
+            SafeResult::Err(if let Some(&s) = any_err.downcast_ref::<&str>() {
+                s.to_owned()
+            } else if let Some(s) = any_err.downcast_ref::<String>() {
+                s.to_owned()
+            } else {
+                "UNABLE TO SHOW RESULT OF PANIC.".to_owned()
+            })
         }
-    })
+    }
 }
 
 #[cfg(test)]
