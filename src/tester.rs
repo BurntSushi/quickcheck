@@ -376,6 +376,14 @@ impl<T: Testable,
         let mut r = safe(move || {self_($($name),*)}).result(g);
 
         if r.is_failure() {
+            {
+                let ($(ref $name,)*) : ($($name,)*) = a;
+                let args: &[&dyn Debug] = &[$($name),*];
+                if !args.is_empty() {
+                    r.arguments = Some(debug_reprs(args));
+                }
+            }
+
             let mut a = a.shrink();
             while let Some(t) = a.next() {
                 let ($($name,)*) = t.clone();
@@ -444,6 +452,16 @@ mod test {
             .unwrap_err();
         let expected_argument = format!("{:?}", [true, true]);
         assert_eq!(failing_case.arguments, Some(vec![expected_argument]));
+    }
+
+    #[test]
+    fn minimal_initial_failure_reports_arguments() {
+        fn prop(_: ()) -> bool {
+            false
+        }
+        let failing_case =
+            QuickCheck::new().quicktest(prop as fn(()) -> bool).unwrap_err();
+        assert_eq!(failing_case.arguments, Some(vec!["()".to_owned()]));
     }
 
     #[test]
